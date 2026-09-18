@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 const SportsPage: NextPage = () => {
   return (
-    <div className="w-full min-h-screen px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-8">
+    <div className="w-full min-h-screen px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-8 pb-28 md:pb-8">
       <Suspense fallback={<div className="min-h-screen bg-black" />}>
         <SportsHub />
       </Suspense>

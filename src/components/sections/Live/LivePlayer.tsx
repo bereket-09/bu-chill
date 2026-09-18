@@ -513,7 +513,7 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
       {/* ================= ON-SCREEN QUICK CHANNEL SWITCHER DRAWER ================= */}
       {showChannelDrawer && (
         <div className="absolute inset-0 z-40 flex items-center justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="w-80 sm:w-96 h-full bg-[#0f1014]/95 backdrop-blur-xl border-l border-white/15 p-4 flex flex-col space-y-3.5 shadow-2xl">
+          <div className="w-full sm:w-96 h-full bg-[#0f1014]/95 backdrop-blur-xl border-l border-white/15 p-4 flex flex-col space-y-3.5 shadow-2xl">
             {/* Drawer Header */}
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">

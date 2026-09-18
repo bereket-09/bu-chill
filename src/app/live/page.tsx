@@ -194,7 +194,7 @@ export default function LiveTvPage() {
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans overflow-x-hidden">
-      <div className="w-full px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-6 space-y-8 select-none">
+      <div className="w-full px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-6 pb-28 md:pb-8 space-y-8 select-none">
         {/* ================= PAGE HEADER ================= */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
           <div>

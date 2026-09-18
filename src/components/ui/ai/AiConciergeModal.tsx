@@ -140,8 +140,8 @@ export const AiConciergeModal: React.FC = () => {
 
   return (
     <>
-      {/* Floating Trigger Button (Bottom-Right) */}
-      <div className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40">
+      {/* Floating Trigger Button (Bottom-Right, comfortably positioned above the mobile dock) */}
+      <div className="fixed bottom-22 right-4 sm:bottom-6 sm:right-6 z-40">
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
@@ -174,11 +174,11 @@ export const AiConciergeModal: React.FC = () => {
       {/* Floating Assistant Window */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-end justify-end sm:p-6 bg-black/40 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none animate-in fade-in duration-200"
+          className="fixed inset-0 z-[70] flex items-end sm:items-end justify-end sm:p-6 bg-black/60 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none animate-in fade-in duration-200"
           onClick={() => setIsOpen(false)}
         >
           <div
-            className="relative w-full sm:w-[410px] h-[85vh] sm:h-[580px] sm:max-h-[calc(100vh-80px)] flex flex-col rounded-t-3xl sm:rounded-2xl bg-[#0c0d14]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(245,158,11,0.08)] overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
+            className="relative w-full sm:w-[410px] h-[88dvh] max-h-[88dvh] sm:h-[580px] sm:max-h-[calc(100vh-80px)] flex flex-col rounded-t-3xl sm:rounded-2xl bg-[#0c0d14]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(245,158,11,0.08)] overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Accent Line */}

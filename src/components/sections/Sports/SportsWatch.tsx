@@ -229,7 +229,7 @@ export const SportsWatch: React.FC = () => {
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans overflow-x-hidden">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-8 md:pl-28 md:pr-10 py-6 space-y-6">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-8 md:pl-28 md:pr-10 py-6 pb-28 md:pb-8 space-y-6">
         {/* Top Header Navigation */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Link
@@ -494,7 +494,7 @@ export const SportsWatch: React.FC = () => {
 
       {/* ================= STUNNING QUICK MATCH SWITCHER DRAWER ================= */}
       {showDrawer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[70] flex items-center justify-end bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
           <div className="w-full max-w-lg h-full bg-[#0d0e12] border-l border-white/10 p-5 sm:p-6 flex flex-col space-y-4 overflow-hidden shadow-2xl">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-white/10 shrink-0">

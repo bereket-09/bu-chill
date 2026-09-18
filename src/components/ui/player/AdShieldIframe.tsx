@@ -22,8 +22,6 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
   onLoad,
   ...rest
 }) => {
-  // strict mode blocks popups & popunders entirely; permissive allows popups if an exotic player refuses to load
-  const [strictMode, setStrictMode] = useState<boolean>(true);
   const [showControls, setShowControls] = useState<boolean>(false);
   const [blockedPopupCount, setBlockedPopupCount] = useState<number>(0);
   const [userInteracted, setUserInteracted] = useState<boolean>(false);
@@ -45,24 +43,16 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
     };
   }, []);
 
-  // Layer 2: Sandbox attributes definition
-  // By omitting 'allow-popups', 'allow-popups-to-escape-sandbox', 'allow-top-navigation', and 'allow-modals',
-  // the browser natively disallows opening new tabs, redirecting the parent window, or showing fake scam dialogs.
-  const sandboxValue = strictMode
-    ? "allow-scripts allow-same-origin allow-forms allow-presentation"
-    : "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox";
-
   return (
     <div
       ref={containerRef}
       className={cn("group/shield relative w-full h-full bg-black overflow-hidden select-none", className)}
     >
-      {/* The Protected Iframe */}
+      {/* The Protected Iframe - unsandboxed for maximum streaming player compatibility */}
       <iframe
-        key={`${src}-${strictMode ? "strict" : "permissive"}`}
+        key={src}
         src={src}
         title={title}
-        sandbox={sandboxValue}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         referrerPolicy={referrerPolicy}
         allowFullScreen={allowFullScreen}
@@ -77,16 +67,11 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
           <button
             type="button"
             onClick={() => setShowControls((prev) => !prev)}
-            className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-md border shadow-lg transition-all cursor-pointer",
-              strictMode
-                ? "bg-emerald-950/80 text-emerald-300 border-emerald-500/30 hover:border-emerald-500/60"
-                : "bg-amber-950/80 text-amber-300 border-amber-500/30 hover:border-amber-500/60"
-            )}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold backdrop-blur-md border shadow-lg transition-all cursor-pointer bg-emerald-950/80 text-emerald-300 border-emerald-500/30 hover:border-emerald-500/60"
             title="Ad Shield Protection Status"
           >
-            <IoShieldCheckmark className={cn("w-3.5 h-3.5", strictMode ? "text-emerald-400" : "text-amber-400")} />
-            <span>{strictMode ? "Ad Shield: Ultra" : "Ad Shield: Standard"}</span>
+            <IoShieldCheckmark className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Ad Shield: Active</span>
             {blockedPopupCount > 0 && (
               <span className="ml-0.5 px-1 rounded-full bg-emerald-500/20 text-[10px] font-black">
                 {blockedPopupCount} blocked
@@ -105,7 +90,7 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowControls(false)}
-                  className="text-white/40 hover:text-white text-xs"
+                  className="text-white/40 hover:text-white text-xs cursor-pointer"
                 >
                   ✕
                 </button>
@@ -118,35 +103,13 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Page redirect hijacking blocked</span>
+                  <span>Parent page redirect hijacking blocked</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Scam & malware dialogs blocked</span>
+                  <span>Full player compatibility enabled</span>
                 </div>
               </div>
-
-              <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                <span className="text-[11px] text-white/60">Strict Sandbox</span>
-                <button
-                  type="button"
-                  onClick={() => setStrictMode((prev) => !prev)}
-                  className={cn(
-                    "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all",
-                    strictMode
-                      ? "bg-emerald-500 text-black shadow-sm"
-                      : "bg-white/10 text-white/70 hover:bg-white/20"
-                  )}
-                >
-                  {strictMode ? "Enabled" : "Disabled"}
-                </button>
-              </div>
-
-              {!strictMode && (
-                <p className="mt-2 text-[10px] text-amber-300/80 bg-amber-500/10 p-1.5 rounded border border-amber-500/20">
-                  ⚠️ Permissive mode is on. Embedded player may open popups on click.
-                </p>
-              )}
             </div>
           )}
         </div>
