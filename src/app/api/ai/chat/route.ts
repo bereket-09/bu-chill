@@ -24,20 +24,7 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
-
-    // Only for signed up users
-    if (authError || !user) {
-      return NextResponse.json(
-        {
-          error: "Unauthorized",
-          message:
-            "Bu-Chill AI Concierge is an exclusive feature for signed-in members. Please sign in or create a free account to get AI recommendations customized to your taste!",
-        },
-        { status: 401 }
-      );
-    }
 
     const body = await request.json();
     const { messages = [] } = body as { messages: ChatMessage[] };
@@ -49,31 +36,40 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch user's watch history and watchlist for personalized grounding
-    const [{ data: histories }, { data: watchlist }] = await Promise.all([
-      supabase
-        .from("histories")
-        .select("title, type")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(10),
-      supabase
-        .from("watchlist")
-        .select("title, type")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10),
-    ]);
+    let historyItems = "";
+    let watchlistItems = "";
 
-    const historyItems = (histories || [])
-      .map((h) => `${h.title || ""} (${h.type || "movie"})`)
-      .filter(Boolean)
-      .join(", ");
+    // If user is logged in, fetch their watch history and watchlist for personalized grounding
+    if (user) {
+      try {
+        const [{ data: histories }, { data: watchlist }] = await Promise.all([
+          supabase
+            .from("histories")
+            .select("title, type")
+            .eq("user_id", user.id)
+            .order("updated_at", { ascending: false })
+            .limit(10),
+          supabase
+            .from("watchlist")
+            .select("title, type")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(10),
+        ]);
 
-    const watchlistItems = (watchlist || [])
-      .map((w) => `${w.title || ""} (${w.type || "movie"})`)
-      .filter(Boolean)
-      .join(", ");
+        historyItems = (histories || [])
+          .map((h) => `${h.title || ""} (${h.type || "movie"})`)
+          .filter(Boolean)
+          .join(", ");
+
+        watchlistItems = (watchlist || [])
+          .map((w) => `${w.title || ""} (${w.type || "movie"})`)
+          .filter(Boolean)
+          .join(", ");
+      } catch (err) {
+        console.warn("Could not fetch user history for AI context:", err);
+      }
+    }
 
     const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
     const baseURL = process.env.AI_BASE_URL || "https://api.groq.com/openai/v1";

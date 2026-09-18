@@ -10,9 +10,9 @@ import {
   IoClose,
   IoSend,
   IoPlay,
-  IoLockClosed,
   IoStar,
   IoRefreshOutline,
+  IoPersonCircleOutline,
 } from "react-icons/io5";
 
 interface ChatMessage {
@@ -35,25 +35,26 @@ interface RecommendationItem {
 }
 
 const QUICK_PROMPTS = [
-  "🍿 Recommend something based on my watch history",
-  "🌌 Mind-bending sci-fi with insane plot twists",
-  "🍕 Cozy feel-good comedy to relax tonight",
-  "🔪 Dark gripping crime mystery like True Detective",
-  "⚡ High-octane action with non-stop adrenaline",
+  "🍿 Popular picks tonight",
+  "🌌 Mind-bending sci-fi",
+  "🍕 Feel-good comedy",
+  "🔪 Gripping thriller",
+  "⚡ Adrenaline action",
+  "❤️ Heartfelt romance",
 ];
 
 export const AiConciergeModal: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { data: user, isLoading: isUserLoading } = useSupabaseUser();
+  const { data: user } = useSupabaseUser();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
       role: "assistant",
       content:
-        "Hey there! 🍿 I'm your **Bu-Chill AI Concierge**. Tell me what kind of vibe, mood, story, or genre you're looking for, and I'll tailor recommendations to your taste!",
+        "Hey! 🍿 I'm your **Bu-Chill AI Concierge**. Tell me what mood, vibe, or genre you're feeling, and I'll curate the perfect movies or shows for you.",
     },
   ]);
 
@@ -102,7 +103,7 @@ export const AiConciergeModal: React.FC = () => {
           {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            content: data.message || "Something went wrong. Please try again later.",
+            content: data.message || "Something went wrong. Please try again in a moment.",
           },
         ]);
       } else {
@@ -122,7 +123,7 @@ export const AiConciergeModal: React.FC = () => {
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: "Failed to connect to Bu-Chill AI. Please check your internet connection.",
+          content: "Failed to connect to Bu-Chill AI. Please check your network connection.",
         },
       ]);
     } finally {
@@ -139,52 +140,74 @@ export const AiConciergeModal: React.FC = () => {
 
   return (
     <>
-      {/* Floating Trigger Button on Bottom-Right */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* Floating Trigger Button (Bottom-Right) */}
+      <div className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40">
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
-          className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500/30 via-primary/40 to-purple-600/40 hover:from-amber-500/50 hover:via-primary/60 hover:to-purple-600/60 border border-white/20 text-white shadow-2xl backdrop-blur-xl transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer select-none"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className={cn(
+            "group relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-full border transition-all duration-300 shadow-2xl cursor-pointer select-none",
+            isOpen
+              ? "bg-amber-500 text-black border-amber-400 scale-95 shadow-amber-500/30"
+              : "bg-[#11121a]/90 hover:bg-[#181a24] text-white border-white/20 hover:border-amber-500/50 backdrop-blur-xl hover:scale-105"
+          )}
           title="Bu-Chill AI Concierge"
-          aria-label="Open Bu-Chill AI Concierge"
+          aria-label="Toggle Bu-Chill AI Concierge"
         >
           <div className="relative flex items-center justify-center">
-            <IoSparkles className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform duration-300 animate-pulse" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            <IoSparkles
+              className={cn(
+                "w-4 h-4 transition-transform duration-300",
+                isOpen ? "text-black rotate-45" : "text-amber-400 group-hover:rotate-12 animate-pulse"
+              )}
+            />
+            {!isOpen && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            )}
           </div>
+          <span className="text-xs font-bold tracking-wide hidden sm:inline-block">
+            {isOpen ? "Close AI" : "AI Concierge"}
+          </span>
         </button>
       </div>
 
-      {/* Modal / Drawer Overlay */}
+      {/* Floating Assistant Window */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-end sm:justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-end justify-end sm:p-6 bg-black/40 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none animate-in fade-in duration-200"
+          onClick={() => setIsOpen(false)}
+        >
           <div
-            className="relative w-full sm:max-w-xl h-[85vh] sm:h-[720px] max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-[#0e0f14] border border-white/15 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-300"
+            className="relative w-full sm:w-[410px] h-[85vh] sm:h-[580px] sm:max-h-[calc(100vh-80px)] flex flex-col rounded-t-3xl sm:rounded-2xl bg-[#0c0d14]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(245,158,11,0.08)] overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
+            {/* Top Accent Line */}
+            <div className="h-[2px] w-full bg-gradient-to-r from-amber-500/10 via-amber-400 to-amber-500/10 shrink-0" />
+
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-gradient-to-r from-[#14151e] via-[#101117] to-[#0e0f14] shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#12131b]/70 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 to-primary text-black font-black shadow-md shadow-amber-500/20">
-                  <IoSparkles className="w-5 h-5 text-white" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 shadow-sm">
+                  <IoSparkles className="w-4 h-4" />
                 </div>
                 <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-base text-white tracking-wide">
-                      Bu-Chill AI Concierge
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-sm text-white tracking-wide">
+                      Bu-Chill AI
                     </span>
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      Smart
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Online
                     </span>
                   </div>
-                  <span className="text-[11px] text-white/50 font-medium">
-                    Personalized movie & TV recommendations
+                  <span className="text-[11px] text-white/50">
+                    Curated movie & TV picks
                   </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-1">
-                {user && (
+                {messages.length > 1 && (
                   <button
                     type="button"
                     onClick={() =>
@@ -197,214 +220,211 @@ export const AiConciergeModal: React.FC = () => {
                         },
                       ])
                     }
-                    className="p-2 text-white/40 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+                    className="p-1.5 text-white/40 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
                     title="Clear chat"
                   >
-                    <IoRefreshOutline className="w-5 h-5" />
+                    <IoRefreshOutline className="w-4 h-4" />
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setIsOpen(false)}
-                  className="p-2 text-white/60 hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+                  className="p-1.5 text-white/50 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
                   aria-label="Close"
                 >
-                  <IoClose className="w-5 h-5" />
+                  <IoClose className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Content Body: Authentication Wall OR Chat Interface */}
-            {!isUserLoading && !user ? (
-              /* Signed-out lock wall */
-              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-xl">
-                  <IoLockClosed className="w-8 h-8" />
+            {/* Personalized Grounding Sub-banner */}
+            <div className="px-4 py-1.5 bg-black/30 border-b border-white/5 text-[11px] text-white/60 flex items-center justify-between">
+              {user ? (
+                <div className="flex items-center gap-1.5 text-amber-300/90 font-medium">
+                  <IoSparkles className="w-3 h-3 text-amber-400" />
+                  <span>Personalized with your watch history</span>
                 </div>
-                <div className="space-y-2 max-w-sm">
-                  <h3 className="text-xl font-bold text-white">
-                    Members Exclusive Feature
-                  </h3>
-                  <p className="text-sm text-white/60 leading-relaxed">
-                    Bu-Chill AI Concierge analyzes your personalized watch history and watchlist to discover movies and shows you'll love.
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-xs pt-2">
+              ) : (
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-white/50 truncate">
+                    💡 Sign in for watch-history picks
+                  </span>
                   <Link
                     href="/auth"
                     onClick={() => setIsOpen(false)}
-                    className="w-full py-3 px-5 rounded-xl bg-white text-black font-bold text-sm text-center shadow-lg hover:bg-white/90 active:scale-95 transition-all"
+                    className="text-amber-400 hover:text-amber-300 font-bold ml-2 underline underline-offset-2 shrink-0 flex items-center gap-1"
                   >
-                    Sign In / Sign Up
+                    <IoPersonCircleOutline className="w-3.5 h-3.5" />
+                    Sign in
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="w-full py-3 px-5 rounded-xl bg-white/10 text-white/80 font-semibold text-sm hover:bg-white/15 transition-all"
-                  >
-                    Maybe Later
-                  </button>
                 </div>
-              </div>
-            ) : (
-              /* Active Chat Feed */
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className={cn(
-                        "flex flex-col max-w-[85%]",
-                        msg.role === "user" ? "ml-auto items-end" : "mr-auto items-start"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "px-4 py-3 rounded-2xl text-sm leading-relaxed",
-                          msg.role === "user"
-                            ? "bg-primary text-white rounded-br-none shadow-md shadow-primary/20 font-medium"
-                            : "bg-[#181922] text-white/90 border border-white/10 rounded-bl-none shadow-md"
-                        )}
-                      >
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                      </div>
+              )}
+            </div>
 
-                      {/* Enriched TMDB Recommendation Cards */}
-                      {msg.recommendations && msg.recommendations.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 w-full max-w-lg">
-                          {msg.recommendations.map((rec) => {
-                            const posterUrl = rec.poster_path
-                              ? `https://image.tmdb.org/t/p/w500${rec.poster_path}`
-                              : undefined;
+            {/* Chat Feed */}
+            <div className="flex-1 overflow-y-auto p-3.5 space-y-3 scrollbar-thin scrollbar-thumb-white/10">
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    "flex flex-col",
+                    msg.role === "user"
+                      ? "ml-auto items-end max-w-[85%]"
+                      : "mr-auto items-start max-w-[94%]"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm leading-relaxed",
+                      msg.role === "user"
+                        ? "bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold rounded-tr-xs shadow-md"
+                        : "bg-white/[0.06] text-white/90 border border-white/10 rounded-tl-xs shadow-sm"
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
 
-                            const playHref =
-                              rec.media_type === "movie"
-                                ? `/movie/${rec.id}/player`
-                                : `/tv/${rec.id}/1/1/player`;
+                  {/* Horizontal Compact Recommendation Cards */}
+                  {msg.recommendations && msg.recommendations.length > 0 && (
+                    <div className="flex flex-col gap-2 mt-2 w-full">
+                      {msg.recommendations.map((rec) => {
+                        const posterUrl = rec.poster_path
+                          ? `https://image.tmdb.org/t/p/w200${rec.poster_path}`
+                          : undefined;
 
-                            const detailHref =
-                              rec.media_type === "movie"
-                                ? `/movie/${rec.id}`
-                                : `/tv/${rec.id}`;
+                        const playHref =
+                          rec.media_type === "movie"
+                            ? `/movie/${rec.id}/player`
+                            : `/tv/${rec.id}/1/1/player`;
 
-                            return (
-                              <div
-                                key={`${rec.media_type}-${rec.id}`}
-                                className="group/card flex flex-col rounded-xl overflow-hidden bg-[#13141b] border border-white/10 hover:border-white/30 transition-all shadow-lg"
-                              >
-                                <div className="relative aspect-[16/9] w-full bg-black/60 overflow-hidden">
-                                  <SafeImage
-                                    src={posterUrl}
-                                    alt={rec.title}
-                                    fallbackTitle={rec.title}
-                                    fill
-                                    className="object-cover group-hover/card:scale-105 transition-transform duration-300"
-                                    unoptimized
-                                  />
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-                                  {rec.vote_average ? (
-                                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[11px] font-bold text-white bg-black/70 px-1.5 py-0.5 rounded backdrop-blur-md border border-white/10">
-                                      <IoStar className="text-amber-400 text-[10px]" />
-                                      <span>{rec.vote_average.toFixed(1)}</span>
-                                    </div>
-                                  ) : null}
-                                  <span className="absolute top-2 right-2 text-[10px] font-black uppercase px-2 py-0.5 rounded bg-black/70 text-white/80 border border-white/10">
-                                    {rec.media_type}
-                                  </span>
-                                </div>
+                        const detailHref =
+                          rec.media_type === "movie"
+                            ? `/movie/${rec.id}`
+                            : `/tv/${rec.id}`;
 
-                                <div className="p-3 flex flex-col flex-1">
-                                  <h4 className="font-bold text-sm text-white line-clamp-1 group-hover/card:text-primary transition-colors">
-                                    {rec.title}
-                                  </h4>
-                                  <span className="text-[11px] text-white/40 mb-1.5 font-medium">
-                                    {rec.year ? `${rec.year} • ` : ""}
-                                    {rec.media_type === "movie" ? "Movie" : "TV Series"}
-                                  </span>
-                                  {rec.reason && (
-                                    <p className="text-[11px] text-white/60 line-clamp-2 leading-tight mb-3">
-                                      {rec.reason}
-                                    </p>
-                                  )}
+                        return (
+                          <div
+                            key={`${rec.media_type}-${rec.id}`}
+                            className="group/card flex items-center gap-2.5 p-2 rounded-xl bg-black/40 border border-white/10 hover:border-amber-500/40 transition-all shadow-md"
+                          >
+                            {/* Mini Poster Thumbnail */}
+                            <div className="relative w-12 h-16 rounded-md bg-white/5 overflow-hidden shrink-0 border border-white/10">
+                              <SafeImage
+                                src={posterUrl}
+                                alt={rec.title}
+                                fallbackTitle={rec.title}
+                                fill
+                                className="object-cover group-hover/card:scale-105 transition-transform duration-300"
+                                unoptimized
+                              />
+                            </div>
 
-                                  <div className="mt-auto flex items-center gap-2 pt-1">
-                                    <Link
-                                      href={playHref}
-                                      onClick={() => setIsOpen(false)}
-                                      className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-white text-black font-bold text-xs hover:bg-white/90 active:scale-95 transition-all shadow"
-                                    >
-                                      <IoPlay className="text-xs fill-black" />
-                                      <span>Play</span>
-                                    </Link>
-                                    <Link
-                                      href={detailHref}
-                                      onClick={() => setIsOpen(false)}
-                                      className="py-1.5 px-2.5 rounded-lg bg-white/10 text-white/80 font-semibold text-xs hover:bg-white/20 transition-colors border border-white/10"
-                                    >
-                                      Info
-                                    </Link>
-                                  </div>
-                                </div>
+                            {/* Details */}
+                            <div className="flex-1 min-w-0 pr-1">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-xs sm:text-sm text-white truncate group-hover/card:text-amber-400 transition-colors">
+                                  {rec.title}
+                                </h4>
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  ))}
 
-                  {/* Typing / Loading indicator */}
-                  {isLoading && (
-                    <div className="mr-auto flex items-center gap-2 p-3 rounded-2xl bg-[#181922] border border-white/10 text-white/60 text-xs">
-                      <IoSparkles className="w-4 h-4 text-amber-400 animate-spin" />
-                      <span>Bu-Chill AI is curating recommendations...</span>
+                              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-white/50">
+                                {rec.vote_average ? (
+                                  <span className="flex items-center gap-0.5 text-amber-400 font-bold">
+                                    <IoStar className="text-[10px]" />
+                                    {rec.vote_average.toFixed(1)}
+                                  </span>
+                                ) : null}
+                                <span>•</span>
+                                <span>{rec.year || "Release"}</span>
+                                <span>•</span>
+                                <span className="uppercase text-[9px] font-bold text-white/70">
+                                  {rec.media_type}
+                                </span>
+                              </div>
+
+                              {rec.reason && (
+                                <p className="text-[10px] text-white/60 line-clamp-1 italic mt-0.5">
+                                  "{rec.reason}"
+                                </p>
+                              )}
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-1.5 mt-1.5">
+                                <Link
+                                  href={playHref}
+                                  onClick={() => setIsOpen(false)}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-white text-black font-bold text-[11px] hover:bg-amber-400 active:scale-95 transition-all shadow-sm"
+                                >
+                                  <IoPlay className="w-2.5 h-2.5 fill-black" />
+                                  <span>Play</span>
+                                </Link>
+                                <Link
+                                  href={detailHref}
+                                  onClick={() => setIsOpen(false)}
+                                  className="px-2 py-1 rounded-md bg-white/10 text-white/80 font-medium text-[11px] hover:bg-white/20 transition-colors"
+                                >
+                                  Details
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
-
-                  <div ref={messagesEndRef} />
                 </div>
+              ))}
 
-                {/* Quick Prompts */}
-                <div className="px-4 py-2 border-t border-white/5 flex items-center gap-2 overflow-x-auto no-scrollbar">
-                  {QUICK_PROMPTS.map((prompt, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleSend(prompt)}
-                      disabled={isLoading}
-                      className="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
+              {/* Typing / Loading indicator */}
+              {isLoading && (
+                <div className="mr-auto flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/[0.06] border border-white/10 text-white/70 text-xs animate-pulse">
+                  <IoSparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                  <span>Bu-Chill AI is thinking...</span>
                 </div>
+              )}
 
-                {/* Chat Input */}
-                <div className="p-3 sm:p-4 border-t border-white/10 bg-[#0f1015]">
-                  <div className="flex items-center gap-2 bg-[#171822] rounded-2xl border border-white/15 focus-within:border-primary/60 px-3.5 py-1.5 shadow-inner transition-colors">
-                    <input
-                      ref={inputRef}
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Describe the vibe (e.g. cozy sci-fi, dark crime, 90s nostalgia)..."
-                      className="w-full bg-transparent text-sm text-white placeholder-white/40 focus:outline-none py-2"
-                      disabled={isLoading}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleSend()}
-                      disabled={!input.trim() || isLoading}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-white disabled:opacity-30 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-md"
-                      aria-label="Send message"
-                    >
-                      <IoSend className="text-sm" />
-                    </button>
-                  </div>
-                </div>
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Quick Prompts */}
+            <div className="px-3 py-1.5 border-t border-white/5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 bg-[#0d0e14]/50">
+              {QUICK_PROMPTS.map((prompt, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleSend(prompt)}
+                  disabled={isLoading}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-white/5 hover:bg-white/15 text-white/75 hover:text-white border border-white/10 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            {/* Chat Input Capsule */}
+            <div className="p-3 border-t border-white/10 bg-[#0e0f17] shrink-0">
+              <div className="flex items-center gap-2 bg-white/[0.07] rounded-full border border-white/15 focus-within:border-amber-500/50 focus-within:ring-2 focus-within:ring-amber-500/20 pl-3.5 pr-1.5 py-1 shadow-inner transition-all">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Describe your mood or vibe..."
+                  className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-white/40 focus:outline-none py-1.5"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSend()}
+                  disabled={!input.trim() || isLoading}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500 hover:bg-amber-400 text-black disabled:opacity-30 disabled:hover:bg-amber-500 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-md"
+                  aria-label="Send message"
+                >
+                  <IoSend className="text-xs" />
+                </button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
