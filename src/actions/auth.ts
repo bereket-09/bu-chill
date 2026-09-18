@@ -72,21 +72,30 @@ const signInWithEmailAction: AuthAction<LoginFormInput> = async (data, supabase)
 
   if (error) return { success: false, message: error.message };
 
-  const { data: username, error: usernameError } = await supabase
+  const { data: username } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", user.user.id)
     .maybeSingle();
 
-  if (!username) {
-    console.error("Username check error:", usernameError);
-    return {
-      success: false,
-      message: `Database error. Could not get username for ${user.user.email}.`,
-    };
+  let finalUsername = username?.username;
+
+  if (!finalUsername) {
+    const adminSupabase = await createClient(true);
+    const fallbackUsername =
+      user.user.user_metadata?.username ||
+      user.user.user_metadata?.full_name ||
+      user.user.email?.split("@")[0] ||
+      "User";
+
+    await adminSupabase.from("profiles").upsert({
+      id: user.user.id,
+      username: fallbackUsername,
+    });
+    finalUsername = fallbackUsername;
   }
 
-  return { success: true, message: `Welcome back, ${username.username}` };
+  return { success: true, message: `Welcome back, ${finalUsername}` };
 };
 
 const signUpAction: AuthAction<RegisterFormInput> = async (data, supabase) => {

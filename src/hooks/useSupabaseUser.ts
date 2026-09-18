@@ -41,14 +41,18 @@ const fetchUser = async (): Promise<AuthUserData | null> => {
       .from("profiles")
       .select("username")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (username) {
-      AuthUser = {
-        ...user,
-        username: username.username,
-      };
-    }
+    AuthUser = {
+      ...user,
+      username:
+        username?.username ||
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.user_metadata?.username ||
+        user.email?.split("@")[0] ||
+        "User",
+    };
   }
 
   return AuthUser;

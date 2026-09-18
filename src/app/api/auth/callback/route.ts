@@ -23,52 +23,47 @@ export const GET = async (request: Request) => {
       // Insert username
       if (user) {
         console.info({ user });
+        const adminSupabase = await createClient(true);
 
-        const { data: profile } = await supabase
+        const { data: profile } = await adminSupabase
           .from("profiles")
           .select("username")
           .eq("id", user.id)
-          .single();
+          .maybeSingle();
 
         if (!profile) {
-          // Get base username dari Google
+          // Get base username from OAuth/Google
           const baseUsername =
-            user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0];
+            user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "user";
 
-          // Function buat generate unique username
+          // Function to generate unique username
           const generateUniqueUsername = async (base: string) => {
             let username = base;
             let attempts = 0;
-            const maxAttempts = 5; // Prevent infinite loop
+            const maxAttempts = 5;
 
             while (attempts < maxAttempts) {
-              // Check if username exists
-              const { data: existing } = await supabase
+              const { data: existing } = await adminSupabase
                 .from("profiles")
                 .select("username")
                 .eq("username", username)
-                .single();
+                .maybeSingle();
 
               if (!existing) {
-                // Username available!
                 return username;
               }
 
-              // Username taken, add random 4 digits
-              const randomNum = Math.floor(1000 + Math.random() * 9000); // 1000-9999
+              const randomNum = Math.floor(1000 + Math.random() * 9000);
               username = `${base}#${randomNum}`;
               attempts++;
             }
 
-            // Fallback: use timestamp if still can't find unique
             return `${base}${Date.now()}`;
           };
 
-          // Generate unique username
           const uniqueUsername = await generateUniqueUsername(baseUsername);
 
-          // Insert profile with unique username
-          const { error: profileError } = await supabase.from("profiles").insert({
+          const { error: profileError } = await adminSupabase.from("profiles").upsert({
             id: user.id,
             username: uniqueUsername,
           });
