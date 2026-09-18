@@ -27,6 +27,7 @@ const ServerSelectionModal = dynamic(() =>
   import("@/components/ui/overlay/ServerSelectionModal").then((mod) => mod.ServerSelectionModal)
 );
 const NativePlayer = dynamic(() => import("@/components/ui/player/NativePlayer"), { ssr: false });
+const AdShieldIframe = dynamic(() => import("@/components/ui/player/AdShieldIframe"), { ssr: false });
 
 interface MoviePlayerProps {
   movie: MovieDetails;
@@ -257,12 +258,12 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
             </div>
           ) : (
             (seen || !PLAYER.ads) && (
-              <iframe
+              <AdShieldIframe
                 allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                 referrerPolicy="origin"
                 key={`${PLAYER.title}-${activePlaybackTime}`}
                 src={PLAYER.source}
+                title={title}
                 className="z-10 h-full w-full border-0"
               />
             )

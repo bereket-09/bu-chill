@@ -7,6 +7,7 @@ import Hls from "hls.js";
 import { useQuery } from "@tanstack/react-query";
 import { SportsMatch, SportsStream } from "@/services/sports";
 import SafeImage from "@/components/ui/other/SafeImage";
+import AdShieldIframe from "@/components/ui/player/AdShieldIframe";
 import { getSportsBadgeUrl, getSportsPosterUrl } from "./SportsHeroCarousel";
 import {
   IoArrowBack,
@@ -279,10 +280,9 @@ export const SportsWatch: React.FC = () => {
               }}
             />
           ) : activeStream?.embedUrl ? (
-            <iframe
+            <AdShieldIframe
               src={activeStream.embedUrl}
               allowFullScreen
-              allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
               referrerPolicy="no-referrer"
               className="w-full h-full border-0 bg-black"
               title={currentMatch?.title || "Sports Stream"}

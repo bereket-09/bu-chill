@@ -29,6 +29,7 @@ const ServerSelectionModal = dynamic(() =>
 );
 const TvShowPlayerEpisodeSelection = dynamic(() => import("./EpisodeSelection"));
 const NativePlayer = dynamic(() => import("@/components/ui/player/NativePlayer"), { ssr: false });
+const AdShieldIframe = dynamic(() => import("@/components/ui/player/AdShieldIframe"), { ssr: false });
 
 export interface TvShowPlayerProps {
   tv: TvShowDetails;
@@ -285,12 +286,12 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
             </div>
           ) : (
             (seen || !PLAYER.ads) && (
-              <iframe
+              <AdShieldIframe
                 allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                 referrerPolicy="origin"
                 key={`${PLAYER.title}-${activePlaybackTime}`}
                 src={PLAYER.source}
+                title={props.seriesName}
                 className="z-10 h-full w-full border-0"
               />
             )
