@@ -101,21 +101,21 @@ export const SportsHub: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"trays" | "grid">("trays");
 
-  // 1. Fetch today's full matches schedule
+  // 1. Fetch full matches schedule (unified across all sports)
   const {
-    data: allTodayMatches,
-    isLoading: isTodayLoading,
-    refetch: refetchToday,
-    isFetching: isTodayFetching,
+    data: allMatches,
+    isLoading: isAllLoading,
+    refetch: refetchAll,
+    isFetching: isAllFetching,
   } = useQuery<SportsMatch[]>({
-    queryKey: ["sports-all-today"],
+    queryKey: ["sports-matches", "all"],
     queryFn: async () => {
-      const res = await fetch("/api/sports/matches?type=today");
+      const res = await fetch("/api/sports/matches?type=all");
       if (!res.ok) return [];
       return res.json();
     },
-    staleTime: 1000 * 60 * 2,
-    refetchInterval: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 3,
+    refetchInterval: 1000 * 60 * 3,
   });
 
   // 2. Fetch popular curated matches
@@ -131,20 +131,20 @@ export const SportsHub: React.FC = () => {
       if (!res.ok) return [];
       return res.json();
     },
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 3,
   });
 
-  const isLoading = isTodayLoading && isPopularLoading;
-  const isFetching = isTodayFetching || isPopularFetching;
+  const isLoading = isAllLoading && isPopularLoading;
+  const isFetching = isAllFetching || isPopularFetching;
 
   const handleRefresh = () => {
-    refetchToday();
+    refetchAll();
     refetchPopular();
   };
 
   // Combine and sort matches: Live now comes first, then by date
   const sortedMatches = useMemo(() => {
-    const list = [...(allTodayMatches || [])];
+    const list = [...(allMatches || [])];
     return list.sort((a, b) => {
       const aIsLive =
         a.category !== "upcoming" && new Date(a.date).getTime() < Date.now() + 1000 * 60 * 60 * 3;
@@ -154,7 +154,7 @@ export const SportsHub: React.FC = () => {
       if (!aIsLive && bIsLive) return 1;
       return a.date - b.date;
     });
-  }, [allTodayMatches]);
+  }, [allMatches]);
 
   // Featured Hero Matches: pick 5 diverse sport matches (like Bingr)
   const heroMatches = useMemo(() => {

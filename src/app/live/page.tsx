@@ -46,7 +46,7 @@ const CATEGORY_META: Record<string, { icon: string; label: string }> = {
 
 export default function LiveTvPage() {
   const [channelIdParam, setChannelIdParam] = useQueryState("channel", {
-    defaultValue: "bbc-news",
+    defaultValue: "sky-news-uk",
   });
 
   const [customChannels, setCustomChannels] = useState<Channel[]>([]);
