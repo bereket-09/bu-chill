@@ -8,6 +8,7 @@ import { AppProgressProvider as ProgressProvider } from "@bprogress/next";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { usePathname, useRouter } from "next/navigation";
 import useDiscoverFilters from "@/hooks/useDiscoverFilters";
+import AdShieldGlobalGuard from "@/components/providers/AdShieldGlobalGuard";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,6 +30,7 @@ export default function Providers({ children }: PropsWithChildren) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AdShieldGlobalGuard />
       <HeroUIProvider navigate={push}>
         <ToastProvider
           placement="top-right"
