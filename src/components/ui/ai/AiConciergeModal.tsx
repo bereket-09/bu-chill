@@ -53,7 +53,7 @@ export const AiConciergeModal: React.FC = () => {
       id: "welcome",
       role: "assistant",
       content:
-        "Hey there! 🍿 I'm your **B Chill AI Concierge**. Tell me what kind of vibe, mood, story, or genre you're looking for, and I'll tailor recommendations to your taste!",
+        "Hey there! 🍿 I'm your **Bu-Chill AI Concierge**. Tell me what kind of vibe, mood, story, or genre you're looking for, and I'll tailor recommendations to your taste!",
     },
   ]);
 
@@ -122,7 +122,7 @@ export const AiConciergeModal: React.FC = () => {
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: "Failed to connect to B Chill AI. Please check your internet connection.",
+          content: "Failed to connect to Bu-Chill AI. Please check your internet connection.",
         },
       ]);
     } finally {
@@ -145,8 +145,8 @@ export const AiConciergeModal: React.FC = () => {
           type="button"
           onClick={() => setIsOpen(true)}
           className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500/30 via-primary/40 to-purple-600/40 hover:from-amber-500/50 hover:via-primary/60 hover:to-purple-600/60 border border-white/20 text-white shadow-2xl backdrop-blur-xl transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer select-none"
-          title="B Chill AI Concierge"
-          aria-label="Open B Chill AI Concierge"
+          title="Bu-Chill AI Concierge"
+          aria-label="Open Bu-Chill AI Concierge"
         >
           <div className="relative flex items-center justify-center">
             <IoSparkles className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform duration-300 animate-pulse" />
@@ -171,7 +171,7 @@ export const AiConciergeModal: React.FC = () => {
                 <div className="flex flex-col">
                   <div className="flex items-center gap-2">
                     <span className="font-black text-base text-white tracking-wide">
-                      B Chill AI Concierge
+                      Bu-Chill AI Concierge
                     </span>
                     <span className="px-1.5 py-0.2 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       Smart
@@ -226,7 +226,7 @@ export const AiConciergeModal: React.FC = () => {
                     Members Exclusive Feature
                   </h3>
                   <p className="text-sm text-white/60 leading-relaxed">
-                    B Chill AI Concierge analyzes your personalized watch history and watchlist to discover movies and shows you'll love.
+                    Bu-Chill AI Concierge analyzes your personalized watch history and watchlist to discover movies and shows you'll love.
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-xs pt-2">
@@ -357,7 +357,7 @@ export const AiConciergeModal: React.FC = () => {
                   {isLoading && (
                     <div className="mr-auto flex items-center gap-2 p-3 rounded-2xl bg-[#181922] border border-white/10 text-white/60 text-xs">
                       <IoSparkles className="w-4 h-4 text-amber-400 animate-spin" />
-                      <span>B Chill AI is curating recommendations...</span>
+                      <span>Bu-Chill AI is curating recommendations...</span>
                     </div>
                   )}
 

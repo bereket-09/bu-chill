@@ -14,7 +14,7 @@ import {
 import { TbFolder, TbFolderFilled } from "react-icons/tb";
 
 export const siteConfig: SiteConfigType = {
-  name: "B Chill",
+  name: "Bu-Chill",
   description: "Your ultimate streaming hub for movies, TV shows, and 24/7 Live TV channels.",
   favicon: "/favicon.ico",
   navItems: [
@@ -134,7 +134,7 @@ export const siteConfig: SiteConfigType = {
     ],
   },
   socials: {
-    github: "https://github.com/wisnuwirayuda15/cinextma",
+    github: "https://github.com/bereket-09/bu-chill",
   },
 };
 
