@@ -75,12 +75,11 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join(", ");
 
-    // OpenAI compatible configuration
     const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
     const baseURL = process.env.AI_BASE_URL || "https://api.groq.com/openai/v1";
     const model =
       process.env.AI_MODEL ||
-      (process.env.GROQ_API_KEY ? "llama-3.3-70b-versatile" : "gpt-4o-mini");
+      (process.env.GROQ_API_KEY ? "qwen/qwen3.8-27b" : "gpt-4o-mini");
 
     const systemPrompt = `You are "Bu-Chill AI Concierge" 🍿, a knowledgeable, charismatic movie and TV series curator for the Bu-Chill streaming platform.
 Your job is to talk to the user about what they are in the mood for (vibe, genre, plot twist, emotion, pace, aesthetic) and recommend 2 to 4 exceptional titles that match their request.
