@@ -25,16 +25,18 @@ const LibraryPage: NextPage = async () => {
   const { user, error } = await getUser();
 
   return (
-    <Suspense>
-      {error || !user ? (
-        <UnauthorizedNotice
-          title="Sign in to access your library"
-          description="Create a free account to save your favorite movies and TV shows!"
-        />
-      ) : (
-        <LibraryList />
-      )}
-    </Suspense>
+    <div className="w-full min-h-screen px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-8">
+      <Suspense>
+        {error || !user ? (
+          <UnauthorizedNotice
+            title="Sign in to access your library"
+            description="Create a free account to save your favorite movies and TV shows!"
+          />
+        ) : (
+          <LibraryList />
+        )}
+      </Suspense>
+    </div>
   );
 };
 

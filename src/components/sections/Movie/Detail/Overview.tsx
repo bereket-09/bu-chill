@@ -9,19 +9,24 @@ import ShareButton from "@/components/ui/button/ShareButton";
 import { AppendToResponse } from "tmdb-ts/dist/types/options";
 import { useDocumentTitle } from "@mantine/hooks";
 import { siteConfig } from "@/config/site";
-import { FaCirclePlay } from "react-icons/fa6";
+import { useState } from "react";
+import { FaCirclePlay, FaServer } from "react-icons/fa6";
 import Genres from "@/components/ui/other/Genres";
 import SectionTitle from "@/components/ui/other/SectionTitle";
 import Trailer from "@/components/ui/overlay/Trailer";
 import { Calendar, Clock } from "@/utils/icons";
 import Link from "next/link";
 import { SavedMovieDetails } from "@/types/movie";
+import { getMoviePlayers } from "@/utils/players";
+import ServerSelectionModal from "@/components/ui/overlay/ServerSelectionModal";
 
 interface OverviewSectionProps {
   movie: AppendToResponse<MovieDetails, "videos"[], "movie">;
 }
 
 const OverviewSection: React.FC<OverviewSectionProps> = ({ movie }) => {
+  const [isServerModalOpen, setIsServerModalOpen] = useState(false);
+  const players = getMoviePlayers(movie.id);
   const releaseYear = new Date(movie.release_date).getFullYear();
   const posterImage = getImageUrl(movie.poster_path);
   const title = mutateMovieTitle(movie);
@@ -99,6 +104,15 @@ const OverviewSection: React.FC<OverviewSectionProps> = ({ movie }) => {
               >
                 Play Now
               </Button>
+              <Button
+                variant="flat"
+                color="default"
+                onPress={() => setIsServerModalOpen(true)}
+                startContent={<FaServer size={18} />}
+                className="border border-white/15 bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+              >
+                Select Server
+              </Button>
               <Trailer videos={movie.videos.results} />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -113,6 +127,14 @@ const OverviewSection: React.FC<OverviewSectionProps> = ({ movie }) => {
           </div>
         </div>
       </div>
+
+      <ServerSelectionModal
+        isOpen={isServerModalOpen}
+        onClose={() => setIsServerModalOpen(false)}
+        movieId={movie.id}
+        players={players}
+        title={`Stream ${title}`}
+      />
     </section>
   );
 };

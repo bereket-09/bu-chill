@@ -4,13 +4,22 @@ import { PropsWithChildren, Suspense } from "react";
 import { HeroUIProvider, ToastProvider } from "@heroui/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { AppProgressProvider as ProgressProvider } from "@bprogress/next";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { usePathname, useRouter } from "next/navigation";
 import useDiscoverFilters from "@/hooks/useDiscoverFilters";
 
-export const queryClient = new QueryClient();
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes cache
+      gcTime: 1000 * 60 * 30, // 30 minutes garbage collection
+      refetchOnWindowFocus: false, // Prevents querying Supabase/APIs on every tab switch
+      refetchOnReconnect: false,
+      retry: 1,
+    },
+  },
+});
 
 export default function Providers({ children }: PropsWithChildren) {
   const { push } = useRouter();
@@ -47,9 +56,6 @@ export default function Providers({ children }: PropsWithChildren) {
           </Suspense>
         </NextThemesProvider>
       </HeroUIProvider>
-      <div className="hidden md:block">
-        <ReactQueryDevtools initialIsOpen={false} />
-      </div>
     </QueryClientProvider>
   );
 }

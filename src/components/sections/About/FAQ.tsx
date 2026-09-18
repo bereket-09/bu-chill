@@ -5,9 +5,9 @@ import { Accordion, AccordionItem, Link } from "@heroui/react";
 
 const FAQS = [
   {
-    title: "🤔 What is Cinextma?",
+    title: "🍿 What is B Chill?",
     description:
-      "Just like every other website, Cinextma is also a streaming site that helps to easily access all the TV shows and movies we wanted, without spending hours searching for them.",
+      "Just like every other top streaming service, B Chill is a next-gen streaming platform that helps you easily access movies, TV shows, and 24/7 Live TV channels in one clean place.",
   },
   {
     title: "❓ So what do we actually do?",

@@ -18,6 +18,38 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveExtensions: [".mdx", ".tsx", ".ts", ".jsx", ".js", ".mjs", ".json"],
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "image.tmdb.org",
+      },
+      {
+        protocol: "http",
+        hostname: "image.tmdb.org",
+      },
+      {
+        protocol: "https",
+        hostname: "wallpapercave.com",
+      },
+      {
+        protocol: "https",
+        hostname: "dancyflix.com",
+      },
+      {
+        protocol: "https",
+        hostname: "static.ppvservices.st",
+      },
+      {
+        protocol: "https",
+        hostname: "api.bingr.one",
+      },
+      {
+        protocol: "https",
+        hostname: "raw.githubusercontent.com",
+      },
+    ],
+  },
   experimental: {
     optimizePackageImports: ["@heroui/react"],
     prefetchInlining: true,

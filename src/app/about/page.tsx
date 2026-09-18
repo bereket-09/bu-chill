@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 
 const AboutPage: NextPage = () => {
   return (
-    <div className="flex w-full justify-center">
-      <div className="flex w-full max-w-2xl flex-col gap-5">
+    <div className="flex w-full justify-center px-4 md:pl-24 lg:pl-28 md:pr-10 py-12 min-h-screen">
+      <div className="flex w-full max-w-3xl flex-col gap-8">
         <Suspense>
           <FAQ />
         </Suspense>

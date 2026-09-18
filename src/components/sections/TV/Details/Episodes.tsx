@@ -1,13 +1,13 @@
 import { tmdb } from "@/api/tmdb";
-import useBreakpoints from "@/hooks/useBreakpoints";
 import { cn, formatDate, isEmpty } from "@/utils/helpers";
 import { PlayOutline } from "@/utils/icons";
 import { getImageUrl, getLoadingLabel, movieDurationString } from "@/utils/movies";
-import { Card, CardBody, CardFooter, Chip, Image, Spinner } from "@heroui/react";
+import { Card, Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { memo } from "react";
 import { Episode } from "tmdb-ts/dist/types/tv-episode";
+import SafeImage from "@/components/ui/other/SafeImage";
 
 interface TvShowEpisodesSelectionProps {
   id: number;
@@ -38,7 +38,7 @@ const TvShowEpisodesSelection: React.FC<TvShowEpisodesSelectionProps> = ({
 
   if (isPending) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-64 items-center justify-center">
         <Spinner variant="wave" size="lg" label={getLoadingLabel()} color="warning" />
       </div>
     );
@@ -54,15 +54,15 @@ const TvShowEpisodesSelection: React.FC<TvShowEpisodesSelectionProps> = ({
 
   if (isEmpty(EPISODES)) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-center">No episodes found.</p>
+      <div className="flex h-48 items-center justify-center">
+        <p className="text-center text-sm text-white/50">No episodes found matching your search.</p>
       </div>
     );
   }
 
   if (layout === "grid") {
     return (
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
         {EPISODES.map((episode) => (
           <EpisodeGridCard key={episode.id} episode={episode} id={id} />
         ))}
@@ -71,7 +71,7 @@ const TvShowEpisodesSelection: React.FC<TvShowEpisodesSelectionProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:gap-4">
+    <div className="grid grid-cols-1 gap-3">
       {EPISODES.map((episode, index) => (
         <EpisodeListCard key={episode.id} episode={episode} order={index + 1} id={id} />
       ))}
@@ -81,14 +81,10 @@ const TvShowEpisodesSelection: React.FC<TvShowEpisodesSelectionProps> = ({
 
 export const EpisodeListCard: React.FC<EpisodeCardProps> = ({
   episode,
-  order = 1,
   id,
-  withAnimation = true,
 }) => {
   const imageUrl = getImageUrl(episode.still_path);
-  const { mobile } = useBreakpoints();
   const isNotReleased = !episode.air_date || new Date(episode.air_date) > new Date();
-  const isOdd = order % 2 !== 0;
   const href = !isNotReleased
     ? `/tv/${id}/${episode.season_number}/${episode.episode_number}/player`
     : undefined;
@@ -100,66 +96,58 @@ export const EpisodeListCard: React.FC<EpisodeCardProps> = ({
       href={href}
       shadow="none"
       className={cn(
-        "group motion-preset-blur-right border-foreground-200 bg-foreground-100 motion-duration-300 grid grid-cols-[auto_1fr] gap-3 border-2 transition-colors",
+        "group border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/25 transition-all duration-200 grid grid-cols-[auto_1fr] gap-4 rounded-xl overflow-hidden p-2.5 sm:p-3",
         {
-          "hover:border-warning hover:bg-foreground-200": !isNotReleased,
           "cursor-not-allowed opacity-50": isNotReleased,
-          "motion-preset-slide-left": isOdd && withAnimation,
-          "motion-preset-slide-right": !isOdd && withAnimation,
         },
       )}
     >
-      <div className="relative">
-        <Image
+      <div className="relative w-36 sm:w-48 aspect-video rounded-lg overflow-hidden bg-black/40 shrink-0 border border-white/5">
+        <SafeImage
           alt={episode.name}
           src={imageUrl}
-          height={120}
-          width={mobile ? 180 : 220}
-          className="rounded-r-none object-cover"
+          fallbackTitle={episode.name}
+          fill
+          sizes="(max-width: 640px) 150px, 200px"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          unoptimized
         />
         {!isNotReleased && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/35 opacity-0 backdrop-blur-xs transition-opacity group-hover:opacity-100">
-              <PlayOutline className="h-6 w-6 text-white" />
+            <div className="z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 opacity-0 backdrop-blur-md border border-white/20 transition-opacity group-hover:opacity-100 text-white shadow-lg">
+              <PlayOutline className="h-4 w-4 ml-0.5" />
             </div>
           </div>
         )}
-        {/* {isNotReleased && (
-        )} */}
-        <Chip
-          size="sm"
-          color={isNotReleased ? "warning" : undefined}
-          variant={isNotReleased ? "shadow" : undefined}
-          className={cn("absolute top-2 right-2 z-20", {
-            "bg-black/35 backdrop-blur-xs": !isNotReleased,
-          })}
-        >
+        <div className="absolute top-2 right-2 z-20 px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white/90 backdrop-blur-md border border-white/10">
           {isNotReleased ? "Coming Soon" : movieDurationString(episode.runtime)}
-        </Chip>
-        <Chip
-          size="sm"
-          className="absolute bottom-2 left-2 z-20 min-w-9 bg-black/35 text-center text-white backdrop-blur-xs"
-        >
-          {episode.episode_number}
-        </Chip>
+        </div>
+        <div className="absolute bottom-2 left-2 z-20 min-w-6 px-1.5 py-0.5 rounded text-[10px] font-black bg-black/80 text-white text-center backdrop-blur-md border border-white/10">
+          E{episode.episode_number}
+        </div>
       </div>
-      <CardBody className="flex space-y-1">
+      <div className="flex flex-col justify-center min-w-0 pr-2">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs font-bold text-primary">Episode {episode.episode_number}</span>
+          {episode.air_date && (
+            <>
+              <span className="text-white/20 text-xs">•</span>
+              <span className="text-xs text-white/40">{formatDate(episode.air_date, "en-US")}</span>
+            </>
+          )}
+        </div>
         <p
           title={episode.name}
-          className={cn(
-            "line-clamp-1 text-xl font-semibold transition-colors",
-            !isNotReleased && "group-hover:text-warning",
-          )}
+          className="line-clamp-1 text-sm sm:text-base font-bold text-white transition-colors group-hover:text-primary"
         >
           {episode.name}
         </p>
-        <p className="text-content4-foreground line-clamp-1 text-xs">
-          {formatDate(episode.air_date, "en-US")}
-        </p>
-        <p className="text-foreground-500 line-clamp-2 text-sm" title={episode.overview}>
-          {episode.overview}
-        </p>
-      </CardBody>
+        {episode.overview && (
+          <p className="mt-1 line-clamp-2 text-xs sm:text-sm text-white/50 leading-relaxed" title={episode.overview}>
+            {episode.overview}
+          </p>
+        )}
+      </div>
     </Card>
   );
 };
@@ -178,64 +166,58 @@ const EpisodeGridCard: React.FC<EpisodeCardProps> = ({ episode, id }) => {
       href={href}
       shadow="none"
       className={cn(
-        "group motion-preset-focus border-foreground-200 bg-foreground-100 border-2 transition-colors",
+        "group border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] hover:border-white/25 transition-all duration-200 rounded-xl overflow-hidden p-2.5 flex flex-col",
         {
-          "hover:border-warning hover:bg-foreground-200": !isNotReleased,
           "cursor-not-allowed opacity-50": isNotReleased,
         },
       )}
     >
-      <CardBody className="overflow-visible p-0">
-        <div className="relative">
-          <Image
-            alt={episode.name}
-            src={imageUrl}
-            className="aspect-video w-full rounded-b-none object-cover"
-          />
-          {!isNotReleased && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="z-10 flex h-12 w-12 items-center justify-center rounded-full bg-black/35 opacity-0 backdrop-blur-xs transition-opacity group-hover:opacity-100">
-                <PlayOutline className="h-6 w-6 text-white" />
-              </div>
+      <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black/40 shrink-0 border border-white/5 mb-3">
+        <SafeImage
+          alt={episode.name}
+          src={imageUrl}
+          fallbackTitle={episode.name}
+          fill
+          sizes="(max-width: 640px) 100vw, 33vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          unoptimized
+        />
+        {!isNotReleased && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/60 opacity-0 backdrop-blur-md border border-white/20 transition-opacity group-hover:opacity-100 text-white shadow-lg">
+              <PlayOutline className="h-5 w-5 ml-0.5" />
             </div>
-          )}
-          <Chip
-            size="sm"
-            color={isNotReleased ? "warning" : undefined}
-            variant={isNotReleased ? "shadow" : undefined}
-            className={cn("absolute top-2 right-2 z-20", {
-              "bg-black/35 backdrop-blur-xs": !isNotReleased,
-            })}
-          >
-            {isNotReleased ? "Coming Soon" : movieDurationString(episode.runtime)}
-          </Chip>
-          <Chip
-            size="sm"
-            className="absolute bottom-2 left-2 z-20 min-w-9 bg-black/35 text-center text-white backdrop-blur-xs"
-          >
-            {episode.episode_number}
-          </Chip>
+          </div>
+        )}
+        <div className="absolute top-2 right-2 z-20 px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/70 text-white/90 backdrop-blur-md border border-white/10">
+          {isNotReleased ? "Coming Soon" : movieDurationString(episode.runtime)}
         </div>
-      </CardBody>
-      <CardFooter className="h-full">
-        <div className="flex h-full flex-col gap-2">
-          <p
-            title={episode.name}
-            className={cn(
-              "text-lg font-semibold transition-colors",
-              !isNotReleased && "group-hover:text-warning",
-            )}
-          >
-            {episode.name}
-          </p>
-          <p className="text-content4-foreground line-clamp-1 text-xs">
-            {formatDate(episode.air_date, "en-US")}
-          </p>
-          <p className="text-foreground-500 text-sm" title={episode.overview}>
+        <div className="absolute bottom-2 left-2 z-20 min-w-6 px-1.5 py-0.5 rounded text-[10px] font-black bg-black/80 text-white text-center backdrop-blur-md border border-white/10">
+          E{episode.episode_number}
+        </div>
+      </div>
+      <div className="flex flex-col flex-1 px-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-xs font-bold text-primary">Episode {episode.episode_number}</span>
+          {episode.air_date && (
+            <>
+              <span className="text-white/20 text-xs">•</span>
+              <span className="text-xs text-white/40">{formatDate(episode.air_date, "en-US")}</span>
+            </>
+          )}
+        </div>
+        <p
+          title={episode.name}
+          className="line-clamp-1 text-sm font-bold text-white transition-colors group-hover:text-primary mb-1"
+        >
+          {episode.name}
+        </p>
+        {episode.overview && (
+          <p className="line-clamp-2 text-xs text-white/50 leading-relaxed" title={episode.overview}>
             {episode.overview}
           </p>
-        </div>
-      </CardFooter>
+        )}
+      </div>
     </Card>
   );
 };

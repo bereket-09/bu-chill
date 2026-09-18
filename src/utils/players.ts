@@ -1,226 +1,263 @@
 import { PlayersProps } from "@/types";
 
 /**
+ * Helper to ensure embed URLs default to English audio and subtitles
+ */
+const withEnglishDefaults = (url: string, startAt?: number): string => {
+  const separator = url.includes("?") ? "&" : "?";
+  let fullUrl = `${url}${separator}sub=en&lang=en&audio=en&ds_lang=en&default_lang=en&subtitle=en&default_audio=en`;
+  if (startAt && startAt > 0) {
+    const s = Math.floor(startAt);
+    fullUrl += `&startAt=${s}&time=${s}&t=${s}&start=${s}`;
+  }
+  return fullUrl;
+};
+
+/**
  * Generates a list of movie players with their respective titles and source URLs.
- * Each player is constructed using the provided movie ID.
+ * Prepend any native/direct ad-free sources if provided.
  *
  * @param {string | number} id - The ID of the movie to be embedded in the player URLs.
  * @param {number} [startAt] - The start position in seconds to be embedded in the player URLs. Optional.
- * @returns {PlayersProps[]} - An array of objects, each containing
- * the title of the player and the corresponding source URL.
+ * @param {PlayersProps[]} [customSources] - Additional or direct stream sources (e.g. OMSS / CinePro).
+ * @returns {PlayersProps[]} - An array of objects, each containing player config.
  */
-export const getMoviePlayers = (id: string | number, startAt?: number): PlayersProps[] => {
-  return [
+export const getMoviePlayers = (
+  id: string | number,
+  startAt?: number,
+  customSources?: PlayersProps[]
+): PlayersProps[] => {
+  const fallbackEmbeds: PlayersProps[] = [
     {
-      title: "VidLink",
-      source: `https://vidlink.pro/movie/${id}?player=jw&primaryColor=006fee&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false&startAt=${startAt || ""}`,
+      title: "Filmu (Bingr Default)",
+      source: withEnglishDefaults(`https://embed.filmu.in/movie/${id}`, startAt),
+      type: "embed",
+      recommended: true,
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Vidy (Bingr Fast)",
+      source: withEnglishDefaults(`https://www.vidy.st/movie/${id}`, startAt),
+      type: "embed",
+      recommended: true,
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Cinezo (Bingr HD)",
+      source: withEnglishDefaults(`https://player.cinezo.live/embed/movie/${id}`, startAt),
+      type: "embed",
+      recommended: true,
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Vidbolt (Bingr)",
+      source: withEnglishDefaults(`https://vidbolt.xyz/movie/${id}`, startAt),
+      type: "embed",
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Vidrift (Bingr)",
+      source: withEnglishDefaults(`https://embed.vidrift.in/embed/movie/${id}`, startAt),
+      type: "embed",
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Videasy (Fast, English)",
+      source: withEnglishDefaults(`https://player.videasy.to/movie/${id}?color=006fee`, startAt),
+      type: "embed",
       recommended: true,
       fast: true,
       ads: true,
       resumable: true,
     },
     {
-      title: "VidLink 2",
-      source: `https://vidlink.pro/movie/${id}?primaryColor=006fee&autoplay=false&startAt=${startAt}`,
+      title: "VidLink (English Audio)",
+      source: withEnglishDefaults(
+        `https://vidlink.pro/movie/${id}?player=jw&primaryColor=006fee&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
+        startAt
+      ),
+      type: "embed",
       recommended: true,
       fast: true,
       ads: true,
       resumable: true,
     },
     {
-      title: "VidKing",
-      // NOTE: VidKing has a known issue with the `progress` query parameter where it stuck at that timestamp.
-      // Currently, this player can save playback progress but cannot resume from a specific timestamp.
-      // The `progress` parameter is commented out in the source URL until this is resolved.
-      source: `https://www.vidking.net/embed/movie/${id}?color=006fee&autoplay=false`, //&progress=${startAt || ""}`,
-      recommended: true,
+      title: "CineSrc (English)",
+      source: withEnglishDefaults(`https://cinesrc.st/embed/movie/${id}`, startAt),
+      type: "embed",
       fast: true,
+      ads: true,
       resumable: true,
     },
     {
-      title: "<Embed>",
-      source: `https://embed.su/embed/movie/${id}`,
-      ads: true,
-    },
-    {
-      title: "SuperEmbed",
-      source: `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1`,
+      title: "VidSrc SBS (Multi-Server)",
+      source: withEnglishDefaults(`https://vidsrc.sbs/embed/movie/${id}/`, startAt),
+      type: "embed",
       fast: true,
       ads: true,
+      resumable: true,
     },
     {
-      title: "FilmKu",
-      source: `https://filmku.stream/embed/${id}`,
+      title: "AutoEmbed (English)",
+      source: withEnglishDefaults(`https://autoembed.co/movie/tmdb/${id}`, startAt),
+      type: "embed",
       ads: true,
+      resumable: true,
     },
     {
-      title: "NontonGo",
-      source: `https://www.nontongo.win/embed/movie/${id}`,
+      title: "AnyEmbed (English)",
+      source: withEnglishDefaults(`https://anyembed.xyz/embed/tmdb-movie-${id}`, startAt),
+      type: "embed",
       ads: true,
-    },
-    {
-      title: "AutoEmbed 1",
-      source: `https://autoembed.co/movie/tmdb/${id}`,
-      fast: true,
-      ads: true,
-    },
-    {
-      title: "AutoEmbed 2",
-      source: `https://player.autoembed.cc/embed/movie/${id}`,
-      ads: true,
-    },
-    {
-      title: "2Embed",
-      source: `https://www.2embed.cc/embed/${id}`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 1",
-      source: `https://vidsrc.xyz/embed/movie/${id}`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 2",
-      source: `https://vidsrc.to/embed/movie/${id}`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 3",
-      source: `https://vidsrc.icu/embed/movie/${id}`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 4",
-      source: `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=false`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 5",
-      source: `https://vidsrc.cc/v3/embed/movie/${id}?autoPlay=false`,
-      recommended: true,
-      fast: true,
-      ads: true,
-    },
-    {
-      title: "MoviesAPI",
-      source: `https://moviesapi.club/movie/${id}`,
-      ads: true,
+      resumable: true,
     },
   ];
+
+  if (customSources && customSources.length > 0) {
+    return [...customSources, ...fallbackEmbeds];
+  }
+
+  return fallbackEmbeds;
 };
 
 /**
  * Generates a list of TV show players with their respective titles and source URLs.
- * Each player is constructed using the provided TV show ID, season, and episode.
  *
  * @param {string | number} id - The ID of the TV show to be embedded in the player URLs.
- * @param {string | number} [season] - The season number of the TV show episode to be embedded.
- * @param {string | number} [episode] - The episode number of the TV show episode to be embedded.
- * @param {number} [startAt] - The start position in seconds to be embedded in the player URLs. Optional.
- * @returns {PlayersProps[]} - An array of objects, each containing
- * the title of the player and the corresponding source URL.
+ * @param {number} season - The season number.
+ * @param {number} episode - The episode number.
+ * @param {number} [startAt] - The start position in seconds. Optional.
+ * @param {PlayersProps[]} [customSources] - Additional or direct stream sources (e.g. OMSS / CinePro).
+ * @returns {PlayersProps[]} - An array of objects, each containing player config.
  */
 export const getTvShowPlayers = (
   id: string | number,
   season: number,
   episode: number,
   startAt?: number,
+  customSources?: PlayersProps[]
 ): PlayersProps[] => {
-  return [
+  const fallbackEmbeds: PlayersProps[] = [
     {
-      title: "VidLink",
-      source: `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false&startAt=${startAt || ""}`,
+      title: "Filmu (Bingr Default)",
+      source: withEnglishDefaults(`https://embed.filmu.in/tv/${id}/${season}/${episode}`, startAt),
+      type: "embed",
+      recommended: true,
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Vidy (Bingr Fast)",
+      source: withEnglishDefaults(`https://www.vidy.st/tv/${id}/${season}/${episode}`, startAt),
+      type: "embed",
+      recommended: true,
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Cinezo (Bingr HD)",
+      source: withEnglishDefaults(`https://player.cinezo.live/embed/tv/${id}/${season}/${episode}`, startAt),
+      type: "embed",
+      recommended: true,
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Vidbolt (Bingr)",
+      source: withEnglishDefaults(`https://vidbolt.xyz/tv/${id}/${season}/${episode}`, startAt),
+      type: "embed",
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Vidrift (Bingr)",
+      source: withEnglishDefaults(`https://embed.vidrift.in/embed/tv/${id}/${season}/${episode}`, startAt),
+      type: "embed",
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Videasy (Fast, English)",
+      source: withEnglishDefaults(
+        `https://player.videasy.to/tv/${id}/${season}/${episode}?color=f5a524`,
+        startAt
+      ),
+      type: "embed",
       recommended: true,
       fast: true,
       ads: true,
       resumable: true,
     },
     {
-      title: "VidLink 2",
-      source: `https://vidlink.pro/tv/${id}/${season}/${episode}?primaryColor=f5a524&autoplay=false&startAt=${startAt}`,
+      title: "VidLink (English Audio)",
+      source: withEnglishDefaults(
+        `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
+        startAt
+      ),
+      type: "embed",
       recommended: true,
       fast: true,
       ads: true,
       resumable: true,
     },
     {
-      title: "VidKing",
-      // NOTE: VidKing has a known issue with the `progress` query parameter where it stuck at that timestamp.
-      // Currently, this player can save playback progress but cannot resume from a specific timestamp.
-      // The `progress` parameter is commented out in the source URL until this is resolved.
-      source: `https://www.vidking.net/embed/tv/${id}/${season}/${episode}?color=f5a524&autoplay=false`, //&progress=${startAt || ""}`,
-      recommended: true,
+      title: "CineSrc (English)",
+      source: withEnglishDefaults(
+        `https://cinesrc.st/embed/tv/${id}?s=${season}&e=${episode}&color=f5a524&autoplay=true&autonext=true`,
+        startAt
+      ),
+      type: "embed",
       fast: true,
+      ads: true,
       resumable: true,
     },
     {
-      title: "<Embed>",
-      source: `https://embed.su/embed/tv/${id}/${season}/${episode}`,
-      ads: true,
-    },
-    {
-      title: "SuperEmbed",
-      source: `https://multiembed.mov/directstream.php?video_id=${id}&tmdb=1&s=${season}&e=${episode}`,
+      title: "VidSrc SBS (Multi-Server)",
+      source: withEnglishDefaults(`https://vidsrc.sbs/embed/tv/${id}/${season}/${episode}`, startAt),
+      type: "embed",
       fast: true,
       ads: true,
+      resumable: true,
     },
     {
-      title: "FilmKu",
-      source: `https://filmku.stream/embed/series?tmdb=${id}&sea=${season}&epi=${episode}`,
+      title: "AutoEmbed (English)",
+      source: withEnglishDefaults(`https://autoembed.co/tv/tmdb/${id}-${season}-${episode}`, startAt),
+      type: "embed",
       ads: true,
+      resumable: true,
     },
     {
-      title: "NontonGo",
-      source: `https://www.NontonGo.win/embed/tv/${id}/${season}/${episode}`,
+      title: "AnyEmbed (English)",
+      source: withEnglishDefaults(
+        `https://anyembed.xyz/embed/tmdb-tv-${id}/${season}/${episode}`,
+        startAt
+      ),
+      type: "embed",
       ads: true,
-    },
-    {
-      title: "AutoEmbed 1",
-      source: `https://autoembed.co/tv/tmdb/${id}-${season}-${episode}`,
-      fast: true,
-      ads: true,
-    },
-    {
-      title: "AutoEmbed 2",
-      source: `https://player.autoembed.cc/embed/tv/${id}/${season}/${episode}`,
-      ads: true,
-    },
-    {
-      title: "2Embed",
-      source: `https://www.2embed.cc/embedtv/${id}&s=${season}&e=${episode}`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 1",
-      source: `https://vidsrc.xyz/embed/tv/${id}/${season}/${episode}`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 2",
-      source: `https://vidsrc.to/embed/tv/${id}/${season}/${episode}`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 3",
-      source: `https://vidsrc.icu/embed/tv/${id}/${season}/${episode}`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 4",
-      source: `https://vidsrc.cc/v2/embed/tv/${id}/${season}/${episode}?autoPlay=false`,
-      ads: true,
-    },
-    {
-      title: "VidSrc 5",
-      source: `https://vidsrc.cc/v3/embed/tv/${id}/${season}/${episode}?autoPlay=false`,
-      recommended: true,
-      fast: true,
-      ads: true,
-    },
-    {
-      title: "MoviesAPI",
-      source: `https://moviesapi.club/tv/${id}-${season}-${episode}`,
-      ads: true,
+      resumable: true,
     },
   ];
+
+  if (customSources && customSources.length > 0) {
+    return [...customSources, ...fallbackEmbeds];
+  }
+
+  return fallbackEmbeds;
 };
+

@@ -1,14 +1,29 @@
 import { PlayersProps } from "@/types";
 import VaulDrawer from "@/components/ui/overlay/VaulDrawer";
 import { HandlerType } from "@/types/component";
-import SelectButton from "@/components/ui/input/SelectButton";
-import { Ads, Clock, Rocket, Star } from "@/utils/icons";
+import { cn } from "@/utils/helpers";
+import { FaPlay } from "react-icons/fa6";
+import { MdCastConnected } from "react-icons/md";
+import { Chip } from "@heroui/react";
 
 interface TvShowPlayerSourceSelectionProps extends HandlerType {
   players: PlayersProps[];
   selectedSource: number;
   setSelectedSource: (source: number) => void;
 }
+
+const getServerSubtitle = (player: PlayersProps, index: number) => {
+  if (player.type === "native") return "Premium Ad-Free HD Stream";
+  const subtitles = [
+    "Direct-play HD stream",
+    "Multi-language HD stream",
+    "Ultra HD fast CDN",
+    "Direct embed stream",
+    "Adaptive multi-bitrate",
+    "High-speed backup stream",
+  ];
+  return subtitles[index % subtitles.length];
+};
 
 const TvShowPlayerSourceSelection: React.FC<TvShowPlayerSourceSelectionProps> = ({
   opened,
@@ -22,53 +37,84 @@ const TvShowPlayerSourceSelection: React.FC<TvShowPlayerSourceSelectionProps> = 
       open={opened}
       onClose={onClose}
       backdrop="blur"
-      title="Select Source"
+      title="Select Stream Server"
       direction="right"
       hiddenHandler
       withCloseButton
+      classNames={{ content: "space-y-0 max-w-md w-full bg-neutral-950/95 border-l border-white/10 text-white" }}
     >
-      <div className="flex flex-col gap-4 p-5">
-        <div className="space-y-2 px-1 py-2">
-          <div className="flex items-center gap-2">
-            <Star className="text-warning-500" />
-            <span>Recommended</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Rocket className="text-danger-500" />
-            <span>Fast hosting</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock className="text-success-500" />
-            <span>Watch Progress Support</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Ads className="text-primary-500" />
-            <span>May contain popup ads</span>
-          </div>
-        </div>
-        <SelectButton
-          color="warning"
-          groupType="list"
-          value={selectedSource.toString()}
-          onChange={(value) => {
-            setSelectedSource(Number(value || 0));
-            onClose();
-          }}
-          data={players.map(({ title, recommended, fast, ads, resumable }, index) => {
-            return {
-              label: title,
-              value: index.toString(),
-              endContent: (
-                <div key={`info-${title}`} className="flex flex-wrap items-center gap-2">
-                  {recommended && <Star className="text-warning" />}
-                  {fast && <Rocket className="text-danger" />}
-                  {resumable && <Clock className="text-success" />}
-                  {ads && <Ads className="text-primary" />}
+      <div className="flex flex-col gap-3 p-5 overflow-y-auto">
+        <p className="text-xs text-neutral-400 mb-2 font-normal">
+          Switch between active streaming servers. Active servers deliver instant direct playback.
+        </p>
+
+        <div className="flex flex-col gap-2">
+          {players.map((player, index) => {
+            const isSelected = selectedSource === index;
+            const subtitle = getServerSubtitle(player, index);
+
+            return (
+              <div
+                key={index}
+                onClick={() => {
+                  setSelectedSource(index);
+                  onClose();
+                }}
+                className={cn(
+                  "group relative flex items-center justify-between rounded-xl px-4 py-3.5 transition-all duration-200 cursor-pointer",
+                  isSelected
+                    ? "bg-white/10 border border-warning/50 shadow-md shadow-warning/10"
+                    : "hover:bg-white/5 border border-white/5"
+                )}
+              >
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "text-base md:text-lg font-black tracking-tight transition-colors",
+                        isSelected ? "text-white" : "text-neutral-300 group-hover:text-white"
+                      )}
+                    >
+                      {player.title}
+                    </span>
+                    {player.type === "native" && (
+                      <Chip size="sm" color="success" variant="flat" className="text-[10px] h-5">
+                        Ad-Free
+                      </Chip>
+                    )}
+                  </div>
+                  <span className="text-xs text-neutral-400 font-medium">
+                    {subtitle}
+                  </span>
                 </div>
-              ),
-            };
+
+                <div className="flex items-center gap-3">
+                  {isSelected ? (
+                    <div className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/30">
+                      <MdCastConnected className="text-xs animate-pulse" />
+                      <span>Connected</span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-neutral-500 font-mono">
+                      Queue —
+                    </span>
+                  )}
+
+                  <div
+                    className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-full transition-all",
+                      isSelected
+                        ? "bg-warning text-white"
+                        : "bg-white/10 text-neutral-400 group-hover:bg-warning group-hover:text-white"
+                    )}
+                  >
+                    <FaPlay className="text-[10px] ml-0.5" />
+                  </div>
+                </div>
+              </div>
+            );
           })}
-        />
+        </div>
       </div>
     </VaulDrawer>
   );

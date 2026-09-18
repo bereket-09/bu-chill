@@ -79,8 +79,7 @@ export const syncHistory = async (
         {
           onConflict: "user_id,media_id,type,season,episode",
         },
-      )
-      .select();
+      );
 
     if (error) {
       console.info("History save error:", error);
@@ -169,14 +168,16 @@ export const getMovieLastPosition = async (id: number): Promise<number> => {
       .select("last_position")
       .eq("user_id", user.id)
       .eq("media_id", id)
-      .eq("type", "movie");
+      .eq("type", "movie")
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       console.info("History fetch error:", error);
       return 0;
     }
 
-    return data?.[0]?.last_position || 0;
+    return data?.last_position || 0;
   } catch (error) {
     console.info("Unexpected error:", error);
     return 0;
@@ -208,14 +209,16 @@ export const getTvShowLastPosition = async (
       .eq("media_id", id)
       .eq("type", "tv")
       .eq("season", season)
-      .eq("episode", episode);
+      .eq("episode", episode)
+      .limit(1)
+      .maybeSingle();
 
     if (error) {
       console.info("History fetch error:", error);
       return 0;
     }
 
-    return data?.[0]?.last_position || 0;
+    return data?.last_position || 0;
   } catch (error) {
     console.info("Unexpected error:", error);
     return 0;

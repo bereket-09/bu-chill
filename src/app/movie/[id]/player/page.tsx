@@ -4,6 +4,7 @@ import { tmdb } from "@/api/tmdb";
 import { getMovieLastPosition } from "@/actions/histories";
 import MoviePlayer from "@/components/sections/Movie/Player/Player";
 import { Params } from "@/types";
+import { siteConfig } from "@/config/site";
 import { isEmpty } from "@/utils/helpers";
 import { Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
@@ -33,6 +34,10 @@ const MoviePlayerPage: NextPage<Params<{ id: number }>> = ({ params }) => {
   }
 
   if (error || isEmpty(movie)) return notFound();
+
+  if (typeof document !== "undefined" && movie?.title) {
+    document.title = `Watching: ${movie.title} · ${siteConfig.name}`;
+  }
 
   return <MoviePlayer movie={movie} startAt={startAt} />;
 };

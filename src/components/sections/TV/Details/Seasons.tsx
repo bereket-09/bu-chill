@@ -38,15 +38,24 @@ const TvShowsSeasonsSelection = forwardRef<HTMLElement, Props>(({ id, seasons },
   );
 
   return (
-    <section ref={ref} id="seasons-episodes" className="z-3 flex flex-col gap-2">
-      <SectionTitle color="warning">Season & Episode</SectionTitle>
-      <Card className="sm:p-3">
+    <section ref={ref} id="seasons-episodes" className="my-8 w-full scroll-mt-24">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+            Episodes
+          </h2>
+          <p className="text-xs sm:text-sm text-white/50 mt-1">
+            Browse and stream all available seasons and episodes
+          </p>
+        </div>
+      </div>
+      <Card className="bg-[#121318]/90 border border-white/10 rounded-2xl p-2 sm:p-4 shadow-xl backdrop-blur-md">
         <CardHeader className="grid grid-cols-1 grid-rows-[1fr_auto] gap-3 md:grid-cols-[1fr_1fr_auto_auto]">
           <Select
             aria-label="Seasons"
             selectedKeys={[seasonNumber]}
             disallowEmptySelection={true}
-            classNames={{ trigger: "border-2 border-foreground-200" }}
+            classNames={{ trigger: "border border-white/15 bg-white/5" }}
             onChange={(e) => {
               close();
               setSearch("");
@@ -64,14 +73,14 @@ const TvShowsSeasonsSelection = forwardRef<HTMLElement, Props>(({ id, seasons },
             value={search}
             onValueChange={setSearch}
             startContent={<Search />}
-            classNames={{ inputWrapper: "border-2 border-foreground-200" }}
+            classNames={{ inputWrapper: "border border-white/15 bg-white/5" }}
           />
           <Tooltip content={titleCase(layout)}>
             <Tabs
               color="warning"
               aria-label="Layout Select"
               size="sm"
-              classNames={{ tabList: "border-2 border-foreground-200" }}
+              classNames={{ tabList: "border border-white/15 bg-white/5" }}
               onSelectionChange={(value) => setLayout(value as typeof layout)}
               selectedKey={layout}
             >

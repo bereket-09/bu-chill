@@ -61,9 +61,25 @@ export type SiteConfigType = {
   };
 };
 
+export type SubtitleTrack = {
+  label: string;
+  language: string;
+  src: string;
+  default?: boolean;
+};
+
+export type StreamSource = {
+  quality?: string;
+  url: string;
+  type?: "hls" | "mp4";
+};
+
 export type PlayersProps = {
   title: string;
-  source: `https://${string}`;
+  source: string;
+  type?: "native" | "embed";
+  streamUrl?: string;
+  subtitles?: SubtitleTrack[];
   recommended?: boolean;
   fast?: boolean;
   ads?: boolean;

@@ -108,13 +108,9 @@ export const getImageUrl = (
   fullSize?: boolean,
 ): string => {
   const size = fullSize ? "original" : "w500";
-  const fallback =
-    type === "poster"
-      ? "https://dancyflix.com/placeholder.png"
-      : type === "backdrop"
-        ? "https://wallpapercave.com/wp/wp1945939.jpg"
-        : "";
-  return path ? `http://image.tmdb.org/t/p/${size}/${path}` : fallback;
+  if (!path) return "";
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `https://image.tmdb.org/t/p/${size}${cleanPath}`;
 };
 
 /**

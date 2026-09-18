@@ -81,13 +81,13 @@ enabled = true
 # Port to use for Supabase Studio.
 port = 54323
 # External URL of the API server that frontend connects to.
-api_url = "http://localhost"
+api_url = "http://127.0.0.1"
 # OpenAI API Key to use for Supabase AI in the Supabase Studio.
-openai_api_key = "env(OPENAI_API_KEY)"
+# openai_api_key = "env(OPENAI_API_KEY)"
 
 # Email testing server. Emails sent with the local dev setup are not actually sent - rather, they
 # are monitored, and you can view the emails that would have been sent from the web interface.
-[inbucket]
+[local_smtp]
 enabled = true
 # Port to use for the email testing server web interface.
 port = 54324
@@ -182,13 +182,13 @@ otp_expiry = 3600
 
 # Use a production-ready SMTP server
 [auth.email.smtp]
-enabled = true
-host = "env(SUPABASE_AUTH_SMTP_HOST)"
-port = "env(SUPABASE_AUTH_SMTP_PORT)"
-user = "env(SUPABASE_AUTH_SMTP_EMAIL)"
-pass = "env(SUPABASE_AUTH_SMTP_PASSWORD)"
-admin_email = "env(SUPABASE_AUTH_SMTP_EMAIL)"
-sender_name = "Cinextma"
+enabled = false
+# host = "env(SUPABASE_AUTH_SMTP_HOST)"
+# port = "env(SUPABASE_AUTH_SMTP_PORT)"
+# user = "env(SUPABASE_AUTH_SMTP_EMAIL)"
+# pass = "env(SUPABASE_AUTH_SMTP_PASSWORD)"
+# admin_email = "env(SUPABASE_AUTH_SMTP_EMAIL)"
+# sender_name = "Cinextma"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
@@ -282,12 +282,12 @@ url = ""
 skip_nonce_check = false
 
 [auth.external.google]
-enabled = true
-client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
-secret = "env(SUPABASE_AUTH_GOOGLE_SECRET_KEY)"
-redirect_uri = "http://localhost:54321/auth/v1/callback"
-url = ""
-skip_nonce_check = true
+enabled = false
+# client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+# secret = "env(SUPABASE_AUTH_GOOGLE_SECRET_KEY)"
+# redirect_uri = "http://localhost:54321/auth/v1/callback"
+# url = ""
+# skip_nonce_check = true
 
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
@@ -338,14 +338,9 @@ port = 54327
 backend = "postgres"
 
 # Experimental features may be deprecated any time
-[experimental]
-# Configures Postgres storage engine to use OrioleDB (S3)
-orioledb_version = ""
-# Configures S3 bucket URL, eg. <bucket_name>.s3-<region>.amazonaws.com
-s3_host = "env(S3_HOST)"
-# Configures S3 bucket region, eg. us-east-1
-s3_region = "env(S3_REGION)"
-# Configures AWS_ACCESS_KEY_ID for S3 bucket
-s3_access_key = "env(S3_ACCESS_KEY)"
-# Configures AWS_SECRET_ACCESS_KEY for S3 bucket
-s3_secret_key = "env(S3_SECRET_KEY)"
+# [experimental]
+# orioledb_version = ""
+# s3_host = "env(S3_HOST)"
+# s3_region = "env(S3_REGION)"
+# s3_access_key = "env(S3_ACCESS_KEY)"
+# s3_secret_key = "env(S3_SECRET_KEY)"

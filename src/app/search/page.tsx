@@ -1,17 +1,17 @@
 import { siteConfig } from "@/config/site";
-import dynamic from "next/dynamic";
 import { Metadata, NextPage } from "next/types";
 import { Suspense } from "react";
-const SearchList = dynamic(() => import("@/components/sections/Search/List"));
+import BingrExplore from "@/components/sections/Search/BingrExplore";
 
 export const metadata: Metadata = {
-  title: `Search Movies | ${siteConfig.name}`,
+  title: `Search & Explore | ${siteConfig.name}`,
+  description: "Search and explore movies, TV series, and anime with real-time suggestions.",
 };
 
 const SearchPage: NextPage = () => {
   return (
-    <Suspense>
-      <SearchList />
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <BingrExplore />
     </Suspense>
   );
 };

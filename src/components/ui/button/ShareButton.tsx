@@ -79,7 +79,7 @@ const SHARE_BUTTONS = [
 
 const ShareButton: React.FC<ShareButtonProps> = ({ title, id, type = "movie" }) => {
   const url = `https://${location.hostname}/${type}/${id}`;
-  const description = `Check out and stream ${title} on Cinextma for FREE!!`;
+  const description = `Check out and stream ${title} on B Chill for FREE!! 🍿`;
 
   const [opened, { open, close }] = useDisclosure(false);
 

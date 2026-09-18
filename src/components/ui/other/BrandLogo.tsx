@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { Saira } from "@/utils/fonts";
 import { cn } from "@/utils/helpers";
-import { Next } from "@/utils/icons";
-import useDiscoverFilters from "@/hooks/useDiscoverFilters";
 
 export interface BrandLogoProps {
   animate?: boolean;
@@ -12,32 +10,27 @@ export interface BrandLogoProps {
 }
 
 const BrandLogo: React.FC<BrandLogoProps> = ({ animate = false, className }) => {
-  const { content } = useDiscoverFilters();
-
   return (
-    <Link href="/" className="group">
+    <Link href="/" className="group flex items-center gap-2 select-none">
+      <span className="text-2xl md:text-3xl filter drop-shadow-[0_0_12px_rgba(244,63,94,0.6)] group-hover:scale-110 transition-transform">
+        🍿
+      </span>
       <span
         className={cn(
-          "flex items-center bg-linear-to-r from-transparent from-80% via-white to-transparent bg-size-[200%_100%] bg-clip-text bg-position-[40%] text-2xl font-semibold text-foreground/60 md:text-3xl",
-          "tracking-widest transition-[letter-spacing] group-hover:tracking-[0.2em]",
-          {
-            "animate-shine": animate,
-            "text-foreground": !animate,
-          },
+          "flex items-center text-2xl font-black md:text-3xl tracking-tight transition-all",
           Saira.className,
           className,
         )}
       >
-        CINE{" "}
-        <span>
-          <Next
-            className={cn("size-full px-[2px] transition-colors", {
-              "text-primary": content === "movie",
-              "text-warning": content === "tv",
-            })}
-          />
-        </span>{" "}
-        TMA
+        <span className="bg-gradient-to-r from-red-500 via-rose-500 to-primary bg-clip-text text-transparent group-hover:drop-shadow-[0_0_15px_rgba(244,63,94,0.6)] transition-all">
+          Bu
+        </span>
+        <span className="mx-1 text-sm text-white/40 group-hover:text-primary transition-colors font-light">
+          •
+        </span>
+        <span className="text-white font-extrabold tracking-wider group-hover:text-white/95">
+          CHILL
+        </span>
       </span>
     </Link>
   );

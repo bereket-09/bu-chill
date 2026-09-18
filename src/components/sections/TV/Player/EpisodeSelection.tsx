@@ -19,12 +19,15 @@ const TvShowPlayerEpisodeSelection: React.FC<TvShowPlayerEpisodeSelectionProps> 
       open={opened}
       onClose={onClose}
       backdrop="blur"
-      title="Select Episode"
-      direction="right"
+      title="Episodes"
+      direction="bottom"
       hiddenHandler
       withCloseButton
+      classNames={{
+        content: "max-h-[82vh] w-full max-w-5xl mx-auto bg-neutral-950/95 border-t border-white/10 text-white rounded-t-3xl shadow-2xl",
+      }}
     >
-      <div className="grid grid-cols-1 gap-2 p-2 sm:gap-4 sm:p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4 sm:p-6 overflow-y-auto max-h-[72vh]">
         {episodes.map((episode, index) => (
           <EpisodeListCard
             id={id}

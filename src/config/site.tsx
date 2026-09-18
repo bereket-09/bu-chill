@@ -2,7 +2,7 @@ import { tmdb } from "@/api/tmdb";
 import { SiteConfigType } from "@/types";
 import { BiSearchAlt2, BiSolidSearchAlt2 } from "react-icons/bi";
 import { GoHomeFill, GoHome } from "react-icons/go";
-import { HiComputerDesktop } from "react-icons/hi2";
+import { HiComputerDesktop, HiTv } from "react-icons/hi2";
 import { IoIosSunny } from "react-icons/io";
 import {
   IoCompass,
@@ -14,8 +14,8 @@ import {
 import { TbFolder, TbFolderFilled } from "react-icons/tb";
 
 export const siteConfig: SiteConfigType = {
-  name: "Cinextma",
-  description: "Your only choice for a free movies and tv shows streaming website.",
+  name: "B Chill",
+  description: "Your ultimate streaming hub for movies, TV shows, and 24/7 Live TV channels.",
   favicon: "/favicon.ico",
   navItems: [
     {
@@ -23,6 +23,12 @@ export const siteConfig: SiteConfigType = {
       href: "/",
       icon: <GoHome className="size-full" />,
       activeIcon: <GoHomeFill className="size-full" />,
+    },
+    {
+      label: "Live TV",
+      href: "/live",
+      icon: <HiTv className="size-full" />,
+      activeIcon: <HiTv className="size-full" />,
     },
     {
       label: "Discover",

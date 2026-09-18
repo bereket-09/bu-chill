@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { use } from "react";
 import dynamic from "next/dynamic";
 import { NextPage } from "next";
+import { siteConfig } from "@/config/site";
 import { getTvShowLastPosition } from "@/actions/histories";
 const TvShowPlayer = dynamic(() => import("@/components/sections/TV/Player/Player"));
 
@@ -52,6 +53,10 @@ const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: n
   const isNotReleased = new Date(EPISODE.air_date) > new Date();
 
   if (isNotReleased) notFound();
+
+  if (typeof document !== "undefined" && tv?.name && EPISODE?.name) {
+    document.title = `Watching: ${tv.name} S${season}E${episode} - ${EPISODE.name} · ${siteConfig.name}`;
+  }
 
   const currentEpisodeIndex = seasonDetail.episodes.findIndex(
     (e) => e.episode_number === EPISODE.episode_number,
