@@ -169,7 +169,7 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
       {/* Only display ads warning for fallback players that actually have ads */}
       {PLAYER?.ads && <AdsWarning />}
 
-      <div className={cn("relative", SpacingClasses.reset)}>
+      <div className="relative w-full h-screen overflow-hidden">
         {!isNative && (
           <MoviePlayerHeader
             id={movie.id}

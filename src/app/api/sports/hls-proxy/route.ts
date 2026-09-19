@@ -26,12 +26,17 @@ export async function GET(request: NextRequest) {
       upstreamRes.headers.get("content-type") || "application/vnd.apple.mpegurl";
     const body = await upstreamRes.arrayBuffer();
 
+    const isSegment = url.includes(".ts") || url.includes(".m4s");
+    const cacheControl = isSegment
+      ? "public, max-age=86400, s-maxage=86400, immutable"
+      : "public, max-age=2, s-maxage=3, stale-while-revalidate=5";
+
     return new NextResponse(body, {
       status: 200,
       headers: {
         "Content-Type": contentType,
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Cache-Control": cacheControl,
       },
     });
   } catch (err: any) {

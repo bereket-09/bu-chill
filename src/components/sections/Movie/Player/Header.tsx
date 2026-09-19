@@ -29,7 +29,7 @@ const MoviePlayerHeader: React.FC<MoviePlayerHeaderProps> = ({
   return (
     <div
       className={cn(
-        "pointer-events-none absolute top-0 inset-x-0 z-40 flex w-full items-center justify-between px-4 sm:px-8 pt-3 sm:pt-4 pb-14 text-white transition-opacity duration-300",
+        "pointer-events-none absolute top-0 inset-x-0 z-40 flex w-full items-center justify-between px-4 sm:px-8 pt-5 sm:pt-6 pb-16 text-white transition-opacity duration-300",
         "bg-gradient-to-b from-black/85 via-black/30 to-transparent",
         { "opacity-0": hidden }
       )}

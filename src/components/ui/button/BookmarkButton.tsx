@@ -8,7 +8,11 @@ import { Trash } from "@/utils/icons";
 import useDeviceVibration from "@/hooks/useDeviceVibration";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import { SavedMovieDetails } from "@/types/movie";
-import { addToWatchlist, removeFromWatchlist, checkInWatchlist } from "@/actions/library";
+import {
+  checkInWatchlistClient,
+  addToWatchlistClient,
+  removeFromWatchlistClient,
+} from "@/services/libraryClient";
 import { queryClient } from "@/app/providers";
 import { usePathname } from "next/navigation";
 
@@ -35,10 +39,8 @@ const BookmarkButton: React.FC<BookmarkButtonProps> = ({ data, isTooltipDisabled
 
       setIsChecking(true);
       try {
-        const result = await checkInWatchlist(data.id, data.type);
-        if (result.success) {
-          setIsSaved(result.isInWatchlist);
-        }
+        const isIn = await checkInWatchlistClient(data.id, data.type);
+        setIsSaved(isIn);
       } catch (error) {
         console.error("Error checking watchlist status:", error);
       } finally {
@@ -61,7 +63,7 @@ const BookmarkButton: React.FC<BookmarkButtonProps> = ({ data, isTooltipDisabled
     startTransition(async () => {
       try {
         if (isSaved) {
-          const result = await removeFromWatchlist(data.id, data.type);
+          const result = await removeFromWatchlistClient(data.id, data.type);
 
           if (result.success) {
             setIsSaved(false);
@@ -83,18 +85,7 @@ const BookmarkButton: React.FC<BookmarkButtonProps> = ({ data, isTooltipDisabled
             });
           }
         } else {
-          const watchlistItem = {
-            id: data.id,
-            type: data.type,
-            adult: data.adult,
-            backdrop_path: data.backdrop_path,
-            poster_path: data.poster_path || null,
-            release_date: data.release_date,
-            title: data.title,
-            vote_average: data.vote_average,
-          };
-
-          const result = await addToWatchlist(watchlistItem);
+          const result = await addToWatchlistClient(data);
 
           if (result.success) {
             setIsSaved(true);
@@ -103,21 +94,15 @@ const BookmarkButton: React.FC<BookmarkButtonProps> = ({ data, isTooltipDisabled
               title: `${data.title} added to your watchlist!`,
               color: "success",
             });
-          } else {
-            if (result.error === "This item is already in your watchlist") {
-              setIsSaved(true);
-              addToast({
-                title: "Already in watchlist",
-                description: `${data.title} is already in your watchlist`,
-                color: "warning",
-              });
-            } else {
-              addToast({
-                title: "Error",
-                description: result.error || "Failed to add to watchlist",
-                color: "danger",
-              });
+            if (pathname.startsWith("/library")) {
+              queryClient.invalidateQueries({ queryKey: ["watchlist"] });
             }
+          } else {
+            addToast({
+              title: "Error",
+              description: result.error || "Failed to add to watchlist",
+              color: "danger",
+            });
           }
         }
       } catch (error) {
