@@ -2,8 +2,8 @@ import { signIn } from "@/actions/auth";
 import PasswordInput from "@/components/ui/input/PasswordInput";
 import { LoginFormSchema } from "@/schemas/auth";
 import { isEmpty } from "@/utils/helpers";
-import { Google, LockPassword, Mail } from "@/utils/icons";
-import { addToast, Button, Divider, Input, Link } from "@heroui/react";
+import { LockPassword, Mail } from "@/utils/icons";
+import { addToast, Button, Input, Link } from "@heroui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Turnstile } from "@marsidev/react-turnstile";
 import { useCallback, useState } from "react";
@@ -11,7 +11,6 @@ import { useForm } from "react-hook-form";
 import { AuthFormProps } from "./Forms";
 import { env } from "@/utils/env";
 import { useRouter } from "@bprogress/next/app";
-import GoogleLoginButton from "@/components/ui/button/GoogleLoginButton";
 
 const AuthLoginForm: React.FC<AuthFormProps> = ({ setForm }) => {
   const router = useRouter();
@@ -124,12 +123,6 @@ const AuthLoginForm: React.FC<AuthFormProps> = ({ setForm }) => {
           {getButtonText()}
         </Button>
       </form>
-      <div className="flex items-center gap-4">
-        <Divider className="flex-1" />
-        <p className="text-tiny text-default-500 shrink-0">OR</p>
-        <Divider className="flex-1" />
-      </div>
-      <GoogleLoginButton isDisabled={isSubmitting || isVerifying} />
       <p className="text-small text-center">
         Don't have an account?
         <Link

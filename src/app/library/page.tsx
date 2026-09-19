@@ -29,8 +29,8 @@ const LibraryPage: NextPage = async () => {
       <Suspense>
         {error || !user ? (
           <UnauthorizedNotice
-            title="Sign in to access your library"
-            description="Create a free account to save your favorite movies and TV shows!"
+            title="Welcome to My Space"
+            description="Create a free account to save your favorite movies and TV shows, resume watching across devices, and unlock AI recommendations."
           />
         ) : (
           <LibraryList />
