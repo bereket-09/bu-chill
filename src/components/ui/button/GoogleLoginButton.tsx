@@ -49,6 +49,29 @@ const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({ variant = "faded"
       }
 
       if (data?.url) {
+        // Pre-validate that the Supabase OAuth provider is actually active before navigating away
+        try {
+          const checkRes = await fetch(data.url, { method: "GET" });
+          if (!checkRes.ok) {
+            const errBody = await checkRes.json().catch(() => null);
+            if (
+              errBody?.msg?.toLowerCase().includes("not enabled") ||
+              errBody?.error_code === "validation_failed"
+            ) {
+              setLoading(false);
+              addToast({
+                title: "Google Sign-In is not enabled in Supabase",
+                description:
+                  "Google Client ID & Secret must be configured in your Supabase Dashboard under Authentication > Providers > Google.",
+                color: "danger",
+              });
+              return;
+            }
+          }
+        } catch {
+          // If fetch fails (e.g. CORS on 302 redirect to accounts.google.com), provider is enabled and redirecting
+        }
+
         window.location.assign(data.url);
       } else {
         setLoading(false);
