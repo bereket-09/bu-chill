@@ -305,6 +305,11 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
         opened={episodeOpened}
         onClose={episodeHandlers.close}
         episodes={episodes}
+        seriesName={props.seriesName}
+        currentSeasonNumber={episode.season_number}
+        currentEpisodeNumber={episode.episode_number}
+        seasons={props.tv?.seasons || []}
+        selectedSource={selectedSource}
       />
     </>
   );
