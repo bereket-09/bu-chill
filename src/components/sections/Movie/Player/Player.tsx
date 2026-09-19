@@ -23,9 +23,6 @@ import {
 
 const AdsWarning = dynamic(() => import("@/components/ui/overlay/AdsWarning"));
 const MoviePlayerHeader = dynamic(() => import("./Header"));
-const ServerSelectionModal = dynamic(() =>
-  import("@/components/ui/overlay/ServerSelectionModal").then((mod) => mod.ServerSelectionModal)
-);
 const NativePlayer = dynamic(() => import("@/components/ui/player/NativePlayer"), { ssr: false });
 const AdShieldIframe = dynamic(() => import("@/components/ui/player/AdShieldIframe"), { ssr: false });
 
@@ -173,7 +170,6 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
       {PLAYER?.ads && <AdsWarning />}
 
       <div className={cn("relative", SpacingClasses.reset)}>
-        {/* Only render separate MoviePlayerHeader in Embed mode */}
         {!isNative && (
           <MoviePlayerHeader
             id={movie.id}
@@ -187,12 +183,10 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
                   }`
                 : undefined
             }
-            onOpenSource={handlers.open}
             hidden={idle && !mobile}
-            isEmbed={true}
-            currentServerName={PLAYER?.title}
-            hasDirectOption={firstNativeIndex !== -1 && firstEmbedIndex !== -1}
-            onToggleMode={handleToggleMode}
+            servers={players}
+            selectedSource={selectedSource}
+            onSelectSource={handleSelectSource}
           />
         )}
 
@@ -270,15 +264,6 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
           )}
         </Card>
       </div>
-
-      <ServerSelectionModal
-        isOpen={opened}
-        onClose={handlers.close}
-        players={players}
-        selectedSource={selectedSource}
-        onSelectSource={handleSelectSource}
-        title="Select Streaming Server"
-      />
     </>
   );
 };

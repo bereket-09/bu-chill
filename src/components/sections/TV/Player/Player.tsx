@@ -24,9 +24,6 @@ import {
 
 const AdsWarning = dynamic(() => import("@/components/ui/overlay/AdsWarning"));
 const TvShowPlayerHeader = dynamic(() => import("./Header"));
-const ServerSelectionModal = dynamic(() =>
-  import("@/components/ui/overlay/ServerSelectionModal").then((mod) => mod.ServerSelectionModal)
-);
 const TvShowPlayerEpisodeSelection = dynamic(() => import("./EpisodeSelection"));
 const NativePlayer = dynamic(() => import("@/components/ui/player/NativePlayer"), { ssr: false });
 const AdShieldIframe = dynamic(() => import("@/components/ui/player/AdShieldIframe"), { ssr: false });
@@ -210,20 +207,17 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
       {PLAYER?.ads && <AdsWarning />}
 
       <div className={cn("relative", SpacingClasses.reset)}>
-        {/* Only render separate TvShowPlayerHeader in Embed mode */}
         {!isNative && (
           <TvShowPlayerHeader
             id={id}
+            seriesName={props.seriesName}
             episode={episode}
             hidden={idle && !mobile}
-            isEmbed={true}
+            servers={players}
             selectedSource={selectedSource}
-            currentServerName={PLAYER?.title}
-            hasDirectOption={firstNativeIndex !== -1 && firstEmbedIndex !== -1}
-            onToggleMode={handleToggleMode}
-            onOpenSource={sourceHandlers.open}
+            onSelectSource={handleSelectSource}
+            nextEpisodeNumber={props.nextEpisodeNumber}
             onOpenEpisodes={episodeHandlers.open}
-            {...props}
           />
         )}
 
@@ -299,14 +293,6 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
         </Card>
       </div>
 
-      <ServerSelectionModal
-        isOpen={sourceOpened}
-        onClose={sourceHandlers.close}
-        players={players}
-        selectedSource={selectedSource}
-        onSelectSource={handleSelectSource}
-        title="Select Streaming Server"
-      />
       <TvShowPlayerEpisodeSelection
         id={id}
         opened={episodeOpened}
