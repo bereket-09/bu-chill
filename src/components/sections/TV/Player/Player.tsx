@@ -92,6 +92,13 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
   const [activePlaybackTime, setActivePlaybackTime] = useState<number>(initialPosition);
   const [showResumeBanner, setShowResumeBanner] = useState<boolean>(initialPosition > 10);
 
+  // Reset banner and playback time whenever navigating to a different episode
+  useEffect(() => {
+    setShowResumeBanner(initialPosition > 10);
+    setActivePlaybackTime(initialPosition);
+    currentTimeRef.current = initialPosition;
+  }, [initialPosition, episode.season_number, episode.episode_number]);
+
   // Auto hide resume banner after 7 seconds
   useEffect(() => {
     if (showResumeBanner) {

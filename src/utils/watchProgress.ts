@@ -45,22 +45,31 @@ export const getStoredProgress = (
       }
     }
 
-    // Fallback check for Filmu progress key
-    const filmuRaw = localStorage.getItem(`filmu_progress_${mediaId}`);
-    if (filmuRaw) {
-      const parsed = JSON.parse(filmuRaw);
-      const time = parsed.currentTime || parsed.time;
-      if (typeof time === "number" && time > 0) {
-        return {
-          mediaId,
-          mediaType,
-          season,
-          episode,
-          currentTime: time,
-          duration: parsed.duration || 0,
-          percentage: 0,
-          updatedAt: Date.now(),
-        };
+    // Fallback check for Filmu / Bingr progress key
+    const filmuKey =
+      mediaType === "tv"
+        ? season !== undefined && episode !== undefined
+          ? `filmu_progress_${mediaId}_s${season}_e${episode}`
+          : null
+        : `filmu_progress_${mediaId}`;
+
+    if (filmuKey) {
+      const filmuRaw = localStorage.getItem(filmuKey);
+      if (filmuRaw) {
+        const parsed = JSON.parse(filmuRaw);
+        const time = parsed.currentTime || parsed.time;
+        if (typeof time === "number" && time > 0) {
+          return {
+            mediaId,
+            mediaType,
+            season,
+            episode,
+            currentTime: time,
+            duration: parsed.duration || 0,
+            percentage: 0,
+            updatedAt: Date.now(),
+          };
+        }
       }
     }
 
@@ -126,8 +135,13 @@ export const saveStoredProgress = (item: {
     }
 
     // Save Filmu / Bingr format compatibility
+    const filmuKey =
+      item.mediaType === "tv" && item.season !== undefined && item.episode !== undefined
+        ? `filmu_progress_${item.mediaId}_s${item.season}_e${item.episode}`
+        : `filmu_progress_${item.mediaId}`;
+
     localStorage.setItem(
-      `filmu_progress_${item.mediaId}`,
+      filmuKey,
       JSON.stringify({
         currentTime: data.currentTime,
         duration: data.duration,
@@ -152,7 +166,11 @@ export const clearStoredProgress = (
   try {
     const key = getWatchProgressKey(mediaType, mediaId, season, episode);
     localStorage.removeItem(key);
-    localStorage.removeItem(`filmu_progress_${mediaId}`);
+    if (mediaType === "tv" && season !== undefined && episode !== undefined) {
+      localStorage.removeItem(`filmu_progress_${mediaId}_s${season}_e${episode}`);
+    } else {
+      localStorage.removeItem(`filmu_progress_${mediaId}`);
+    }
   } catch {}
 };
 
