@@ -26,9 +26,16 @@ const UserProfileButton: React.FC = () => {
 
   const ITEMS: DropdownItemProps[] = useMemo(
     () => [
-      // TODO: Add profile and settings page
-      // { label: "Profile", href: "/profile", icon: <User /> },
-      // { label: "Settings", href: "/settings", icon: <Gear /> },
+      {
+        label: "Account & Profile",
+        href: "/profile",
+        icon: <User className="text-lg" />,
+      },
+      {
+        label: "My Space / Watchlist",
+        href: "/library",
+        icon: <Gear className="text-lg" />,
+      },
       {
         label: "Logout",
         onClick: async () => {
@@ -44,12 +51,12 @@ const UserProfileButton: React.FC = () => {
           }
           return router.push("/auth");
         },
-        icon: logout ? <Spinner size="sm" color="danger" /> : <Logout />,
+        icon: logout ? <Spinner size="sm" color="danger" /> : <Logout className="text-lg" />,
         color: "danger",
         className: "text-danger",
       },
     ],
-    [logout],
+    [logout, router],
   );
 
   if (isLoading) return null;
@@ -87,15 +94,21 @@ const UserProfileButton: React.FC = () => {
   if (guest) return ProfileButton;
 
   return (
-    <Dropdown showArrow closeOnSelect={false} className="w-10">
+    <Dropdown showArrow closeOnSelect={true} className="min-w-[200px]">
       <DropdownTrigger className="w-10">{ProfileButton}</DropdownTrigger>
       <DropdownMenu
         aria-label="User profile dropdown"
         variant="flat"
         disabledKeys={logout ? ITEMS.map((i) => i.label) : undefined}
       >
-        {ITEMS.map(({ label, icon, ...props }) => (
-          <DropdownItem key={label} startContent={icon} {...props}>
+        {ITEMS.map(({ label, icon, href, ...props }) => (
+          <DropdownItem
+            key={label}
+            startContent={icon}
+            as={href ? Link : undefined}
+            href={href}
+            {...props}
+          >
             {label}
           </DropdownItem>
         ))}
