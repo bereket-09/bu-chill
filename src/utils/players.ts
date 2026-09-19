@@ -29,8 +29,11 @@ export const getMoviePlayers = (
 ): PlayersProps[] => {
   const fallbackEmbeds: PlayersProps[] = [
     {
-      title: "Filmu (Bingr Default)",
-      source: withEnglishDefaults(`https://embed.filmu.in/movie/${id}`, startAt),
+      title: "VidLink (English HD - Recommended)",
+      source: withEnglishDefaults(
+        `https://vidlink.pro/movie/${id}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
+        startAt
+      ),
       type: "embed",
       recommended: true,
       fast: true,
@@ -38,8 +41,8 @@ export const getMoviePlayers = (
       resumable: true,
     },
     {
-      title: "Vidy (Bingr Fast)",
-      source: withEnglishDefaults(`https://www.vidy.st/movie/${id}`, startAt),
+      title: "Videasy (Fast English HD)",
+      source: withEnglishDefaults(`https://player.videasy.to/movie/${id}?color=f5a524`, startAt),
       type: "embed",
       recommended: true,
       fast: true,
@@ -47,7 +50,7 @@ export const getMoviePlayers = (
       resumable: true,
     },
     {
-      title: "Cinezo (Bingr HD)",
+      title: "Cinezo (English HD)",
       source: withEnglishDefaults(`https://player.cinezo.live/embed/movie/${id}`, startAt),
       type: "embed",
       recommended: true,
@@ -56,40 +59,11 @@ export const getMoviePlayers = (
       resumable: true,
     },
     {
-      title: "Vidbolt (Bingr)",
-      source: withEnglishDefaults(`https://vidbolt.xyz/movie/${id}`, startAt),
+      title: "Vidy (Fast Stream)",
+      source: withEnglishDefaults(`https://www.vidy.st/movie/${id}`, startAt),
       type: "embed",
       fast: true,
       ads: false,
-      resumable: true,
-    },
-    {
-      title: "Vidrift (Bingr)",
-      source: withEnglishDefaults(`https://embed.vidrift.in/embed/movie/${id}`, startAt),
-      type: "embed",
-      fast: true,
-      ads: false,
-      resumable: true,
-    },
-    {
-      title: "Videasy (Fast, English)",
-      source: withEnglishDefaults(`https://player.videasy.to/movie/${id}?color=006fee`, startAt),
-      type: "embed",
-      recommended: true,
-      fast: true,
-      ads: true,
-      resumable: true,
-    },
-    {
-      title: "VidLink (English Audio)",
-      source: withEnglishDefaults(
-        `https://vidlink.pro/movie/${id}?player=jw&primaryColor=006fee&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
-        startAt
-      ),
-      type: "embed",
-      recommended: true,
-      fast: true,
-      ads: true,
       resumable: true,
     },
     {
@@ -97,6 +71,21 @@ export const getMoviePlayers = (
       source: withEnglishDefaults(`https://cinesrc.st/embed/movie/${id}`, startAt),
       type: "embed",
       fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Vidbolt (English)",
+      source: withEnglishDefaults(`https://vidbolt.xyz/movie/${id}`, startAt),
+      type: "embed",
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "AutoEmbed (English)",
+      source: withEnglishDefaults(`https://autoembed.co/movie/tmdb/${id}`, startAt),
+      type: "embed",
       ads: true,
       resumable: true,
     },
@@ -109,15 +98,15 @@ export const getMoviePlayers = (
       resumable: true,
     },
     {
-      title: "AutoEmbed (English)",
-      source: withEnglishDefaults(`https://autoembed.co/movie/tmdb/${id}`, startAt),
+      title: "AnyEmbed (English)",
+      source: withEnglishDefaults(`https://anyembed.xyz/embed/tmdb-movie-${id}`, startAt),
       type: "embed",
       ads: true,
       resumable: true,
     },
     {
-      title: "AnyEmbed (English)",
-      source: withEnglishDefaults(`https://anyembed.xyz/embed/tmdb-movie-${id}`, startAt),
+      title: "Filmu (Regional / Secondary)",
+      source: withEnglishDefaults(`https://embed.filmu.in/movie/${id}`, startAt),
       type: "embed",
       ads: true,
       resumable: true,
@@ -150,8 +139,11 @@ export const getTvShowPlayers = (
 ): PlayersProps[] => {
   const fallbackEmbeds: PlayersProps[] = [
     {
-      title: "Filmu (Bingr Default)",
-      source: withEnglishDefaults(`https://embed.filmu.in/tv/${id}/${season}/${episode}`, startAt),
+      title: "VidLink (English HD - Recommended)",
+      source: withEnglishDefaults(
+        `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
+        startAt
+      ),
       type: "embed",
       recommended: true,
       fast: true,
@@ -159,8 +151,11 @@ export const getTvShowPlayers = (
       resumable: true,
     },
     {
-      title: "Vidy (Bingr Fast)",
-      source: withEnglishDefaults(`https://www.vidy.st/tv/${id}/${season}/${episode}`, startAt),
+      title: "Videasy (Fast English HD)",
+      source: withEnglishDefaults(
+        `https://player.videasy.to/tv/${id}/${season}/${episode}?color=f5a524`,
+        startAt
+      ),
       type: "embed",
       recommended: true,
       fast: true,
@@ -168,7 +163,7 @@ export const getTvShowPlayers = (
       resumable: true,
     },
     {
-      title: "Cinezo (Bingr HD)",
+      title: "Cinezo (English HD)",
       source: withEnglishDefaults(`https://player.cinezo.live/embed/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       recommended: true,
@@ -177,43 +172,11 @@ export const getTvShowPlayers = (
       resumable: true,
     },
     {
-      title: "Vidbolt (Bingr)",
-      source: withEnglishDefaults(`https://vidbolt.xyz/tv/${id}/${season}/${episode}`, startAt),
+      title: "Vidy (Fast Stream)",
+      source: withEnglishDefaults(`https://www.vidy.st/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       fast: true,
       ads: false,
-      resumable: true,
-    },
-    {
-      title: "Vidrift (Bingr)",
-      source: withEnglishDefaults(`https://embed.vidrift.in/embed/tv/${id}/${season}/${episode}`, startAt),
-      type: "embed",
-      fast: true,
-      ads: false,
-      resumable: true,
-    },
-    {
-      title: "Videasy (Fast, English)",
-      source: withEnglishDefaults(
-        `https://player.videasy.to/tv/${id}/${season}/${episode}?color=f5a524`,
-        startAt
-      ),
-      type: "embed",
-      recommended: true,
-      fast: true,
-      ads: true,
-      resumable: true,
-    },
-    {
-      title: "VidLink (English Audio)",
-      source: withEnglishDefaults(
-        `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
-        startAt
-      ),
-      type: "embed",
-      recommended: true,
-      fast: true,
-      ads: true,
       resumable: true,
     },
     {
@@ -224,6 +187,21 @@ export const getTvShowPlayers = (
       ),
       type: "embed",
       fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Vidbolt (English)",
+      source: withEnglishDefaults(`https://vidbolt.xyz/tv/${id}/${season}/${episode}`, startAt),
+      type: "embed",
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "AutoEmbed (English)",
+      source: withEnglishDefaults(`https://autoembed.co/tv/tmdb/${id}-${season}-${episode}`, startAt),
+      type: "embed",
       ads: true,
       resumable: true,
     },
@@ -236,18 +214,18 @@ export const getTvShowPlayers = (
       resumable: true,
     },
     {
-      title: "AutoEmbed (English)",
-      source: withEnglishDefaults(`https://autoembed.co/tv/tmdb/${id}-${season}-${episode}`, startAt),
-      type: "embed",
-      ads: true,
-      resumable: true,
-    },
-    {
       title: "AnyEmbed (English)",
       source: withEnglishDefaults(
         `https://anyembed.xyz/embed/tmdb-tv-${id}/${season}/${episode}`,
         startAt
       ),
+      type: "embed",
+      ads: true,
+      resumable: true,
+    },
+    {
+      title: "Filmu (Regional / Secondary)",
+      source: withEnglishDefaults(`https://embed.filmu.in/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       ads: true,
       resumable: true,

@@ -37,52 +37,11 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
   ...rest
 }) => {
   const [showControls, setShowControls] = useState<boolean>(false);
-  const [shieldClicksLeft, setShieldClicksLeft] = useState<number>(SHIELD_CLICKS);
-  const [absorbedCount, setAbsorbedCount] = useState<number>(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  // Re-arm the shield for every new source
-  useEffect(() => {
-    setShieldClicksLeft(SHIELD_CLICKS);
-  }, [src]);
-
-  // If a click inside the embed still opened a popup/new tab, our tab becomes hidden.
-  // When the user comes back, re-arm the shield so the next ad-hooked click is absorbed too.
-  useEffect(() => {
-    let clickedIntoEmbed = false;
-
-    const handleBlur = () => {
-      // Window blur while the iframe is focused means the user clicked inside the embed
-      clickedIntoEmbed = document.activeElement === iframeRef.current;
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible" && clickedIntoEmbed) {
-        clickedIntoEmbed = false;
-        setShieldClicksLeft((prev) => Math.max(prev, 1));
-      }
-    };
-
-    window.addEventListener("blur", handleBlur);
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      window.removeEventListener("blur", handleBlur);
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-  }, []);
-
-  const handleShieldClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setShieldClicksLeft((prev) => prev - 1);
-    setAbsorbedCount((prev) => prev + 1);
-  };
-
-  const shieldActive = shieldClicksLeft > 0;
 
   return (
     <div className={cn("group/shield relative w-full h-full bg-black overflow-hidden select-none", className)}>
-      {/* The embed - unsandboxed because providers block playback when sandboxed */}
+      {/* The embed player */}
       <iframe
         ref={iframeRef}
         key={src}
@@ -96,27 +55,6 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
         {...rest}
       />
 
-      {/* Click shield - absorbs the first clicks that popunder scripts hook onto */}
-      {shieldActive && (
-        <div
-          role="button"
-          tabIndex={0}
-          aria-label="Tap to activate player"
-          onClick={handleShieldClick}
-          className="absolute inset-0 z-20 cursor-pointer"
-        >
-          {absorbedCount > 0 && (
-            <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/85 border border-emerald-500/40 text-[11px] text-emerald-300 shadow-xl backdrop-blur-md animate-in fade-in duration-300">
-              <IoInformationCircleOutline className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                Ad click absorbed. Tap {shieldClicksLeft} more {shieldClicksLeft === 1 ? "time" : "times"} to
-                use the player.
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Ad Shield Status Floating Pill */}
       <div className="absolute top-3 right-3 z-30 pointer-events-auto transition-opacity duration-300 opacity-80 group-hover/shield:opacity-100">
         <div className="relative">
@@ -127,12 +65,7 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
             title="Ad Shield Protection Status"
           >
             <IoShieldCheckmark className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Click Shield: {shieldActive ? "Armed" : "Passed"}</span>
-            {absorbedCount > 0 && (
-              <span className="ml-0.5 px-1 rounded-full bg-emerald-500/20 text-[10px] font-black">
-                {absorbedCount} absorbed
-              </span>
-            )}
+            <span>Ad Shield: Active</span>
           </button>
 
           {/* Expanded Ad Shield Info Dropdown */}
@@ -141,7 +74,7 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
               <div className="flex items-center justify-between pb-2 border-b border-white/10">
                 <span className="font-bold text-white flex items-center gap-1.5">
                   <IoShieldOutline className="w-4 h-4 text-emerald-400" />
-                  Click Shield
+                  Ad Shield Protection
                 </span>
                 <button
                   type="button"
@@ -155,18 +88,15 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
               <div className="py-2.5 space-y-2 text-[11px] text-white/70 leading-relaxed">
                 <div className="flex items-start gap-1.5">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>First clicks absorbed so embed popunders can&apos;t fire</span>
+                  <span>Parent page popups & redirects guarded</span>
                 </div>
                 <div className="flex items-start gap-1.5">
                   <span className="text-emerald-400 font-bold">✓</span>
-                  <span>Re-arms automatically if a popup gets through</span>
+                  <span>Original English HD sources prioritized</span>
                 </div>
                 <div className="flex items-start gap-1.5">
-                  <span className="text-amber-400 font-bold">!</span>
-                  <span>
-                    This is a third-party server and may still show ads. Use a blocker like uBlock
-                    Origin, or pick a Direct server for an ad-free stream.
-                  </span>
+                  <span className="text-emerald-400 font-bold">✓</span>
+                  <span>Unrestricted video buffer & fullscreen</span>
                 </div>
               </div>
             </div>

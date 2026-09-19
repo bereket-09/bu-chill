@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/utils/helpers";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import SafeImage from "@/components/ui/other/SafeImage";
@@ -44,10 +45,19 @@ const QUICK_PROMPTS = [
 ];
 
 export const AiConciergeModal: React.FC = () => {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { data: user } = useSupabaseUser();
+
+  // Hide AI floating assistant completely on all player and video watch pages
+  const isVideoPage =
+    pathname?.includes("/player") ||
+    pathname?.startsWith("/sports/watch") ||
+    pathname?.startsWith("/live");
+
+  if (isVideoPage) return null;
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -140,16 +150,16 @@ export const AiConciergeModal: React.FC = () => {
 
   return (
     <>
-      {/* Floating Trigger Button (Bottom-Right, comfortably positioned above the mobile dock) */}
+      {/* Floating Trigger Button (Bottom-Right, sleek circular icon, comfortably positioned above the mobile dock) */}
       <div className="fixed bottom-22 right-4 sm:bottom-6 sm:right-6 z-40">
         <button
           type="button"
           onClick={() => setIsOpen((prev) => !prev)}
           className={cn(
-            "group relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-full border transition-all duration-300 shadow-2xl cursor-pointer select-none",
+            "group relative flex h-12 w-12 items-center justify-center rounded-full border transition-all duration-300 shadow-2xl cursor-pointer select-none",
             isOpen
-              ? "bg-amber-500 text-black border-amber-400 scale-95 shadow-amber-500/30"
-              : "bg-[#11121a]/90 hover:bg-[#181a24] text-white border-white/20 hover:border-amber-500/50 backdrop-blur-xl hover:scale-105"
+              ? "bg-amber-500 text-black border-amber-400 scale-95 shadow-amber-500/40"
+              : "bg-[#11121a]/95 hover:bg-[#181a24] text-white border-white/20 hover:border-amber-400/60 backdrop-blur-xl hover:scale-110 shadow-black/80"
           )}
           title="Bu-Chill AI Concierge"
           aria-label="Toggle Bu-Chill AI Concierge"
@@ -157,28 +167,25 @@ export const AiConciergeModal: React.FC = () => {
           <div className="relative flex items-center justify-center">
             <IoSparkles
               className={cn(
-                "w-4 h-4 transition-transform duration-300",
+                "w-5 h-5 transition-transform duration-300",
                 isOpen ? "text-black rotate-45" : "text-amber-400 group-hover:rotate-12 animate-pulse"
               )}
             />
             {!isOpen && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
             )}
           </div>
-          <span className="text-xs font-bold tracking-wide hidden sm:inline-block">
-            {isOpen ? "Close AI" : "AI Concierge"}
-          </span>
         </button>
       </div>
 
-      {/* Floating Assistant Window */}
+      {/* Floating Assistant Window - Spacious & Tall */}
       {isOpen && (
         <div
           className="fixed inset-0 z-[70] flex items-end sm:items-end justify-end sm:p-6 bg-black/60 sm:bg-transparent backdrop-blur-xs sm:backdrop-blur-none animate-in fade-in duration-200"
           onClick={() => setIsOpen(false)}
         >
           <div
-            className="relative w-full sm:w-[410px] h-[88dvh] max-h-[88dvh] sm:h-[580px] sm:max-h-[calc(100vh-80px)] flex flex-col rounded-t-3xl sm:rounded-2xl bg-[#0c0d14]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(245,158,11,0.08)] overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
+            className="relative w-full sm:w-[460px] h-[92dvh] max-h-[95dvh] sm:h-[720px] sm:max-h-[calc(100vh-48px)] flex flex-col rounded-t-3xl sm:rounded-2xl bg-[#0c0d14]/95 backdrop-blur-2xl border border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_30px_rgba(245,158,11,0.08)] overflow-hidden animate-in slide-in-from-bottom-5 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Accent Line */}
