@@ -51,14 +51,6 @@ export const AiConciergeModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { data: user } = useSupabaseUser();
 
-  // Hide AI floating assistant completely on all player and video watch pages
-  const isVideoPage =
-    pathname?.includes("/player") ||
-    pathname?.startsWith("/sports/watch") ||
-    pathname?.startsWith("/live");
-
-  if (isVideoPage) return null;
-
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -77,6 +69,14 @@ export const AiConciergeModal: React.FC = () => {
       setTimeout(() => inputRef.current?.focus(), 150);
     }
   }, [isOpen, messages]);
+
+  // Hide AI floating assistant completely on all player and video watch pages
+  const isVideoPage =
+    pathname?.includes("/player") ||
+    pathname?.startsWith("/sports/watch") ||
+    pathname?.startsWith("/live");
+
+  if (isVideoPage) return null;
 
   const handleSend = async (textToSend?: string) => {
     const query = (textToSend || input).trim();
