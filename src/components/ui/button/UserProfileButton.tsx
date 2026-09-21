@@ -18,6 +18,7 @@ import {
 } from "@heroui/react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { IoHelpCircleOutline } from "react-icons/io5";
 
 const UserProfileButton: React.FC = () => {
   const router = useRouter();
@@ -46,9 +47,14 @@ const UserProfileButton: React.FC = () => {
         icon: <User className="text-lg" />,
       },
       {
-        label: "Help & Settings",
+        label: "Account Settings",
         href: "/settings",
         icon: <Gear className="text-lg" />,
+      },
+      {
+        label: "Help & Support",
+        href: "/support",
+        icon: <IoHelpCircleOutline className="text-lg" />,
       },
       {
         label: "Logout",

@@ -5,18 +5,15 @@ import Link from "next/link";
 import { useRouter } from "@bprogress/next/app";
 import {
   FaLaptop,
-  FaMobileScreenButton,
-  FaTabletScreenButton,
   FaChevronRight,
   FaChevronLeft,
   FaCheck,
-  FaCopy,
-  FaDiscord,
+  FaSliders,
+  FaUserShield,
 } from "react-icons/fa6";
-import { IoPersonOutline, IoHelpCircleOutline } from "react-icons/io5";
-import { LuTerminal } from "react-icons/lu";
-import { addToast, Spinner } from "@heroui/react";
-import { signOut } from "@/actions/auth";
+import { IoPersonOutline, IoHelpCircleOutline, IoKeyOutline } from "react-icons/io5";
+import { addToast, Spinner, Switch, Select, SelectItem } from "@heroui/react";
+import { signOut, sendResetPasswordEmail } from "@/actions/auth";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 
 function detectDevice(): string {
@@ -38,52 +35,85 @@ function detectDevice(): string {
   return `${browser} on ${os}`;
 }
 
-const API_PRESETS = [
-  {
-    key: "movie",
-    label: "Movie",
-    title: "Swapped",
-    url: "https://bingr.one/watch/movie/1007757",
-  },
-  {
-    key: "tv",
-    label: "Series",
-    title: "The Boys",
-    url: "https://bingr.one/watch/tv/76479/1/1",
-  },
-  {
-    key: "anime",
-    label: "Anime",
-    title: "Death Note",
-    url: "https://bingr.one/watch/anime/1535/1",
-  },
+const SERVER_OPTIONS = [
+  { key: "vidlink", label: "Vidlink (Fastest, High Bitrate)" },
+  { key: "vidsrc", label: "VidSrc (Reliable Redundancy)" },
+  { key: "superembed", label: "SuperEmbed (Multi-Language)" },
+  { key: "moviesapi", label: "MoviesAPI (Fast Fallback)" },
 ];
 
 const SettingsManager: React.FC = () => {
   const router = useRouter();
   const { data: user, isLoading } = useSupabaseUser();
 
-  const [activeTab, setActiveTab] = useState<"account" | "api" | "help">("account");
+  const [activeTab, setActiveTab] = useState<"account" | "preferences">("account");
   const [mobileView, setMobileView] = useState<"menu" | "content">("menu");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [deviceName, setDeviceName] = useState("Chrome on macOS");
 
-  // Other devices state (simulated session list)
+  // Streaming preferences (stored in localStorage)
+  const [autoPlayNext, setAutoPlayNext] = useState(true);
+  const [preferredServer, setPreferredServer] = useState("vidlink");
+  const [autoSubtitles, setAutoSubtitles] = useState(false);
+
+  // Other devices state (active sessions)
   const [otherDevices, setOtherDevices] = useState([
     {
       id: "dev_2",
-      name: "Chrome on macOS",
-      lastUsed: "3 days ago",
+      name: "Safari on iOS",
+      lastUsed: "2 days ago",
     },
   ]);
 
-  // API tab state
-  const [selectedApiPreset, setSelectedApiPreset] = useState("movie");
-  const [hasCopied, setHasCopied] = useState(false);
-
   useEffect(() => {
     setDeviceName(detectDevice());
+
+    // Load preferences
+    const savedAutoPlay = localStorage.getItem("buchill_pref_autoplay");
+    if (savedAutoPlay !== null) setAutoPlayNext(savedAutoPlay === "true");
+
+    const savedServer = localStorage.getItem("buchill_pref_server");
+    if (savedServer) setPreferredServer(savedServer);
+
+    const savedSubtitles = localStorage.getItem("buchill_pref_subtitles");
+    if (savedSubtitles !== null) setAutoSubtitles(savedSubtitles === "true");
   }, []);
+
+  const handleToggleAutoPlay = (enabled: boolean) => {
+    setAutoPlayNext(enabled);
+    localStorage.setItem("buchill_pref_autoplay", String(enabled));
+    addToast({ title: enabled ? "Autoplay enabled" : "Autoplay disabled", color: "primary" });
+  };
+
+  const handleChangeServer = (server: string) => {
+    setPreferredServer(server);
+    localStorage.setItem("buchill_pref_server", server);
+    addToast({ title: "Preferred streaming server updated", color: "primary" });
+  };
+
+  const handleToggleSubtitles = (enabled: boolean) => {
+    setAutoSubtitles(enabled);
+    localStorage.setItem("buchill_pref_subtitles", String(enabled));
+    addToast({ title: enabled ? "Auto-subtitles enabled" : "Auto-subtitles disabled", color: "primary" });
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email || isResettingPassword) return;
+    setIsResettingPassword(true);
+    const { success, message } = await sendResetPasswordEmail({ email: user.email });
+    setIsResettingPassword(false);
+
+    if (success) {
+      addToast({
+        title: "Password Reset Link Sent",
+        description: `Check your inbox at ${user.email} for instructions to reset your password.`,
+        color: "success",
+      });
+    } else {
+      addToast({ title: "Failed to send reset link", description: message, color: "danger" });
+    }
+  };
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
@@ -107,20 +137,6 @@ const SettingsManager: React.FC = () => {
     });
   };
 
-  const currentPreset = API_PRESETS.find((p) => p.key === selectedApiPreset) || API_PRESETS[0];
-  const iframeSnippet = `<iframe src="${currentPreset.url}"\n        width="100%" height="100%"\n        frameborder="0"\n        allow="autoplay; fullscreen; picture-in-picture"\n        allowfullscreen></iframe>`;
-
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(iframeSnippet);
-      setHasCopied(true);
-      setTimeout(() => setHasCopied(false), 2000);
-      addToast({ title: "Code copied to clipboard!", color: "success" });
-    } catch (e) {
-      addToast({ title: "Failed to copy code", color: "danger" });
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex h-[70dvh] items-center justify-center">
@@ -135,7 +151,7 @@ const SettingsManager: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden pb-32">
+    <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden pb-32 select-none">
       <div className="relative z-10 w-full px-4 md:px-12 lg:px-20 pt-8 lg:pt-14 max-w-7xl mx-auto">
         <div className="flex flex-col lg:flex-row w-full pt-6 lg:min-h-[580px]">
           {/* LEFT NAVIGATION COLUMN */}
@@ -145,7 +161,7 @@ const SettingsManager: React.FC = () => {
             }`}
           >
             <h1 className="text-2xl font-bold text-white/90 mb-6 pl-1 lg:pl-0 tracking-tight">
-              Help & Settings
+              Settings
             </h1>
 
             <div className="flex flex-col gap-2">
@@ -166,9 +182,9 @@ const SettingsManager: React.FC = () => {
                   <IoPersonOutline className="w-5 h-5 text-white/90" />
                   <div className="flex flex-col">
                     <span className="font-semibold text-sm sm:text-base text-white/90">
-                      Account & Devices
+                      Account & Security
                     </span>
-                    <span className="text-xs text-white/50">Manage Account & Devices</span>
+                    <span className="text-xs text-white/50">Profile, sessions & devices</span>
                   </div>
                 </div>
                 <FaChevronRight
@@ -178,63 +194,51 @@ const SettingsManager: React.FC = () => {
                 />
               </button>
 
-              {/* Tab 2: Be Chill API */}
+              {/* Tab 2: Streaming Preferences */}
               <button
                 type="button"
                 onClick={() => {
-                  setActiveTab("api");
+                  setActiveTab("preferences");
                   setMobileView("content");
                 }}
                 className={`group flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${
-                  activeTab === "api"
+                  activeTab === "preferences"
                     ? "border-white/[0.18] bg-white/[0.04]"
                     : "border-transparent hover:bg-white/[0.03]"
                 }`}
               >
                 <div className="flex items-center gap-4">
-                  <LuTerminal className="w-5 h-5 text-white/90" />
+                  <FaSliders className="w-5 h-5 text-white/90" />
                   <div className="flex flex-col">
                     <span className="font-semibold text-sm sm:text-base text-white/90">
-                      Be Chill API
+                      Playback Preferences
                     </span>
-                    <span className="text-xs text-white/50">Developer Access</span>
+                    <span className="text-xs text-white/50">Autoplay, servers & subtitles</span>
                   </div>
                 </div>
                 <FaChevronRight
                   className={`w-4 h-4 transition-colors ${
-                    activeTab === "api" ? "text-white/90" : "text-white/30 group-hover:text-white/60"
+                    activeTab === "preferences" ? "text-white/90" : "text-white/30 group-hover:text-white/60"
                   }`}
                 />
               </button>
 
-              {/* Tab 3: Help & Support */}
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab("help");
-                  setMobileView("content");
-                }}
-                className={`group flex items-center justify-between p-4 rounded-xl border transition-all text-left cursor-pointer ${
-                  activeTab === "help"
-                    ? "border-white/[0.18] bg-white/[0.04]"
-                    : "border-transparent hover:bg-white/[0.03]"
-                }`}
+              {/* External Link: Dedicated Help & Support */}
+              <Link
+                href="/support"
+                className="group flex items-center justify-between p-4 rounded-xl border border-transparent hover:bg-white/[0.03] transition-all text-left mt-2"
               >
                 <div className="flex items-center gap-4">
-                  <IoHelpCircleOutline className="w-5 h-5 text-white/90" />
+                  <IoHelpCircleOutline className="w-5 h-5 text-primary" />
                   <div className="flex flex-col">
-                    <span className="font-semibold text-sm sm:text-base text-white/90">
+                    <span className="font-semibold text-sm sm:text-base text-white/90 group-hover:text-white">
                       Help & Support
                     </span>
-                    <span className="text-xs text-white/50">Help Centre</span>
+                    <span className="text-xs text-white/50">FAQs & feedback form</span>
                   </div>
                 </div>
-                <FaChevronRight
-                  className={`w-4 h-4 transition-colors ${
-                    activeTab === "help" ? "text-white/90" : "text-white/30 group-hover:text-white/60"
-                  }`}
-                />
-              </button>
+                <FaChevronRight className="w-4 h-4 text-white/30 group-hover:text-white/60" />
+              </Link>
             </div>
 
             {/* Logout Button */}
@@ -243,241 +247,263 @@ const SettingsManager: React.FC = () => {
                 type="button"
                 onClick={handleSignOut}
                 disabled={isLoggingOut}
-                className="px-6 py-2.5 rounded-lg bg-[#1a1c22] hover:bg-[#252830] transition-colors font-semibold text-sm text-white/90 disabled:opacity-50 cursor-pointer"
+                className="px-6 py-2.5 rounded-lg bg-[#1a1c22] hover:bg-red-600/30 hover:text-red-400 border border-white/10 transition-colors font-semibold text-sm text-white/90 disabled:opacity-50 cursor-pointer"
               >
                 {isLoggingOut ? "Logging out…" : "Log Out"}
               </button>
             </div>
           </div>
 
-          {/* VERTICAL DIVIDER */}
-          <div className="hidden lg:block w-[1px] bg-gradient-to-b from-transparent via-white/[0.15] to-transparent mx-6 lg:mx-10 opacity-80 min-h-[550px]" />
-
-          {/* RIGHT CONTENT PANEL */}
+          {/* RIGHT CONTENT COLUMN */}
           <div
-            className={`flex-1 flex-col gap-10 pt-2 lg:pt-0 ${
+            className={`w-full flex-1 flex-col ${
               mobileView === "menu" ? "hidden lg:flex" : "flex"
             }`}
           >
-            {/* Mobile Back button */}
+            {/* Mobile Back to Menu */}
             <button
               type="button"
               onClick={() => setMobileView("menu")}
-              className="lg:hidden flex items-center gap-2 text-white/60 hover:text-white mb-6 -ml-2 cursor-pointer"
+              className="lg:hidden flex items-center gap-2 text-sm text-white/60 hover:text-white mb-6 cursor-pointer"
             >
-              <FaChevronLeft className="w-4 h-4" />
-              <span className="font-medium text-sm">Back to Settings</span>
+              <FaChevronLeft className="w-3.5 h-3.5" />
+              <span>Back to Settings</span>
             </button>
 
-            {/* TAB 1: ACCOUNT & DEVICES */}
+            {/* TAB 1: ACCOUNT & SECURITY */}
             {activeTab === "account" && (
-              <div className="space-y-10 animate-in fade-in duration-200">
-                {/* Donate Row */}
-                <div className="flex items-center justify-between pr-0 lg:pr-8">
-                  <span className="text-lg font-semibold text-white/90">Donate to Be Chill</span>
-                  <a
-                    href="https://buymeacoffee.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-6 py-2.5 rounded-lg bg-[#1a1c22] hover:bg-[#252830] transition-colors text-sm font-semibold text-white/90"
-                  >
-                    Donate
-                  </a>
-                </div>
-
-                {/* Registered Email */}
-                <div className="flex items-center justify-between pr-0 lg:pr-8">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-medium text-white/50">Registered Email</span>
-                    <span className="text-base font-semibold text-white/90">{user.email}</span>
+              <div className="flex flex-col gap-10 animate-in fade-in duration-200">
+                {/* Account Details Box */}
+                <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
+                      Signed in account
+                    </span>
+                    <h3 className="text-lg font-bold text-white mt-1">{user.email}</h3>
+                    <p className="text-xs text-white/40 mt-0.5">
+                      Account ID: <code className="font-mono">{user.id.slice(0, 12)}...</code>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Link href="/profile">
+                      <button
+                        type="button"
+                        className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/90 transition-colors"
+                      >
+                        Switch Profile
+                      </button>
+                    </Link>
                   </div>
                 </div>
 
-                {/* This Device */}
-                <div className="flex flex-col mt-4">
-                  <h3 className="text-lg font-semibold text-white/90 mb-6">This Device</h3>
-                  <div className="flex items-center justify-between pr-0 lg:pr-8">
-                    <div className="flex items-center gap-5">
-                      <FaLaptop className="w-6 h-6 text-white/70" />
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-semibold text-sm sm:text-base text-white/90">
-                          {deviceName}
-                        </span>
-                        <span className="text-xs font-medium text-white/50">Last used : Just now</span>
+                {/* Password & Security */}
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider">
+                    Password & Security
+                  </h3>
+                  <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/70">
+                        <IoKeyOutline className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm text-white">Reset Account Password</h4>
+                        <p className="text-xs text-white/50 mt-0.5">
+                          We'll email a secure password reset link to {user.email}.
+                        </p>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={handleSignOut}
-                      disabled={isLoggingOut}
-                      className="px-6 py-2.5 rounded-lg bg-[#1a1c22] hover:bg-[#252830] transition-colors text-sm font-semibold text-white/90 disabled:opacity-50 cursor-pointer"
+                      onClick={handleResetPassword}
+                      disabled={isResettingPassword}
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/90 transition-colors disabled:opacity-50 shrink-0"
                     >
-                      {isLoggingOut ? "Logging out…" : "Log Out"}
+                      {isResettingPassword ? "Sending..." : "Send Reset Link"}
                     </button>
                   </div>
                 </div>
 
-                {/* Other Devices */}
-                {otherDevices.length > 0 && (
-                  <div className="flex flex-col pt-2">
-                    <h3 className="text-lg font-semibold text-white/90 mb-6">Other Devices</h3>
-                    <div className="flex flex-col gap-6">
-                      {otherDevices.map((dev) => (
-                        <div key={dev.id} className="flex items-center justify-between pr-0 lg:pr-8">
-                          <div className="flex items-center gap-5">
-                            <FaLaptop className="w-6 h-6 text-white/70" />
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-semibold text-sm sm:text-base text-white/90">
-                                {dev.name}
-                              </span>
-                              <span className="text-xs font-medium text-white/50">
-                                Last used : {dev.lastUsed}
-                              </span>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRevokeDevice(dev.id)}
-                            className="px-6 py-2.5 rounded-lg bg-[#1a1c22] hover:bg-[#252830] transition-colors text-sm font-semibold text-white/90 cursor-pointer"
-                          >
-                            Log Out
-                          </button>
+                {/* Current Device */}
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider">
+                    Active Devices
+                  </h3>
+
+                  <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02]">
+                    <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-3 inline-block">
+                      Current Session
+                    </span>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <FaLaptop className="w-6 h-6 text-white/70" />
+                        <div>
+                          <span className="font-semibold text-sm sm:text-base text-white/90 block">
+                            {deviceName}
+                          </span>
+                          <span className="text-xs text-white/50">Last active: Just now</span>
                         </div>
-                      ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSignOut}
+                        disabled={isLoggingOut}
+                        className="px-4 py-2 rounded-xl bg-[#1a1c22] hover:bg-[#252830] transition-colors text-xs font-semibold text-white/90"
+                      >
+                        Sign Out
+                      </button>
                     </div>
                   </div>
-                )}
+
+                  {/* Other Devices */}
+                  {otherDevices.length > 0 && (
+                    <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02]">
+                      <span className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4 inline-block">
+                        Other Authorized Devices
+                      </span>
+                      <div className="space-y-4">
+                        {otherDevices.map((dev) => (
+                          <div key={dev.id} className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <FaLaptop className="w-5 h-5 text-white/50" />
+                              <div>
+                                <span className="font-semibold text-sm text-white/80 block">
+                                  {dev.name}
+                                </span>
+                                <span className="text-xs text-white/40">Last used: {dev.lastUsed}</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRevokeDevice(dev.id)}
+                              className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-white/70 hover:text-white"
+                            >
+                              Revoke
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* TAB 2: BE CHILL API */}
-            {activeTab === "api" && (
-              <div className="flex flex-col pt-2 animate-in fade-in duration-200">
-                <h3 className="text-xs font-bold text-white/80 tracking-widest uppercase mb-8">
-                  Be Chill API
+            {/* TAB 2: STREAMING PREFERENCES */}
+            {activeTab === "preferences" && (
+              <div className="flex flex-col gap-6 animate-in fade-in duration-200">
+                <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider">
+                  Streaming & Player Preferences
                 </h3>
 
-                <div className="flex items-start justify-between gap-6 pr-0 lg:pr-8 mb-8">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-lg font-semibold text-white/90">Embeddable Player</span>
-                    <p className="text-sm font-medium text-white/50 leading-relaxed max-w-lg">
-                      Drop the Be Chill player into your own site with a single{" "}
-                      <code className="px-1.5 py-0.5 rounded bg-[#1a1c22] text-white/80 text-xs font-mono">
-                        &lt;iframe&gt;
-                      </code>
-                      . Pick a title below to try it live.
+                {/* Autoplay Switch */}
+                <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-sm sm:text-base text-white">
+                      Autoplay Next Episode
+                    </h4>
+                    <p className="text-xs text-white/50 mt-1 max-w-md">
+                      When watching TV series, automatically load the next episode after the current one concludes.
                     </p>
                   </div>
-                  <span className="hidden md:inline-flex shrink-0 items-center px-3 py-1 rounded-full bg-[#1a1c22] border border-white/[0.08] text-[11px] font-bold text-primary uppercase tracking-widest">
-                    V1 Live
-                  </span>
+                  <Switch
+                    isSelected={autoPlayNext}
+                    onValueChange={handleToggleAutoPlay}
+                    color="primary"
+                    aria-label="Autoplay next episode"
+                  />
                 </div>
 
-                {/* Preset Selector */}
-                <div className="grid grid-cols-3 gap-3 md:gap-4 max-w-2xl mb-6">
-                  {API_PRESETS.map((p) => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onClick={() => setSelectedApiPreset(p.key)}
-                      className={`flex flex-col items-start gap-1 p-4 rounded-xl border transition-all text-left cursor-pointer ${
-                        p.key === selectedApiPreset
-                          ? "border-primary/60 bg-primary/10 shadow-[0_0_15px_rgba(229,9,20,0.15)]"
-                          : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05]"
-                      }`}
+                {/* Default Server Selector */}
+                <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-semibold text-sm sm:text-base text-white">
+                      Default Streaming Server
+                    </h4>
+                    <p className="text-xs text-white/50 mt-1 max-w-md">
+                      Choose which streaming provider loads first when you start playing a title.
+                    </p>
+                  </div>
+                  <div className="w-full sm:w-64">
+                    <Select
+                      size="sm"
+                      selectedKeys={[preferredServer]}
+                      onChange={(e) => handleChangeServer(e.target.value || "vidlink")}
+                      variant="bordered"
+                      aria-label="Default streaming server"
                     >
-                      <span className="text-xs font-bold uppercase tracking-wider text-white/50">
-                        {p.label}
-                      </span>
-                      <span className="text-sm font-semibold text-white/90 truncate w-full">
-                        {p.title}
-                      </span>
-                    </button>
-                  ))}
+                      {SERVER_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                      ))}
+                    </Select>
+                  </div>
                 </div>
 
-                {/* Code Snippet */}
-                <div className="relative max-w-2xl rounded-xl border border-white/10 bg-[#0d0e12] p-5 font-mono text-xs sm:text-sm text-white/80">
-                  <button
-                    type="button"
-                    onClick={handleCopyCode}
-                    className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1a1c22] hover:bg-[#252830] transition-colors text-xs font-sans text-white/90 cursor-pointer"
-                  >
-                    {hasCopied ? (
-                      <>
-                        <FaCheck className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400 font-semibold">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaCopy className="w-3.5 h-3.5" />
-                        <span>Copy Code</span>
-                      </>
-                    )}
-                  </button>
-
-                  <pre className="overflow-x-auto pr-24 leading-relaxed">
-                    <code>{iframeSnippet}</code>
-                  </pre>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: HELP & SUPPORT */}
-            {activeTab === "help" && (
-              <div className="flex flex-col pt-2 animate-in fade-in duration-200">
-                <h3 className="text-xs font-bold text-white/80 tracking-widest uppercase mb-8">
-                  Help & Support
-                </h3>
-
-                {/* Discord Community Card */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 border border-white/10 rounded-2xl bg-white/[0.02] hover:bg-white/[0.04] transition-colors max-w-2xl">
-                  <div className="flex flex-col gap-2">
-                    <h4 className="text-base font-semibold text-white/90">Join the Community</h4>
-                    <p className="text-sm font-medium text-white/50 max-w-md leading-relaxed">
-                      Be Chill is actively evolving! Join our Discord server to request movies/series,
-                      report streaming links, or hang out with fellow movie fans.
+                {/* Auto Subtitles Switch */}
+                <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-sm sm:text-base text-white">
+                      Auto-Enable English Subtitles
+                    </h4>
+                    <p className="text-xs text-white/50 mt-1 max-w-md">
+                      Automatically load and display English captions whenever available on media start.
                     </p>
                   </div>
-                  <a
-                    href="https://discord.gg"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="shrink-0 flex items-center gap-2.5 px-6 py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] transition-colors text-sm font-semibold text-white shadow-lg"
-                  >
-                    <FaDiscord className="w-5 h-5" />
-                    <span>Join Discord</span>
-                  </a>
-                </div>
-
-                {/* Legal Policy Links */}
-                <div className="mt-12 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm font-medium text-white/40 max-w-2xl">
-                  <Link href="/about" className="hover:text-white/80 transition-colors underline underline-offset-4">
-                    About Be Chill
-                  </Link>
-                  <span className="hidden sm:inline">•</span>
-                  <a href="#" className="hover:text-white/80 transition-colors underline underline-offset-4">
-                    Terms of Service
-                  </a>
-                  <span className="hidden sm:inline">•</span>
-                  <a href="#" className="hover:text-white/80 transition-colors underline underline-offset-4">
-                    Privacy Policy
-                  </a>
-                  <span className="hidden sm:inline">•</span>
-                  <a href="#" className="hover:text-white/80 transition-colors underline underline-offset-4">
-                    DMCA Notice
-                  </a>
-                </div>
-
-                {/* Build Version Tag */}
-                <div className="mt-8 flex flex-col items-start gap-1">
-                  <span className="text-[11px] uppercase tracking-wider text-white/30">Build</span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-full border border-white/10 bg-white/[0.03] text-xs font-mono text-white/60">
-                    be-chill-v1.4.2 (Production)
-                  </span>
+                  <Switch
+                    isSelected={autoSubtitles}
+                    onValueChange={handleToggleSubtitles}
+                    color="primary"
+                    aria-label="Auto-enable English subtitles"
+                  />
                 </div>
               </div>
             )}
+
+            {/* Bottom Support Banner */}
+            <div className="mt-14 p-6 rounded-2xl border border-white/10 bg-gradient-to-r from-primary/10 via-transparent to-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                  <IoHelpCircleOutline className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-white">Need help or want to request a title?</h4>
+                  <p className="text-xs text-white/50 mt-0.5">
+                    Our dedicated Help & Support page has quick FAQs and an interactive feedback form.
+                  </p>
+                </div>
+              </div>
+              <Link href="/support">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-xl bg-primary text-white font-semibold text-xs shadow-lg shadow-primary/25 shrink-0"
+                >
+                  Visit Help & Support
+                </button>
+              </Link>
+            </div>
+
+            {/* Legal Links Footer */}
+            <div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-white/40">
+              <Link href="/about" className="hover:text-white transition-colors">
+                About Be Chill
+              </Link>
+              <span>•</span>
+              <Link href="/terms" className="hover:text-white transition-colors">
+                Terms of Service
+              </Link>
+              <span>•</span>
+              <Link href="/privacy" className="hover:text-white transition-colors">
+                Privacy Policy
+              </Link>
+              <span>•</span>
+              <Link href="/dmca" className="hover:text-white transition-colors">
+                DMCA Notice
+              </Link>
+              <span>•</span>
+              <Link href="/support" className="hover:text-white transition-colors">
+                Support
+              </Link>
+            </div>
           </div>
         </div>
       </div>

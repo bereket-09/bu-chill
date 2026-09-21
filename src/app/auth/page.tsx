@@ -196,7 +196,7 @@ function AuthContent() {
       {/* Top Header */}
       <header className="relative z-10 flex items-center justify-end px-6 py-5 md:px-12">
         <Link
-          href="/settings"
+          href="/support"
           className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs sm:text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:border-white/30 transition-all"
         >
           <IoHelpCircleOutline className="w-4 h-4 text-white/70" />
@@ -431,21 +431,21 @@ function AuthContent() {
           <div className="border-t border-white/[0.08] px-6 sm:px-10 py-3.5 flex flex-col sm:flex-row items-center justify-between text-[11px] text-white/40 gap-2 bg-black/30">
             <p>
               By continuing you agree to our{" "}
-              <a href="#" className="underline hover:text-white/70">
+              <Link href="/terms" className="underline hover:text-white/70">
                 Terms
-              </a>
+              </Link>
               ,{" "}
-              <a href="#" className="underline hover:text-white/70">
+              <Link href="/privacy" className="underline hover:text-white/70">
                 Privacy
-              </a>{" "}
+              </Link>{" "}
               and{" "}
-              <a href="#" className="underline hover:text-white/70">
+              <Link href="/dmca" className="underline hover:text-white/70">
                 DMCA
-              </a>
+              </Link>
               .
             </p>
             <Link
-              href="/settings"
+              href="/support"
               className="flex items-center gap-1 hover:text-white/70 transition-colors"
             >
               <IoHelpCircleOutline className="w-3.5 h-3.5" />

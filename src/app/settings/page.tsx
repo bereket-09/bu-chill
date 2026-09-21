@@ -9,8 +9,8 @@ const SettingsManager = dynamic(
 );
 
 export const metadata: Metadata = {
-  title: `Help & Settings | ${siteConfig.name}`,
-  description: "Manage account, devices, API access, and streaming settings.",
+  title: `Account Settings | ${siteConfig.name}`,
+  description: "Manage account security, authorized devices, and streaming preferences.",
 };
 
 const SettingsPage: NextPage = async () => {
