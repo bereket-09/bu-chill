@@ -226,3 +226,59 @@ export const signOut = async (): ActionResponse => {
 
   return { success: true, message: "You have been signed out." };
 };
+
+export const deleteAccount = async (): ActionResponse => {
+  try {
+    const cookieSupabase = await createClient(false);
+    const {
+      data: { user },
+      error: userError,
+    } = await cookieSupabase.auth.getUser();
+
+    if (userError || !user) {
+      return { success: false, message: "Unauthorized. Please log in first." };
+    }
+
+    const userId = user.id;
+
+    // Use service role admin client to wipe user records
+    const adminSupabase = await createClient(true);
+
+    const [historiesRes, watchlistRes, profilesRes] = await Promise.all([
+      adminSupabase.from("histories").delete().eq("user_id", userId),
+      adminSupabase.from("watchlist").delete().eq("user_id", userId),
+      adminSupabase.from("profiles").delete().eq("id", userId),
+    ]);
+
+    if (historiesRes.error) {
+      console.warn("Could not delete histories during account deletion:", historiesRes.error);
+    }
+    if (watchlistRes.error) {
+      console.warn("Could not delete watchlist during account deletion:", watchlistRes.error);
+    }
+    if (profilesRes.error) {
+      console.warn("Could not delete profiles during account deletion:", profilesRes.error);
+    }
+
+    // Permanently delete user from Supabase auth.users
+    const { error: authDeleteError } = await adminSupabase.auth.admin.deleteUser(userId);
+    if (authDeleteError) {
+      console.error("Failed to delete user auth record:", authDeleteError);
+      return { success: false, message: authDeleteError.message };
+    }
+
+    // Sign out from session
+    await cookieSupabase.auth.signOut();
+
+    return {
+      success: true,
+      message: "Your account and all associated data have been permanently deleted.",
+    };
+  } catch (error) {
+    console.error("Error in deleteAccount action:", error);
+    if (error instanceof Error) {
+      return { success: false, message: error.message };
+    }
+    return { success: false, message: "An unexpected error occurred while deleting your account." };
+  }
+};

@@ -10,12 +10,28 @@ import {
   FaCheck,
   FaSliders,
   FaUserShield,
+  FaTrashCan,
+  FaTriangleExclamation,
 } from "react-icons/fa6";
 import { IoPersonOutline, IoHelpCircleOutline, IoKeyOutline } from "react-icons/io5";
 import { SiBuymeacoffee } from "react-icons/si";
 import { siteConfig } from "@/config/site";
-import { addToast, Spinner, Switch, Select, SelectItem } from "@heroui/react";
-import { signOut, sendResetPasswordEmail } from "@/actions/auth";
+import {
+  addToast,
+  Spinner,
+  Switch,
+  Select,
+  SelectItem,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+} from "@heroui/react";
+import { signOut, sendResetPasswordEmail, deleteAccount } from "@/actions/auth";
+import { purgeAllUserData } from "@/services/profileStorage";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 
 function detectDevice(): string {
@@ -67,6 +83,11 @@ const SettingsManager: React.FC = () => {
       lastUsed: "2 days ago",
     },
   ]);
+
+  // Delete account state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     setDeviceName(detectDevice());
@@ -137,6 +158,46 @@ const SettingsManager: React.FC = () => {
       description: "Device has been signed out of your Be Chill account.",
       color: "primary",
     });
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationText.trim() !== "DELETE" || isDeletingAccount || !user) return;
+
+    setIsDeletingAccount(true);
+    const userId = user.id;
+
+    try {
+      const { success, message } = await deleteAccount();
+
+      if (success) {
+        // Purge local storage data for this user
+        purgeAllUserData(userId);
+        setIsDeleteModalOpen(false);
+
+        addToast({
+          title: "Account Permanently Deleted",
+          description: "Your account and all associated streaming data have been erased.",
+          color: "success",
+        });
+
+        router.push("/auth");
+      } else {
+        setIsDeletingAccount(false);
+        addToast({
+          title: "Failed to delete account",
+          description: message,
+          color: "danger",
+        });
+      }
+    } catch (err) {
+      console.error("Account deletion error:", err);
+      setIsDeletingAccount(false);
+      addToast({
+        title: "Error deleting account",
+        description: "An unexpected error occurred. Please try again.",
+        color: "danger",
+      });
+    }
   };
 
   if (isLoading) {
@@ -407,6 +468,38 @@ const SettingsManager: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Danger Zone: Delete Account */}
+                <div className="flex flex-col gap-4 pt-6 border-t border-red-500/20">
+                  <h3 className="text-sm font-bold text-red-400 uppercase tracking-wider flex items-center gap-2">
+                    <FaTriangleExclamation className="w-4 h-4 text-red-500" />
+                    <span>Danger Zone</span>
+                  </h3>
+
+                  <div className="p-6 rounded-2xl border border-red-500/25 bg-gradient-to-b from-red-500/[0.05] to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                    <div>
+                      <h4 className="font-semibold text-sm sm:text-base text-white flex items-center gap-2">
+                        <FaTrashCan className="w-4 h-4 text-red-400" />
+                        <span>Delete Account Permanently</span>
+                      </h4>
+                      <p className="text-xs text-white/55 mt-1 max-w-lg leading-relaxed">
+                        Permanently erase your Be Chill account, including all your streaming profiles, continue watching queue, personalized watchlists, and authentication data. This action is irreversible.
+                      </p>
+                    </div>
+                    <Button
+                      color="danger"
+                      variant="flat"
+                      className="font-semibold text-xs shrink-0 border border-red-500/30 hover:bg-red-500/20 shadow-lg shadow-red-500/10 cursor-pointer"
+                      startContent={<FaTrashCan className="w-3.5 h-3.5" />}
+                      onPress={() => {
+                        setDeleteConfirmationText("");
+                        setIsDeleteModalOpen(true);
+                      }}
+                    >
+                      Delete Account
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -562,6 +655,80 @@ const SettingsManager: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          if (!isDeletingAccount) {
+            setIsDeleteModalOpen(false);
+            setDeleteConfirmationText("");
+          }
+        }}
+        placement="center"
+        backdrop="blur"
+        classNames={{
+          base: "bg-[#12141a] border border-red-500/30 text-white max-w-md mx-4",
+          header: "border-b border-white/10 pb-3",
+          footer: "border-t border-white/10 pt-3",
+        }}
+        isDismissable={!isDeletingAccount}
+        hideCloseButton={isDeletingAccount}
+      >
+        <ModalContent>
+          <ModalHeader className="flex items-center gap-2 text-red-400 font-bold text-base">
+            <FaTriangleExclamation className="w-5 h-5 text-red-500 shrink-0" />
+            <span>Delete Account Permanently?</span>
+          </ModalHeader>
+          <ModalBody className="py-4 space-y-4">
+            <p className="text-xs sm:text-sm text-white/70 leading-relaxed">
+              This action is <strong className="text-red-400 font-semibold">permanent and irreversible</strong>. Your account (<code className="text-white font-mono bg-white/5 px-1 py-0.5 rounded">{user.email}</code>), personalized profiles, watchlists, continue watching progress, and all personal data will be completely erased.
+            </p>
+
+            <div className="space-y-2 pt-2">
+              <label className="text-xs font-semibold text-white/60 block">
+                To confirm deletion, please type <span className="text-red-400 font-bold font-mono">DELETE</span> below:
+              </label>
+              <Input
+                size="sm"
+                placeholder='Type "DELETE"'
+                value={deleteConfirmationText}
+                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                variant="bordered"
+                disabled={isDeletingAccount}
+                classNames={{
+                  inputWrapper: "border-red-500/30 bg-red-500/[0.04] focus-within:!border-red-500",
+                  input: "text-white font-mono",
+                }}
+              />
+            </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="flat"
+              size="sm"
+              disabled={isDeletingAccount}
+              onPress={() => {
+                setIsDeleteModalOpen(false);
+                setDeleteConfirmationText("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="danger"
+              size="sm"
+              isLoading={isDeletingAccount}
+              disabled={deleteConfirmationText.trim() !== "DELETE" || isDeletingAccount}
+              onPress={handleDeleteAccount}
+              startContent={!isDeletingAccount && <FaTrashCan className="w-3.5 h-3.5" />}
+              className="font-bold shadow-lg shadow-red-500/25"
+            >
+              Permanently Delete Account
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

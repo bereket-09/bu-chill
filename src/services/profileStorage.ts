@@ -257,3 +257,23 @@ export function removeFromProfileHistory(
 export function clearProfileHistory(userId: string, profileId: string): void {
   saveProfileHistory(userId, profileId, []);
 }
+
+/**
+ * Completely purges all local storage entries associated with a user ID.
+ */
+export function purgeAllUserData(userId: string): void {
+  if (typeof window === "undefined" || !userId) return;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.includes(userId)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    window.dispatchEvent(new CustomEvent("buchill_profile_changed", { detail: { userId, profileId: "main" } }));
+  } catch (e) {
+    console.error("Failed to purge user local data:", e);
+  }
+}
