@@ -109,7 +109,7 @@ const OverviewSection: React.FC<OverviewSectionProps> = ({ movie }) => {
                 color="default"
                 onPress={() => setIsServerModalOpen(true)}
                 startContent={<FaServer size={18} />}
-                className="border border-white/15 bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
+                className="hidden sm:inline-flex border border-white/15 bg-white/10 text-white backdrop-blur-md hover:bg-white/20"
               >
                 Select Server
               </Button>

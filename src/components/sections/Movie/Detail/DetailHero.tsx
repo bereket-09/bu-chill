@@ -278,11 +278,11 @@ export const DetailHero: React.FC<DetailHeroProps> = ({ movie }) => {
               </div>
             </Link>
 
-            {/* Select Server Button */}
+            {/* Select Server Button (Desktop only - mobile switches inside player) */}
             <button
               type="button"
               onClick={() => setIsServerModalOpen(true)}
-              className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20 active:scale-95 shadow-lg"
+              className="hidden sm:flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20 active:scale-95 shadow-lg"
             >
               <FaServer className="text-primary text-xs sm:text-sm" />
               <span>Select Server</span>
