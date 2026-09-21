@@ -4,12 +4,12 @@ const AuthFormSchema = z.object({
   username: z
     .string()
     .min(3, "Username must be at least 3 characters long")
-    .max(25, "Username must not exceed 20 characters"),
-  email: z.email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
-  loginPassword: z.string(),
+    .max(25, "Username must not exceed 25 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters long"),
+  loginPassword: z.string().min(1, "Password is required"),
   confirm: z.string().min(1, "Password confirmation is required"),
-  captchaToken: z.string().min(500, "Token too short").max(5000, "Token too long").optional(),
+  captchaToken: z.string().optional(),
 });
 
 const RegisterFormSchema = AuthFormSchema.omit({ loginPassword: true }).refine(

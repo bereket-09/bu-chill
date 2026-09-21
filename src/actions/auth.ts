@@ -44,10 +44,6 @@ const createAuthAction = <T extends { captchaToken?: string }>(
       return { success: false, message };
     }
 
-    if (!result.data.captchaToken) {
-      return { success: false, message: "Captcha is required." };
-    }
-
     try {
       const supabase = await createClient(admin);
       return await action(result.data, supabase);
@@ -62,15 +58,24 @@ const createAuthAction = <T extends { captchaToken?: string }>(
 };
 
 const signInWithEmailAction: AuthAction<LoginFormInput> = async (data, supabase) => {
+  const email = data.email.trim();
+  const password = data.loginPassword;
+
   const { data: user, error } = await supabase.auth.signInWithPassword({
-    email: data.email,
-    password: data.loginPassword,
-    options: {
-      captchaToken: data.captchaToken,
-    },
+    email,
+    password,
   });
 
-  if (error) return { success: false, message: error.message };
+  if (error) {
+    if (error.message.toLowerCase().includes("invalid login credentials")) {
+      return { success: false, message: "Invalid email or password. Please try again." };
+    }
+    return { success: false, message: error.message };
+  }
+
+  if (!user.user) {
+    return { success: false, message: "Could not authenticate user. Please try again." };
+  }
 
   const { data: username } = await supabase
     .from("profiles")
@@ -85,7 +90,7 @@ const signInWithEmailAction: AuthAction<LoginFormInput> = async (data, supabase)
     const fallbackUsername =
       user.user.user_metadata?.username ||
       user.user.user_metadata?.full_name ||
-      user.user.email?.split("@")[0] ||
+      email.split("@")[0] ||
       "User";
 
     await adminSupabase.from("profiles").upsert({
@@ -98,12 +103,17 @@ const signInWithEmailAction: AuthAction<LoginFormInput> = async (data, supabase)
   return { success: true, message: `Welcome back, ${finalUsername}` };
 };
 
-const signUpAction: AuthAction<RegisterFormInput> = async (data, supabase) => {
-  // Check username availability
-  const { data: usernameExists, error: usernameError } = await supabase
+const signUpAction: AuthAction<RegisterFormInput> = async (data) => {
+  const adminSupabase = await createClient(true);
+  const username = data.username.trim();
+  const email = data.email.trim().toLowerCase();
+  const password = data.password;
+
+  // 1. Check username availability in profiles
+  const { data: usernameExists, error: usernameError } = await adminSupabase
     .from("profiles")
     .select("id")
-    .eq("username", data.username)
+    .eq("username", username)
     .maybeSingle();
 
   if (usernameError) {
@@ -112,37 +122,67 @@ const signUpAction: AuthAction<RegisterFormInput> = async (data, supabase) => {
   }
 
   if (usernameExists) {
-    return { success: false, message: "Username already taken." };
+    return { success: false, message: "Username is already taken. Please choose another." };
   }
 
-  // Create user
-  const { data: authData, error: signUpError } = await supabase.auth.signUp({
-    email: data.email,
-    password: data.password,
-    options: {
-      captchaToken: data.captchaToken,
+  // 2. Create the user using Supabase Admin API with pre-confirmed email
+  // (Prevents Supabase default mailer 429 rate limit and allows immediate sign-in)
+  const { data: authData, error: createError } = await adminSupabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      username,
     },
   });
 
-  if (signUpError) return { success: false, message: signUpError.message };
-  if (!authData.user) return { success: false, message: "User not created. Please try again." };
+  if (createError) {
+    if (
+      createError.message.toLowerCase().includes("already registered") ||
+      createError.message.toLowerCase().includes("already exists")
+    ) {
+      return {
+        success: false,
+        message: "An account with this email already exists. Please sign in instead.",
+      };
+    }
+    return { success: false, message: createError.message };
+  }
 
-  // Insert profile
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .insert({ id: authData.user.id, username: data.username });
+  if (!authData.user) {
+    return { success: false, message: "Could not create user account. Please try again." };
+  }
+
+  // 3. Upsert user profile record
+  const { error: profileError } = await adminSupabase.from("profiles").upsert({
+    id: authData.user.id,
+    username,
+  });
 
   if (profileError) {
     console.error("Profile creation error:", profileError);
-    // This is a critical error. The user exists in auth but not in profiles.
-    // It's better to return a generic error and log it for investigation.
-    return { success: false, message: "Could not create user profile. Please contact support." };
+    await adminSupabase.auth.admin.deleteUser(authData.user.id);
+    return { success: false, message: "Could not create user profile. Please try again." };
+  }
+
+  // 4. Automatically establish user session cookies on the response
+  const cookieSupabase = await createClient(false);
+  const { error: signInError } = await cookieSupabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError) {
+    console.error("Auto sign-in error:", signInError);
+    return {
+      success: true,
+      message: "Account created successfully! Please sign in with your credentials.",
+    };
   }
 
   return {
     success: true,
-    message:
-      "Sign up successful. Please check your email for verification. Check spam folder if you don't see it.",
+    message: `Account created successfully! Welcome to Bu-Chill, ${username}.`,
   };
 };
 
@@ -150,9 +190,7 @@ const sendResetPasswordEmailAction: AuthAction<ForgotPasswordFormInput> = async 
   data,
   supabase,
 ) => {
-  const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-    captchaToken: data.captchaToken,
-  });
+  const { error } = await supabase.auth.resetPasswordForEmail(data.email.trim());
 
   if (error) return { success: false, message: error.message };
 
