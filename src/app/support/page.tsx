@@ -29,6 +29,8 @@ import {
   IoMailOutline,
   IoSparklesOutline,
 } from "react-icons/io5";
+import { SiBuymeacoffee } from "react-icons/si";
+import { siteConfig } from "@/config/site";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 
 interface FAQItem {
@@ -427,9 +429,34 @@ export default function SupportPage() {
         </section>
 
         {/* ================================================================= */}
-        {/* SECTION 3: COMMUNITY & LEGAL RESOURCE CARDS                       */}
+        {/* SECTION 3: COMMUNITY, DONATE & LEGAL RESOURCE CARDS               */}
         {/* ================================================================= */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-16">
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-16">
+          {/* Buy Me a Coffee / Donate Card */}
+          <div className="p-6 rounded-2xl border border-[#FFDD00]/20 bg-gradient-to-b from-[#FFDD00]/[0.06] to-white/[0.02] hover:border-[#FFDD00]/40 transition-all flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[#FFDD00] font-bold text-sm mb-2">
+                <SiBuymeacoffee className="w-5 h-5" />
+                <span>Support & Donate</span>
+              </div>
+              <h3 className="font-bold text-base text-white mb-1">
+                Buy Me a Coffee
+              </h3>
+              <p className="text-xs text-white/50 leading-relaxed">
+                Be Chill is 100% free with no subscriptions. If you love streaming here, consider supporting development and server bandwidth.
+              </p>
+            </div>
+            <a
+              href={siteConfig.socials.buymeacoffee || "https://www.buymeacoffee.com/bereket.zelalem"}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FFDD00] hover:bg-[#ffe338] text-xs font-bold text-black shadow-lg shadow-[#FFDD00]/15 transition-all"
+            >
+              <SiBuymeacoffee className="w-4 h-4 text-black" />
+              <span>Buy Me a Coffee</span>
+            </a>
+          </div>
+
           {/* Discord Card */}
           <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all flex flex-col justify-between">
             <div>
@@ -438,7 +465,7 @@ export default function SupportPage() {
                 <span>Discord Community</span>
               </div>
               <h3 className="font-bold text-base text-white mb-1">
-                Join the Be Chill Community
+                Join Our Discord
               </h3>
               <p className="text-xs text-white/50 leading-relaxed">
                 Connect with thousands of movie and anime enthusiasts, get instant server uptime alerts, and request new releases in real time.
@@ -460,10 +487,10 @@ export default function SupportPage() {
             <div>
               <div className="flex items-center gap-2 text-primary font-bold text-sm mb-2">
                 <IoMailOutline className="w-5 h-5" />
-                <span>Legal & Platform Resources</span>
+                <span>Legal & Platform</span>
               </div>
               <h3 className="font-bold text-base text-white mb-1">
-                Transparency & Guidelines
+                Transparency
               </h3>
               <p className="text-xs text-white/50 leading-relaxed mb-4">
                 Explore our legal guidelines, data protection standards, and copyright takedown compliance policies.

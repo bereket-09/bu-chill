@@ -15,6 +15,7 @@ import {
   IoArrowBack,
   IoHelpCircleOutline,
 } from "react-icons/io5";
+import { SiBuymeacoffee } from "react-icons/si";
 
 export const metadata: Metadata = {
   title: `About Us | ${siteConfig.name}`,
@@ -170,6 +171,33 @@ const AboutPage: NextPage = () => {
               </Button>
             </Link>
           </div>
+        </section>
+
+        {/* ================================================================= */}
+        {/* SUPPORT BE CHILL / BUY ME A COFFEE                                */}
+        {/* ================================================================= */}
+        <section className="mb-14 rounded-3xl border border-[#FFDD00]/25 bg-gradient-to-r from-[#FFDD00]/[0.08] via-white/[0.02] to-transparent p-6 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFDD00]/15 border border-[#FFDD00]/30 text-[#FFDD00] text-xs font-bold mb-3">
+              <SiBuymeacoffee className="w-3.5 h-3.5" />
+              <span>Support Independent Streaming</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+              Love Be Chill? Buy the Creator a Coffee!
+            </h3>
+            <p className="text-xs sm:text-sm text-white/60 leading-relaxed">
+              Be Chill is built and maintained as an open, free platform without ads or forced paywalls. Your donations help fund fast streaming CDN proxies, domain renewals, and continuous new features.
+            </p>
+          </div>
+          <a
+            href={siteConfig.socials.buymeacoffee || "https://www.buymeacoffee.com/bereket.zelalem"}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-[#FFDD00] hover:bg-[#ffe338] text-black font-extrabold text-sm shadow-xl shadow-[#FFDD00]/20 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0 cursor-pointer"
+          >
+            <SiBuymeacoffee className="w-5 h-5 text-black" />
+            <span>Buy Me a Coffee</span>
+          </a>
         </section>
 
         {/* Footer */}

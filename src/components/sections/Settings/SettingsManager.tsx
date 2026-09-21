@@ -12,6 +12,8 @@ import {
   FaUserShield,
 } from "react-icons/fa6";
 import { IoPersonOutline, IoHelpCircleOutline, IoKeyOutline } from "react-icons/io5";
+import { SiBuymeacoffee } from "react-icons/si";
+import { siteConfig } from "@/config/site";
 import { addToast, Spinner, Switch, Select, SelectItem } from "@heroui/react";
 import { signOut, sendResetPasswordEmail } from "@/actions/auth";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
@@ -239,6 +241,25 @@ const SettingsManager: React.FC = () => {
                 </div>
                 <FaChevronRight className="w-4 h-4 text-white/30 group-hover:text-white/60" />
               </Link>
+
+              {/* External Link: Donate / Buy Me a Coffee */}
+              <a
+                href={siteConfig.socials.buymeacoffee || "https://www.buymeacoffee.com/bereket.zelalem"}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center justify-between p-4 rounded-xl border border-[#FFDD00]/15 bg-[#FFDD00]/[0.03] hover:bg-[#FFDD00]/[0.08] transition-all text-left mt-1"
+              >
+                <div className="flex items-center gap-4">
+                  <SiBuymeacoffee className="w-5 h-5 text-[#FFDD00]" />
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-sm sm:text-base text-white/90 group-hover:text-white">
+                      Buy Me a Coffee
+                    </span>
+                    <span className="text-xs text-[#FFDD00]/70">Support & donate</span>
+                  </div>
+                </div>
+                <FaChevronRight className="w-4 h-4 text-[#FFDD00]/50 group-hover:text-[#FFDD00]" />
+              </a>
             </div>
 
             {/* Logout Button */}
@@ -459,8 +480,32 @@ const SettingsManager: React.FC = () => {
               </div>
             )}
 
+            {/* Donate / Buy Me a Coffee Banner */}
+            <div className="mt-14 p-6 rounded-2xl border border-[#FFDD00]/25 bg-gradient-to-r from-[#FFDD00]/[0.08] via-white/[0.02] to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-[#FFDD00]/20 text-[#FFDD00] flex items-center justify-center shrink-0 border border-[#FFDD00]/30">
+                  <SiBuymeacoffee className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-white">Support Independent Streaming</h4>
+                  <p className="text-xs text-white/50 mt-0.5">
+                    Help keep Be Chill fast, free, and ad-free by buying the creator a coffee.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={siteConfig.socials.buymeacoffee || "https://www.buymeacoffee.com/bereket.zelalem"}
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 rounded-xl bg-[#FFDD00] hover:bg-[#ffe338] text-black font-bold text-xs shadow-lg shadow-[#FFDD00]/15 transition-all shrink-0 inline-flex items-center gap-2"
+              >
+                <SiBuymeacoffee className="w-4 h-4 text-black" />
+                <span>Buy Me a Coffee</span>
+              </a>
+            </div>
+
             {/* Bottom Support Banner */}
-            <div className="mt-14 p-6 rounded-2xl border border-white/10 bg-gradient-to-r from-primary/10 via-transparent to-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="mt-4 p-6 rounded-2xl border border-white/10 bg-gradient-to-r from-primary/10 via-transparent to-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="size-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
                   <IoHelpCircleOutline className="w-5 h-5" />
@@ -503,6 +548,16 @@ const SettingsManager: React.FC = () => {
               <Link href="/support" className="hover:text-white transition-colors">
                 Support
               </Link>
+              <span>•</span>
+              <a
+                href={siteConfig.socials.buymeacoffee || "https://www.buymeacoffee.com/bereket.zelalem"}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-[#FFDD00] transition-colors inline-flex items-center gap-1 text-[#FFDD00]/70"
+              >
+                <SiBuymeacoffee className="w-3.5 h-3.5" />
+                <span>Donate</span>
+              </a>
             </div>
           </div>
         </div>

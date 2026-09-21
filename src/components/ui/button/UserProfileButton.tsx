@@ -19,6 +19,8 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { IoHelpCircleOutline } from "react-icons/io5";
+import { SiBuymeacoffee } from "react-icons/si";
+import { siteConfig } from "@/config/site";
 
 const UserProfileButton: React.FC = () => {
   const router = useRouter();
@@ -55,6 +57,13 @@ const UserProfileButton: React.FC = () => {
         label: "Help & Support",
         href: "/support",
         icon: <IoHelpCircleOutline className="text-lg" />,
+      },
+      {
+        label: "Buy Me a Coffee",
+        href: siteConfig.socials.buymeacoffee || "https://www.buymeacoffee.com/bereket.zelalem",
+        target: "_blank",
+        rel: "noopener noreferrer",
+        icon: <SiBuymeacoffee className="text-lg text-[#FFDD00]" />,
       },
       {
         label: "Logout",
@@ -124,17 +133,22 @@ const UserProfileButton: React.FC = () => {
         variant="flat"
         disabledKeys={logout ? ITEMS.map((i) => i.label) : undefined}
       >
-        {ITEMS.map(({ label, icon, href, ...props }) => (
-          <DropdownItem
-            key={label}
-            startContent={icon}
-            as={href ? Link : undefined}
-            href={href}
-            {...props}
-          >
-            {label}
-          </DropdownItem>
-        ))}
+        {ITEMS.map(({ label, icon, href, target, rel, ...props }) => {
+          const isExternal = href?.startsWith("http");
+          return (
+            <DropdownItem
+              key={label}
+              startContent={icon}
+              as={href ? (isExternal ? "a" : Link) : undefined}
+              href={href}
+              target={target || (isExternal ? "_blank" : undefined)}
+              rel={rel || (isExternal ? "noopener noreferrer" : undefined)}
+              {...props}
+            >
+              {label}
+            </DropdownItem>
+          );
+        })}
       </DropdownMenu>
     </Dropdown>
   );

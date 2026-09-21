@@ -135,6 +135,8 @@ export const siteConfig: SiteConfigType = {
   },
   socials: {
     github: "https://github.com/bereket-09/bu-chill",
+    buymeacoffee: "https://www.buymeacoffee.com/bereket.zelalem",
+    donate: "https://www.buymeacoffee.com/bereket.zelalem",
   },
 };
 

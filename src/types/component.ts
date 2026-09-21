@@ -37,6 +37,8 @@ export type InputWrapperProps = {
 export type DropdownItemProps = {
   label: string;
   href?: string;
+  target?: string;
+  rel?: string;
   icon?: React.ReactNode;
   onClick?: () => void;
   color?: ColorType;

@@ -58,6 +58,8 @@ export type SiteConfigType = {
   }[];
   socials: {
     github: string;
+    buymeacoffee?: string;
+    donate?: string;
   };
 };
 
