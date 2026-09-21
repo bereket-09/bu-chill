@@ -93,13 +93,13 @@ export const SportsHeroCarousel: React.FC<SportsHeroCarouselProps> = ({ matches 
     }
   }, []);
 
-  // Auto slide every 7 seconds
+  // Auto slide every 10 seconds
   useEffect(() => {
     if (featured.length <= 1) return;
 
     autoPlayTimerRef.current = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % featured.length);
-    }, 7000);
+    }, 10000);
 
     return () => {
       if (autoPlayTimerRef.current) clearInterval(autoPlayTimerRef.current);
