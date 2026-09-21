@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,6 +23,7 @@ import {
   FaStar,
 } from "react-icons/fa6";
 import { LuPopcorn, LuUsers } from "react-icons/lu";
+import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import {
   DEFAULT_AVATAR_ID,
@@ -90,11 +91,24 @@ export const MySpace: React.FC = () => {
   // Library & Watchlist filters
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
   const [sortOption, setSortOption] = useState<SortOption>("created_at");
-  const [activeTab, setActiveTab] = useState<"watching" | "watchlist" | "history">("watching");
 
   // Profile data
   const [watchlistItems, setWatchlistItems] = useState<ProfileWatchlistItem[]>([]);
   const [historyItems, setHistoryItems] = useState<ProfileHistoryItem[]>([]);
+
+  // Horizontal scroll shelf refs
+  const watchingScrollRef = useRef<HTMLDivElement>(null);
+  const watchlistScrollRef = useRef<HTMLDivElement>(null);
+  const historyScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollShelf = (ref: React.RefObject<HTMLDivElement | null>, direction: "left" | "right") => {
+    if (!ref.current) return;
+    const distance = ref.current.clientWidth * 0.75;
+    ref.current.scrollBy({
+      left: direction === "left" ? -distance : distance,
+      behavior: "smooth",
+    });
+  };
 
   // Confirmation Modals
   const [clearWatchlistOpened, { open: openClearWatchlist, close: closeClearWatchlist }] =
@@ -452,23 +466,51 @@ export const MySpace: React.FC = () => {
         </header>
 
         {/* ================================================================= */}
-        {/* CONTINUE WATCHING (ISOLATED TO ACTIVE PROFILE)                    */}
+        {/* ROW 1: WATCHING (IN-PROGRESS MEDIA)                               */}
         {/* ================================================================= */}
-        {continueWatchingItems.length > 0 && activeTab !== "watching" && (
-          <section className="mb-14">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/90">
-                  Continue Watching
-                </h3>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  {continueWatchingItems.length}
-                </span>
+        <section className="relative group/shelf mb-12 select-none">
+          <div className="flex items-center justify-between mb-4 px-1">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/20 text-primary border border-primary/30">
+                <FaPlay className="w-3 h-3 ml-0.5" />
               </div>
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
+                Watching
+              </h3>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                {continueWatchingItems.length}
+              </span>
             </div>
 
-            {/* Carousel / Grid Tray */}
-            <div className="flex items-stretch gap-4 overflow-x-auto pb-4 pt-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            {/* Navigation Arrows */}
+            {continueWatchingItems.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => scrollShelf(watchingScrollRef, "left")}
+                  aria-label="Scroll left"
+                  className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                >
+                  <IoChevronBack className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollShelf(watchingScrollRef, "right")}
+                  aria-label="Scroll right"
+                  className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                >
+                  <IoChevronForward className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {continueWatchingItems.length > 0 ? (
+            <div
+              ref={watchingScrollRef}
+              className="flex items-stretch gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
               {continueWatchingItems.map((item) => {
                 const redirectLink =
                   item.type === "movie"
@@ -483,7 +525,7 @@ export const MySpace: React.FC = () => {
                 return (
                   <div
                     key={`${item.type}-${item.media_id}-${item.season}-${item.episode}`}
-                    className="group relative flex-none w-[240px] sm:w-[280px] rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:scale-[1.02]"
+                    className="group relative w-[260px] sm:w-[300px] md:w-[320px] shrink-0 rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:scale-[1.02] hover:shadow-2xl flex flex-col"
                   >
                     {/* Thumbnail Image */}
                     <div className="relative aspect-video w-full overflow-hidden bg-neutral-800">
@@ -526,7 +568,7 @@ export const MySpace: React.FC = () => {
                             item.episode
                           )
                         }
-                        title="Remove from continue watching"
+                        title="Remove from watching"
                         className="absolute top-2 left-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                       >
                         <FaXmark className="w-3 h-3" />
@@ -542,500 +584,396 @@ export const MySpace: React.FC = () => {
                     </div>
 
                     {/* Metadata Details */}
-                    <div className="p-3">
-                      <h4 className="font-semibold text-sm truncate text-white/90 group-hover:text-white">
-                        {item.title}
-                      </h4>
-                      <p className="text-xs text-white/40 mt-0.5">
-                        {timeAgo(item.updated_at)}
-                      </p>
+                    <div className="p-3.5 flex flex-col justify-between flex-1">
+                      <div>
+                        <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
+                          {item.title}
+                        </h4>
+                        <p className="text-xs text-white/40 mt-1">
+                          {timeAgo(item.updated_at)} • {Math.round(progressPct)}% completed
+                        </p>
+                      </div>
+                      <Link
+                        href={redirectLink}
+                        className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                      >
+                        <FaPlay className="w-2.5 h-2.5" />
+                        Resume Playing
+                      </Link>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </section>
-        )}
+          ) : (
+            <div className="flex items-center justify-between p-6 rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
+              <div className="flex items-center gap-4">
+                <div className="size-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
+                  🎬
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-white">No in-progress movies or shows</h4>
+                  <p className="text-xs text-white/45 mt-0.5">
+                    Start watching any title and it will appear here with your playback progress saved.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link href="/movies">
+                  <Button color="primary" variant="flat" size="sm" startContent={<FaPlay className="w-2.5 h-2.5" />}>
+                    Explore Movies
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* ================================================================= */}
-        {/* SECTION: WATCHING, WATCHLIST & HISTORY TABS                       */}
+        {/* ROW 2: WATCHLIST                                                  */}
         {/* ================================================================= */}
-        <section className="mb-14">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-6">
-            {/* View Switcher Tabs: Watching vs Watchlist vs History */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <button
-                type="button"
-                onClick={() => setActiveTab("watching")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 cursor-pointer ${
-                  activeTab === "watching"
-                    ? "bg-white text-black shadow-lg"
-                    : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white"
-                }`}
-              >
-                <FaPlay className="w-3 h-3 text-primary" />
-                <span>Watching</span>
-                <span
-                  className={`ml-1 text-xs px-1.5 py-0.2 rounded-full ${
-                    activeTab === "watching" ? "bg-black/15 text-black" : "bg-white/15 text-white"
-                  }`}
-                >
-                  {continueWatchingItems.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("watchlist")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 cursor-pointer ${
-                  activeTab === "watchlist"
-                    ? "bg-white text-black shadow-lg"
-                    : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white"
-                }`}
-              >
-                <LuPopcorn className="w-4 h-4 text-primary" />
-                <span>Watchlist</span>
-                <span
-                  className={`ml-1 text-xs px-1.5 py-0.2 rounded-full ${
-                    activeTab === "watchlist" ? "bg-black/15 text-black" : "bg-white/15 text-white"
-                  }`}
-                >
-                  {watchlistItems.length}
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("history")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 cursor-pointer ${
-                  activeTab === "history"
-                    ? "bg-white text-black shadow-lg"
-                    : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white"
-                }`}
-              >
-                <FaClockRotateLeft className="w-3.5 h-3.5" />
-                <span>Already Watched</span>
-                <span
-                  className={`ml-1 text-xs px-1.5 py-0.2 rounded-full ${
-                    activeTab === "history" ? "bg-black/15 text-black" : "bg-white/15 text-white"
-                  }`}
-                >
-                  {alreadyWatchedItems.length}
-                </span>
-              </button>
+        <section className="relative group/shelf mb-12 select-none">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 px-1">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <LuPopcorn className="w-3.5 h-3.5" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
+                Watchlist
+              </h3>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                {watchlistItems.length}
+              </span>
             </div>
 
-            {/* Filter Pills & Sort Dropdown (For Watchlist) */}
-            {activeTab === "watchlist" && (
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Content Type Filter Pills */}
-                <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setContentFilter("all")}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-                      contentFilter === "all"
-                        ? "bg-white/20 text-white"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContentFilter("movie")}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 ${
-                      contentFilter === "movie"
-                        ? "bg-white/20 text-white"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    <FaFilm className="w-2.5 h-2.5" />
-                    Movies
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContentFilter("tv")}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 ${
-                      contentFilter === "tv"
-                        ? "bg-white/20 text-white"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    <FaTv className="w-2.5 h-2.5" />
-                    TV Series
-                  </button>
-                </div>
-
-                {/* Sort Dropdown */}
-                <div className="w-36">
-                  <Select
-                    size="sm"
-                    label="Sort"
-                    selectedKeys={[sortOption]}
-                    onChange={(e) => setSortOption((e.target.value as SortOption) || "created_at")}
-                    variant="bordered"
-                    className="max-w-xs"
-                  >
-                    {SORT_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.key}>{opt.label}</SelectItem>
-                    ))}
-                  </Select>
-                </div>
-
-                {/* Clear Button */}
-                {filteredWatchlist.length > 0 && (
-                  <Button
-                    size="sm"
-                    color="danger"
-                    variant="flat"
-                    startContent={<FaTrash className="w-3 h-3" />}
-                    onClick={openClearWatchlist}
-                    className="text-xs"
-                  >
-                    Clear
-                  </Button>
-                )}
+            {/* Filter Pills, Sort & Navigation */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Type Filters */}
+              <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setContentFilter("all")}
+                  className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors ${
+                    contentFilter === "all"
+                      ? "bg-white/20 text-white"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContentFilter("movie")}
+                  className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
+                    contentFilter === "movie"
+                      ? "bg-white/20 text-white"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <FaFilm className="w-2.5 h-2.5" />
+                  Movies
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContentFilter("tv")}
+                  className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
+                    contentFilter === "tv"
+                      ? "bg-white/20 text-white"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <FaTv className="w-2.5 h-2.5" />
+                  TV Series
+                </button>
               </div>
-            )}
 
-            {/* Clear History Button (For History Tab) */}
-            {activeTab === "history" && alreadyWatchedItems.length > 0 && (
-              <Button
-                size="sm"
-                color="danger"
-                variant="flat"
-                startContent={<FaTrash className="w-3 h-3" />}
-                onClick={openClearHistory}
-                className="text-xs"
-              >
-                Clear History
-              </Button>
-            )}
+              {/* Sort Dropdown */}
+              <div className="w-32">
+                <Select
+                  size="sm"
+                  selectedKeys={[sortOption]}
+                  onChange={(e) => setSortOption((e.target.value as SortOption) || "created_at")}
+                  variant="bordered"
+                  className="max-w-xs"
+                  aria-label="Sort watchlist"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                  ))}
+                </Select>
+              </div>
+
+              {/* Clear Watchlist */}
+              {filteredWatchlist.length > 0 && (
+                <Button
+                  size="sm"
+                  color="danger"
+                  variant="flat"
+                  startContent={<FaTrash className="w-3 h-3" />}
+                  onClick={openClearWatchlist}
+                  className="text-xs h-8 px-2.5"
+                >
+                  Clear
+                </Button>
+              )}
+
+              {/* Navigation Arrows */}
+              {filteredWatchlist.length > 0 && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  <button
+                    type="button"
+                    onClick={() => scrollShelf(watchlistScrollRef, "left")}
+                    aria-label="Scroll left"
+                    className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                  >
+                    <IoChevronBack className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollShelf(watchlistScrollRef, "right")}
+                    aria-label="Scroll right"
+                    className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                  >
+                    <IoChevronForward className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* TAB 1: WATCHING CONTENT */}
-          {activeTab === "watching" && (
-            <div>
-              {continueWatchingItems.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-                  {continueWatchingItems.map((item) => {
-                    const redirectLink =
-                      item.type === "movie"
-                        ? `/movie/${item.media_id}/player`
-                        : `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player`;
-                    const progressPct =
-                      item.duration > 0
-                        ? Math.min(100, Math.round((item.last_position / item.duration) * 100))
-                        : 0;
-                    const backdrop = getImageUrl(item.backdrop_path || item.poster_path || "");
+          {filteredWatchlist.length > 0 ? (
+            <div
+              ref={watchlistScrollRef}
+              className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {filteredWatchlist.map((item) => {
+                const poster = getImageUrl(item.poster_path || item.backdrop_path || "");
+                const link = item.type === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`;
+                const year = item.release_date ? new Date(item.release_date).getFullYear() : null;
 
-                    return (
-                      <div
-                        key={`${item.type}-${item.media_id}-${item.season}-${item.episode}`}
-                        className="group relative flex flex-col rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:scale-[1.02] hover:shadow-2xl"
+                return (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    className="group relative w-[140px] sm:w-[170px] md:w-[185px] shrink-0 rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+                  >
+                    <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
+                      <img
+                        src={poster}
+                        alt={item.title}
+                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+
+                      <Link
+                        href={link}
+                        className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        {/* Thumbnail Image */}
-                        <div className="relative aspect-video w-full overflow-hidden bg-neutral-800">
-                          <img
-                            src={backdrop}
-                            alt={item.title}
-                            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-
-                          {/* Play Button Overlay */}
-                          <Link
-                            href={redirectLink}
-                            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <div className="flex size-12 items-center justify-center rounded-full bg-primary text-white shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
-                              <FaPlay className="w-4 h-4 ml-0.5" />
-                            </div>
-                          </Link>
-
-                          {/* TV Tag (Season / Episode) */}
-                          {item.type === "tv" && (
-                            <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-amber-400 border border-white/10">
-                              S{item.season} E{item.episode}
-                            </span>
-                          )}
-
-                          {/* Time Left Badge */}
-                          <span className="absolute bottom-2 left-2 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-white/80">
-                            {formatDuration(item.last_position)}
-                          </span>
-
-                          {/* Dismiss / Remove Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleRemoveContinueWatching(
-                                item.media_id,
-                                item.type,
-                                item.season,
-                                item.episode
-                              )
-                            }
-                            title="Remove from watching"
-                            className="absolute top-2 left-2 size-7 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md cursor-pointer"
-                          >
-                            <FaXmark className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Progress Bar */}
-                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-                            <div
-                              className="h-full bg-primary"
-                              style={{ width: `${progressPct}%` }}
-                            />
-                          </div>
+                        <div className="flex size-11 items-center justify-center rounded-full bg-white text-black shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
+                          <FaPlay className="w-4 h-4 ml-0.5" />
                         </div>
+                      </Link>
 
-                        {/* Metadata Details */}
-                        <div className="p-3.5 flex flex-col justify-between flex-1">
-                          <div>
-                            <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
-                              {item.title}
-                            </h4>
-                            <p className="text-xs text-white/40 mt-1">
-                              {timeAgo(item.updated_at)} • {Math.round(progressPct)}% completed
-                            </p>
-                          </div>
-                          <Link
-                            href={redirectLink}
-                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-                          >
-                            <FaPlay className="w-2.5 h-2.5" />
-                            Resume Playing
-                          </Link>
+                      <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-white/90 border border-white/10">
+                        {item.type}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveWatchlistItem(item.id, item.type, item.title)}
+                        title="Remove from watchlist"
+                        className="absolute top-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                      >
+                        <FaTrash className="w-2.5 h-2.5" />
+                      </button>
+
+                      {item.vote_average ? (
+                        <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-amber-400">
+                          <FaStar className="w-2.5 h-2.5" />
+                          <span>{item.vote_average.toFixed(1)}</span>
                         </div>
+                      ) : null}
+                    </div>
+
+                    <div className="p-3 flex flex-col justify-between flex-1">
+                      <Link href={link}>
+                        <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
+                          {item.title}
+                        </h4>
+                      </Link>
+                      <div className="flex items-center justify-between text-xs text-white/40 mt-1">
+                        <span>{year || "—"}</span>
+                        <span className="capitalize">{item.type}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                /* Ultra-clean Empty Watching State */
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
-                  <div className="size-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-4">
-                    🎬
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    No in-progress movies or shows
-                  </h3>
-                  <p className="text-sm text-white/50 max-w-md mb-8 leading-relaxed">
-                    Pick up right where you left off. Start streaming any movie or series and it will automatically appear here with your playback progress saved.
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <Link href="/movies">
-                      <Button color="primary" variant="shadow" size="sm" startContent={<FaPlay />}>
-                        Explore Movies
-                      </Button>
-                    </Link>
-                    <Link href="/tv">
-                      <Button variant="flat" size="sm" startContent={<FaTv />}>
-                        Browse TV Series
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              )}
+                );
+              })}
             </div>
-          )}
-
-          {/* TAB 2: WATCHLIST CONTENT */}
-          {activeTab === "watchlist" && (
-            <div>
-              {filteredWatchlist.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-                  {filteredWatchlist.map((item) => {
-                    const poster = getImageUrl(item.poster_path || item.backdrop_path || "");
-                    const link =
-                      item.type === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`;
-                    const year = item.release_date
-                      ? new Date(item.release_date).getFullYear()
-                      : null;
-
-                    return (
-                      <div
-                        key={`${item.type}-${item.id}`}
-                        className="group relative flex flex-col rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl"
-                      >
-                        {/* Poster Art */}
-                        <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
-                          <img
-                            src={poster}
-                            alt={item.title}
-                            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-
-                          {/* Hover Play Button */}
-                          <Link
-                            href={link}
-                            className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <div className="flex size-12 items-center justify-center rounded-full bg-white text-black shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
-                              <FaPlay className="w-4 h-4 ml-0.5" />
-                            </div>
-                          </Link>
-
-                          {/* Type Chip */}
-                          <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-white/90 border border-white/10">
-                            {item.type}
-                          </span>
-
-                          {/* Remove Bookmark Button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleRemoveWatchlistItem(item.id, item.type, item.title)
-                            }
-                            title="Remove from watchlist"
-                            className="absolute top-2 right-2 size-7 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
-                          >
-                            <FaTrash className="w-3 h-3" />
-                          </button>
-
-                          {/* Rating Badge */}
-                          {item.vote_average ? (
-                            <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-amber-400">
-                              <FaStar className="w-2.5 h-2.5" />
-                              <span>{item.vote_average.toFixed(1)}</span>
-                            </div>
-                          ) : null}
-                        </div>
-
-                        {/* Title & Metadata */}
-                        <div className="p-3 flex flex-col justify-between flex-1">
-                          <Link href={link}>
-                            <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
-                              {item.title}
-                            </h4>
-                          </Link>
-                          <div className="flex items-center justify-between text-xs text-white/40 mt-1">
-                            <span>{year || "—"}</span>
-                            <span className="capitalize">{item.type}</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+          ) : (
+            <div className="flex items-center justify-between p-6 rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
+              <div className="flex items-center gap-4">
+                <div className="size-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
+                  🍿
                 </div>
-              ) : (
-                /* Ultra-clean Empty Watchlist State */
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
-                  <div className="size-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-4">
-                    🍿
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    Your Watchlist is empty
-                  </h3>
-                  <p className="text-sm text-white/50 max-w-md mb-8 leading-relaxed">
+                <div>
+                  <h4 className="font-semibold text-sm text-white">Your Watchlist is empty</h4>
+                  <p className="text-xs text-white/45 mt-0.5">
                     Explore trending movies and series to save them to your personal streaming queue.
                   </p>
-                  <div className="flex items-center gap-3">
-                    <Link href="/movies">
-                      <Button color="primary" variant="shadow" size="sm" startContent={<FaFilm />}>
-                        Explore Movies
-                      </Button>
-                    </Link>
-                    <Link href="/tv">
-                      <Button variant="flat" size="sm" startContent={<FaTv />}>
-                        Browse TV Series
-                      </Button>
-                    </Link>
-                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link href="/movies">
+                  <Button color="primary" variant="flat" size="sm" startContent={<FaFilm className="w-2.5 h-2.5" />}>
+                    Browse Movies
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ================================================================= */}
+        {/* ROW 3: MY HISTORY (ALREADY WATCHED)                               */}
+        {/* ================================================================= */}
+        <section className="relative group/shelf mb-14 select-none">
+          <div className="flex items-center justify-between mb-4 px-1">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <FaClockRotateLeft className="w-3.5 h-3.5" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
+                My History
+              </h3>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                {alreadyWatchedItems.length}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              {alreadyWatchedItems.length > 0 && (
+                <Button
+                  size="sm"
+                  color="danger"
+                  variant="flat"
+                  startContent={<FaTrash className="w-3 h-3" />}
+                  onClick={openClearHistory}
+                  className="text-xs h-8 px-2.5"
+                >
+                  Clear History
+                </Button>
+              )}
+
+              {alreadyWatchedItems.length > 0 && (
+                <div className="flex items-center gap-1.5 ml-1">
+                  <button
+                    type="button"
+                    onClick={() => scrollShelf(historyScrollRef, "left")}
+                    aria-label="Scroll left"
+                    className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                  >
+                    <IoChevronBack className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollShelf(historyScrollRef, "right")}
+                    aria-label="Scroll right"
+                    className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                  >
+                    <IoChevronForward className="w-4 h-4" />
+                  </button>
                 </div>
               )}
             </div>
-          )}
+          </div>
 
-          {/* TAB 2: HISTORY & ALREADY WATCHED CONTENT */}
-          {activeTab === "history" && (
-            <div>
-              {alreadyWatchedItems.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-                  {alreadyWatchedItems.map((item) => {
-                    const poster = getImageUrl(item.poster_path || item.backdrop_path || "");
-                    const link =
-                      item.type === "movie" ? `/movie/${item.media_id}` : `/tv/${item.media_id}`;
+          {alreadyWatchedItems.length > 0 ? (
+            <div
+              ref={historyScrollRef}
+              className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+            >
+              {alreadyWatchedItems.map((item) => {
+                const poster = getImageUrl(item.poster_path || item.backdrop_path || "");
+                const link = item.type === "movie" ? `/movie/${item.media_id}` : `/tv/${item.media_id}`;
 
-                    return (
-                      <div
-                        key={`${item.type}-${item.media_id}-${item.season}-${item.episode}`}
-                        className="group relative flex flex-col rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl"
+                return (
+                  <div
+                    key={`${item.type}-${item.media_id}-${item.season}-${item.episode}`}
+                    className="group relative w-[140px] sm:w-[170px] md:w-[185px] shrink-0 rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+                  >
+                    <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
+                      <img
+                        src={poster}
+                        alt={item.title}
+                        className="size-full object-cover"
+                      />
+
+                      <Link
+                        href={link}
+                        className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
-                          <img
-                            src={poster}
-                            alt={item.title}
-                            className="size-full object-cover"
-                          />
-
-                          <Link
-                            href={link}
-                            className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <div className="flex size-12 items-center justify-center rounded-full bg-white text-black shadow-xl">
-                              <FaPlay className="w-4 h-4 ml-0.5" />
-                            </div>
-                          </Link>
-
-                          {/* Completed Chip */}
-                          <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-600/90 text-white shadow-md">
-                            Watched
-                          </span>
-
-                          {/* Remove from history button */}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleRemoveContinueWatching(
-                                item.media_id,
-                                item.type,
-                                item.season,
-                                item.episode
-                              )
-                            }
-                            title="Remove from history"
-                            className="absolute top-2 right-2 size-7 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
-                          >
-                            <FaTrash className="w-3 h-3" />
-                          </button>
+                        <div className="flex size-11 items-center justify-center rounded-full bg-white text-black shadow-xl">
+                          <FaPlay className="w-4 h-4 ml-0.5" />
                         </div>
+                      </Link>
 
-                        <div className="p-3 flex flex-col justify-between flex-1">
-                          <Link href={link}>
-                            <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
-                              {item.title}
-                            </h4>
-                          </Link>
-                          <div className="flex items-center justify-between text-xs text-white/40 mt-1">
-                            <span>{timeAgo(item.updated_at)}</span>
-                            <span className="capitalize">{item.type}</span>
-                          </div>
-                        </div>
+                      <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-600/90 text-white shadow-md">
+                        Watched
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRemoveContinueWatching(
+                            item.media_id,
+                            item.type,
+                            item.season,
+                            item.episode
+                          )
+                        }
+                        title="Remove from history"
+                        className="absolute top-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                      >
+                        <FaTrash className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+
+                    <div className="p-3 flex flex-col justify-between flex-1">
+                      <Link href={link}>
+                        <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
+                          {item.title}
+                        </h4>
+                      </Link>
+                      <div className="flex items-center justify-between text-xs text-white/40 mt-1">
+                        <span>{timeAgo(item.updated_at)}</span>
+                        <span className="capitalize">{item.type}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
-                  <div className="size-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-4">
-                    🎬
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">
-                    Your Watch History is empty
-                  </h3>
-                  <p className="text-sm text-white/50 max-w-md mb-8 leading-relaxed">
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-6 rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
+              <div className="flex items-center gap-4">
+                <div className="size-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
+                  🎬
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm text-white">Your Watch History is empty</h4>
+                  <p className="text-xs text-white/45 mt-0.5">
                     Movies and episodes you watch to completion will appear here so you can revisit them anytime.
                   </p>
-                  <Link href="/movies">
-                    <Button color="primary" variant="shadow" size="sm" startContent={<FaPlay />}>
-                      Start Streaming
-                    </Button>
-                  </Link>
                 </div>
-              )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Link href="/movies">
+                  <Button color="primary" variant="flat" size="sm" startContent={<FaPlay className="w-2.5 h-2.5" />}>
+                    Start Streaming
+                  </Button>
+                </Link>
+              </div>
             </div>
           )}
         </section>
