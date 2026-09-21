@@ -222,21 +222,23 @@ export default function LiveTvPage() {
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all shadow active:scale-95"
-              title="Import M3U Playlist"
-              aria-label="Import M3U Playlist"
+              className="flex items-center gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary font-semibold text-xs sm:text-sm transition-all shadow active:scale-95"
+              title="Import Working M3U Playlists or Custom Channels"
+              aria-label="Import Working M3U Playlists"
             >
-              <IoAdd className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <IoAddCircleOutline className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+              <span>Import M3U / Channels</span>
             </button>
 
             {customChannels.length > 0 && (
               <button
                 type="button"
                 onClick={handleClearCustom}
-                className="p-2 sm:p-2.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-red-400 text-xs transition-colors"
-                title="Clear imported playlist"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 sm:py-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-red-400 text-xs transition-colors"
+                title="Reset custom imported channels"
               >
                 <IoTrashOutline className="w-4 h-4" />
+                <span className="hidden sm:inline">Reset</span>
               </button>
             )}
           </div>

@@ -62,6 +62,24 @@ export const CURATED_CHANNELS: Channel[] = [
     language: "English",
     url: "https://dai.google.com/linear/hls/event/jKwfd4apQcuxQtyRI9Q6-Q/master.m3u8",
   },
+  {
+    id: "al-jazeera-english",
+    name: "Al Jazeera English",
+    logo: "https://raw.githubusercontent.com/iptv-org/epg/master/sites/aljazeera.com/aljazeera.com.png",
+    group: "News",
+    country: "Global",
+    language: "English",
+    url: "https://live-hls-apps-aje-fa.getaj.net/AJE/index.m3u8",
+  },
+  {
+    id: "france-24-english",
+    name: "France 24 English",
+    logo: "https://raw.githubusercontent.com/iptv-org/epg/master/sites/france24.com/france24.com.png",
+    group: "News",
+    country: "France",
+    language: "English",
+    url: "https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_5000.m3u8",
+  },
 
   // --- SPORTS ---
   {
@@ -541,15 +559,125 @@ export const CURATED_CHANNELS: Channel[] = [
   },
 ];
 
+export interface M3UPlaylistPreset {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  url: string;
+  badge?: string;
+  channelCountEstimate?: string;
+  featured?: boolean;
+}
+
+export const POPULAR_M3U_PLAYLISTS: M3UPlaylistPreset[] = [
+  {
+    id: "iptv-eng",
+    name: "English Channels (Global)",
+    description: "Curated collection of 1,000+ English broadcast channels worldwide",
+    category: "General",
+    url: "https://iptv-org.github.io/iptv/languages/eng.m3u",
+    badge: "Popular",
+    channelCountEstimate: "1,500+",
+    featured: true,
+  },
+  {
+    id: "iptv-movies",
+    name: "Movies & Cinema (24/7)",
+    description: "Free 24/7 movie channels, indie films, Hollywood classics & action cinema",
+    category: "Movies",
+    url: "https://iptv-org.github.io/iptv/categories/movies.m3u",
+    badge: "Movies",
+    channelCountEstimate: "400+",
+    featured: true,
+  },
+  {
+    id: "iptv-news",
+    name: "24/7 Global News Network",
+    description: "Top international networks: Sky News, DW, France 24, CGTN, Al Jazeera",
+    category: "News",
+    url: "https://iptv-org.github.io/iptv/categories/news.m3u",
+    badge: "News",
+    channelCountEstimate: "600+",
+    featured: true,
+  },
+  {
+    id: "iptv-sports",
+    name: "Live Sports & Action",
+    description: "Sports, combat, motorsports, golf, extreme athletics & highlights",
+    category: "Sports",
+    url: "https://iptv-org.github.io/iptv/categories/sports.m3u",
+    badge: "Sports",
+    channelCountEstimate: "250+",
+    featured: true,
+  },
+  {
+    id: "iptv-animation",
+    name: "Animation & Kids",
+    description: "Cartoons, anime series, family programs & animated adventures",
+    category: "Kids",
+    url: "https://iptv-org.github.io/iptv/categories/animation.m3u",
+    badge: "Kids & Anime",
+    channelCountEstimate: "180+",
+  },
+  {
+    id: "iptv-doc",
+    name: "Documentary & Nature",
+    description: "Science, space, history, wildlife and investigative documentaries",
+    category: "Documentary",
+    url: "https://iptv-org.github.io/iptv/categories/documentary.m3u",
+    badge: "Docs",
+    channelCountEstimate: "150+",
+  },
+  {
+    id: "iptv-music",
+    name: "Music & Concerts",
+    description: "24/7 music channels across pop, rock, electronic, jazz & hip-hop",
+    category: "Music",
+    url: "https://iptv-org.github.io/iptv/categories/music.m3u",
+    badge: "Music",
+    channelCountEstimate: "300+",
+  },
+  {
+    id: "free-tv-global",
+    name: "Free-TV Curated Worldwide",
+    description: "Tested free-to-air public broadcasts worldwide from Free-TV project",
+    category: "General",
+    url: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8",
+    badge: "Global",
+    channelCountEstimate: "1,200+",
+  },
+  {
+    id: "iptv-us",
+    name: "United States (US Live TV)",
+    description: "Local, regional, and national free streams from the United States",
+    category: "US",
+    url: "https://iptv-org.github.io/iptv/countries/us.m3u",
+    badge: "US",
+    channelCountEstimate: "800+",
+  },
+  {
+    id: "iptv-uk",
+    name: "United Kingdom (UK Live TV)",
+    description: "Public and digital channels broadcasting across the United Kingdom",
+    category: "UK",
+    url: "https://iptv-org.github.io/iptv/countries/uk.m3u",
+    badge: "UK",
+    channelCountEstimate: "200+",
+  },
+];
+
 /**
  * Robust M3U / M3U8 string parser
  */
-export function parseM3U(content: string): Channel[] {
+export function parseM3U(content: string, maxLimit = 1500): Channel[] {
   const lines = content.split(/\r?\n/);
   const channels: Channel[] = [];
   let currentInfo: Partial<Channel> | null = null;
+  const seenIds = new Set<string>();
 
   for (let i = 0; i < lines.length; i++) {
+    if (channels.length >= maxLimit) break;
     const line = lines[i].trim();
 
     if (line.startsWith("#EXTINF:")) {
@@ -559,6 +687,12 @@ export function parseM3U(content: string): Channel[] {
       const lastCommaIndex = line.lastIndexOf(",");
       if (lastCommaIndex !== -1) {
         currentInfo.name = line.substring(lastCommaIndex + 1).trim();
+      }
+
+      // Parse tvg-name as fallback name
+      const tvgNameMatch = line.match(/tvg-name="([^"]*)"/i);
+      if (!currentInfo.name && tvgNameMatch && tvgNameMatch[1]) {
+        currentInfo.name = tvgNameMatch[1].trim();
       }
 
       // Parse tvg-id
@@ -590,25 +724,42 @@ export function parseM3U(content: string): Channel[] {
       if (langMatch && langMatch[1]) {
         currentInfo.language = langMatch[1].trim();
       }
+    } else if (line.startsWith("#EXTGRP:") && currentInfo) {
+      currentInfo.group = line.replace("#EXTGRP:", "").trim();
     } else if (line && !line.startsWith("#") && currentInfo) {
       // This is the stream URL line
       const streamUrl = line;
-      const channelName = currentInfo.name || "Live Stream";
-      const channelId =
-        currentInfo.id ||
-        channelName.toLowerCase().replace(/[^a-z0-9]/g, "-") +
-        "-" +
-        Math.random().toString(36).substring(2, 7);
 
-      channels.push({
-        id: channelId,
-        name: channelName,
-        logo: currentInfo.logo,
-        group: currentInfo.group || "Other",
-        country: currentInfo.country || "Global",
-        language: currentInfo.language || "English",
-        url: streamUrl,
-      });
+      // Filter out raw web pages or YouTube watch pages that are not direct HLS/MP4 streams
+      const isDirectStream =
+        streamUrl.startsWith("http://") || streamUrl.startsWith("https://");
+      const isYouTubeWeb =
+        streamUrl.includes("youtube.com/watch") ||
+        streamUrl.includes("youtube.com/@") ||
+        streamUrl.includes("youtu.be/");
+
+      if (isDirectStream && !isYouTubeWeb) {
+        const channelName = currentInfo.name || "Live Stream";
+        let channelId =
+          currentInfo.id ||
+          channelName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+
+        // Ensure unique channelId
+        if (seenIds.has(channelId)) {
+          channelId = `${channelId}-${Math.random().toString(36).substring(2, 6)}`;
+        }
+        seenIds.add(channelId);
+
+        channels.push({
+          id: channelId,
+          name: channelName,
+          logo: currentInfo.logo,
+          group: currentInfo.group || "Other",
+          country: currentInfo.country || "Global",
+          language: currentInfo.language || "English",
+          url: streamUrl,
+        });
+      }
 
       currentInfo = null;
     }
@@ -665,7 +816,22 @@ export function saveStoredCustomChannels(channels: Channel[]) {
   try {
     localStorage.setItem(CUSTOM_CHANNELS_STORAGE_KEY, JSON.stringify(channels));
   } catch {
-    // Ignore localStorage quota errors
+    // If quota exceeded (e.g. 5MB quota reached), save a smaller subset
+    try {
+      localStorage.setItem(
+        CUSTOM_CHANNELS_STORAGE_KEY,
+        JSON.stringify(channels.slice(0, 500))
+      );
+    } catch {
+      try {
+        localStorage.setItem(
+          CUSTOM_CHANNELS_STORAGE_KEY,
+          JSON.stringify(channels.slice(0, 200))
+        );
+      } catch {
+        // Ignore quota error safely
+      }
+    }
   }
 }
 
@@ -677,3 +843,4 @@ export function clearStoredCustomChannels() {
     // Ignore error
   }
 }
+
