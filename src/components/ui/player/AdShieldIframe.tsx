@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/helpers";
+import { IoPlayForward, IoRefresh, IoServerOutline } from "react-icons/io5";
 
 interface AdShieldIframeProps extends React.IframeHTMLAttributes<HTMLIFrameElement> {
   src: string;
@@ -9,6 +10,12 @@ interface AdShieldIframeProps extends React.IframeHTMLAttributes<HTMLIFrameEleme
   className?: string;
   referrerPolicy?: React.HTMLAttributeReferrerPolicy;
   onLoad?: () => void;
+  onError?: () => void;
+  onTimeout?: () => void;
+  onNextServer?: () => void;
+  serverName?: string;
+  nextServerName?: string;
+  timeoutSeconds?: number;
   allowFullScreen?: boolean;
 }
 
@@ -19,13 +26,99 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
   referrerPolicy = "no-referrer",
   allowFullScreen = true,
   onLoad,
+  onError,
+  onTimeout,
+  onNextServer,
+  serverName = "Server",
+  nextServerName,
+  timeoutSeconds = 9,
   ...rest
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [countdown, setCountdown] = useState(timeoutSeconds);
+
+  // Reset loading & timer whenever src changes
+  useEffect(() => {
+    setIsLoaded(false);
+    setCountdown(timeoutSeconds);
+
+    const interval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          onTimeout?.();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [src, timeoutSeconds, onTimeout]);
+
+  const handleIframeLoad = () => {
+    setIsLoaded(true);
+    onLoad?.();
+  };
+
+  const handleIframeError = () => {
+    onError?.();
+    if (onNextServer) {
+      onNextServer();
+    }
+  };
 
   return (
     <div className={cn("relative w-full h-full bg-black overflow-hidden select-none", className)}>
-      {/* The embed player */}
+      {/* Loading & Watchdog Screen (shown until iframe finishes loading) */}
+      {!isLoaded && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/95 p-6 text-center text-white backdrop-blur-md animate-fade-in">
+          <div className="relative mb-5 flex items-center justify-center">
+            <div className="h-14 w-14 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+            <IoServerOutline className="absolute text-xl text-primary" />
+          </div>
+
+          <p className="text-base sm:text-lg font-bold text-white tracking-wide">
+            Connecting to {serverName}
+          </p>
+
+          <p className="mt-1 text-xs sm:text-sm text-white/50 max-w-sm">
+            {countdown > 0
+              ? `Waiting for stream response... Auto-switching to next server in ${countdown}s`
+              : "Server response timed out. Switching to next server..."}
+          </p>
+
+          {/* Quick Manual Skip Button */}
+          {onNextServer && (
+            <button
+              type="button"
+              onClick={onNextServer}
+              className="mt-5 flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold text-white/90 backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20 active:scale-95 shadow-lg"
+            >
+              <IoPlayForward className="text-xs" />
+              <span>{nextServerName ? `Skip to ${nextServerName}` : "Skip to Next Server"}</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Persistent Subtle "Switch Server" Quick Button (visible when loaded for fast recovery if player is blank) */}
+      {isLoaded && onNextServer && (
+        <div className="pointer-events-auto absolute bottom-4 left-4 z-30 opacity-40 hover:opacity-100 transition-opacity duration-300">
+          <button
+            type="button"
+            onClick={onNextServer}
+            className="flex items-center gap-1.5 rounded-full border border-white/15 bg-black/75 px-3 py-1.5 text-[11px] font-medium text-white/80 backdrop-blur-md hover:bg-black/90 hover:text-white shadow-lg transition-all active:scale-95"
+            title="Video not loading inside server? Switch to next server"
+          >
+            <IoRefresh className="text-xs text-primary" />
+            <span>Server issues? Try next</span>
+          </button>
+        </div>
+      )}
+
+      {/* The embed player iframe */}
       <iframe
         ref={iframeRef}
         key={src}
@@ -35,7 +128,8 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
         referrerPolicy={referrerPolicy}
         allowFullScreen={allowFullScreen}
         className="w-full h-full border-0 bg-black"
-        onLoad={onLoad}
+        onLoad={handleIframeLoad}
+        onError={handleIframeError}
         {...rest}
       />
     </div>

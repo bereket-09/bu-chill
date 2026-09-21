@@ -174,8 +174,21 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     [players]
   );
 
+  // Consecutive failure tracker to prevent infinite loops
+  const consecutiveFailuresRef = useRef<number>(0);
+  const [serverNotice, setServerNotice] = useState<string | null>(null);
+
+  // Auto hide server notification
+  useEffect(() => {
+    if (serverNotice) {
+      const timer = setTimeout(() => setServerNotice(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [serverNotice]);
+
   const handleSelectSource = useCallback(
     (newSource: number) => {
+      consecutiveFailuresRef.current = 0;
       // Carry over exact playback time to newly chosen server
       const latestTime = Math.floor(currentTimeRef.current || activePlaybackTime);
       setActivePlaybackTime(latestTime);
@@ -183,6 +196,43 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     },
     [activePlaybackTime, setSelectedSource]
   );
+
+  const nextServerIndex = useMemo(
+    () => (players && players.length > 1 ? (selectedSource + 1) % players.length : selectedSource),
+    [players, selectedSource]
+  );
+
+  const handleAutoSwitch = useCallback(() => {
+    if (!players || players.length <= 1) return;
+
+    consecutiveFailuresRef.current += 1;
+    if (consecutiveFailuresRef.current >= players.length) {
+      setServerNotice("All available servers were tried. Check your connection or choose a server manually.");
+      return;
+    }
+
+    const nextIndex = (selectedSource + 1) % players.length;
+    const currentName = players[selectedSource]?.title || "Server";
+    const nextName = players[nextIndex]?.title || "Next Server";
+
+    setServerNotice(`${currentName.replace(/\s*\([^)]*\)/g, "")} was unreachable. Auto-switched to ${nextName.replace(/\s*\([^)]*\)/g, "")}.`);
+    
+    // Carry over playback time
+    const latestTime = Math.floor(currentTimeRef.current || activePlaybackTime);
+    setActivePlaybackTime(latestTime);
+    setSelectedSource(nextIndex);
+  }, [players, selectedSource, activePlaybackTime, setSelectedSource]);
+
+  const handleManualNextServer = useCallback(() => {
+    if (!players || players.length <= 1) return;
+    consecutiveFailuresRef.current = 0;
+    const nextIndex = (selectedSource + 1) % players.length;
+    handleSelectSource(nextIndex);
+  }, [players, selectedSource, handleSelectSource]);
+
+  const handleIframeLoaded = useCallback(() => {
+    consecutiveFailuresRef.current = 0;
+  }, []);
 
   const handleToggleMode = useCallback(
     (mode: "direct" | "embed") => {
@@ -228,8 +278,23 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
           />
         )}
 
+        {/* Server Switch Notification Pill */}
+        {serverNotice && (
+          <div className="pointer-events-auto absolute top-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2.5 rounded-full border border-amber-500/30 bg-black/90 px-4 py-2 text-xs sm:text-sm font-medium text-white shadow-2xl backdrop-blur-xl animate-fade-in transition-all">
+            <span className="h-2 w-2 rounded-full bg-amber-400 animate-ping" />
+            <span>{serverNotice}</span>
+            <button
+              type="button"
+              onClick={() => setServerNotice(null)}
+              className="ml-2 text-white/50 hover:text-white text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Resume Notification Pill */}
-        {showResumeBanner && initialPosition > 10 && (
+        {showResumeBanner && initialPosition > 10 && !serverNotice && (
           <div className="pointer-events-auto absolute top-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 rounded-full border border-white/20 bg-black/85 px-4 py-2 text-xs sm:text-sm font-medium text-white shadow-2xl backdrop-blur-xl animate-fade-in transition-all">
             <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -293,6 +358,12 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
                 key={`${PLAYER.title}-${activePlaybackTime}`}
                 src={PLAYER.source}
                 title={props.seriesName}
+                serverName={PLAYER.title?.replace(/\s*\([^)]*\)/g, "") || "Server"}
+                nextServerName={players[nextServerIndex]?.title?.replace(/\s*\([^)]*\)/g, "") || "Next Server"}
+                onTimeout={handleAutoSwitch}
+                onError={handleAutoSwitch}
+                onNextServer={handleManualNextServer}
+                onLoad={handleIframeLoaded}
                 className="z-10 h-full w-full border-0"
               />
             )
