@@ -14,7 +14,6 @@ import {
   IoArrowBack,
   IoClose,
   IoSearchOutline,
-  IoShieldCheckmark,
 } from "react-icons/io5";
 import {
   MdFullscreen,
@@ -370,15 +369,6 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
           showControls || showChannelDrawer ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
-        {/* Ad Shield Indicator */}
-        <div
-          className="flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-emerald-950/80 text-emerald-300 backdrop-blur-md border border-emerald-500/30 text-xs font-bold shadow-lg select-none"
-          title="Ad Shield: Popups, redirects, and clickjack ads are blocked"
-        >
-          <IoShieldCheckmark className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden sm:inline">Ad Shield</span>
-        </div>
-
         {/* Quick Channel Switcher Trigger Button */}
         <button
           type="button"
