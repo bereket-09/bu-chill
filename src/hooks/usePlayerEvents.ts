@@ -202,19 +202,18 @@ export function usePlayerEvents(options: UsePlayerEventsOptions = {}) {
       duration: data.duration,
     });
 
-    if (user?.id) {
-      const activeProfileId = getActiveProfileId(user.id);
-      saveProfileHistoryItem(user.id, activeProfileId, {
-        media_id: Number(data.mediaId || mediaId || 0),
-        type: data.mediaType || mediaType,
-        season: data.season || metadata?.season,
-        episode: data.episode || metadata?.episode,
-        title: title || "Media",
-        duration: data.duration,
-        last_position: data.currentTime,
-        completed: data.event === "ended",
-      });
-    }
+    const effectiveUserId = user?.id || "guest";
+    const activeProfileId = getActiveProfileId(effectiveUserId);
+    saveProfileHistoryItem(effectiveUserId, activeProfileId, {
+      media_id: Number(data.mediaId || mediaId || 0),
+      type: data.mediaType || mediaType,
+      season: data.season || metadata?.season,
+      episode: data.episode || metadata?.episode,
+      title: title || "Media",
+      duration: data.duration,
+      last_position: data.currentTime,
+      completed: data.event === "ended",
+    });
   };
 
   const syncToServer = async (data: UnifiedPlayerEventData, completed?: boolean) => {

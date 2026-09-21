@@ -300,7 +300,11 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
           <div className="flex flex-wrap items-center gap-2.5 sm:gap-4">
             {/* Primary Watch / Resume Pill Button */}
             <Link
-              href={`/tv/${tv.id}/${currentPlaySeason}/${currentPlayEpisode}/player`}
+              href={
+                savedProgress && savedProgress.currentTime > 10
+                  ? `/tv/${tv.id}/${currentPlaySeason}/${currentPlayEpisode}/player?startAt=${savedProgress.currentTime}`
+                  : `/tv/${tv.id}/${currentPlaySeason}/${currentPlayEpisode}/player`
+              }
               className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all duration-200 hover:scale-105 hover:bg-white/90 active:scale-95"
             >
               <FaPlay className="ml-0.5 text-xs sm:text-sm text-black" />

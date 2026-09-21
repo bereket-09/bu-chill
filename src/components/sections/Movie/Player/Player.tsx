@@ -20,6 +20,8 @@ import {
   getStoredProgress,
   saveStoredProgress,
 } from "@/utils/watchProgress";
+import useSupabaseUser from "@/hooks/useSupabaseUser";
+import { getActiveProfileId, saveProfileHistoryItem } from "@/services/profileStorage";
 
 const AdsWarning = dynamic(() => import("@/components/ui/overlay/AdsWarning"));
 const MoviePlayerHeader = dynamic(() => import("./Header"));
@@ -94,6 +96,7 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
     [movie.id, activePlaybackTime, nativeSources]
   );
 
+  const { data: user } = useSupabaseUser();
   const title = mutateMovieTitle(movie);
   const idle = useIdle(3000);
   const { mobile } = useBreakpoints();
@@ -103,6 +106,36 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
     parseAsInteger.withDefault(0)
   );
 
+  // Immediately record movie watching session on mount so continue watching is never empty
+  useEffect(() => {
+    if (!movie) return;
+    const uid = user?.id || "guest";
+    const pid = getActiveProfileId(uid);
+    const movieRuntimeSec = movie.runtime ? movie.runtime * 60 : 0;
+    const pos = initialPosition > 0 ? initialPosition : 1;
+
+    saveStoredProgress({
+      mediaType: "movie",
+      mediaId: movie.id,
+      title,
+      currentTime: pos,
+      duration: movieRuntimeSec,
+    });
+
+    saveProfileHistoryItem(uid, pid, {
+      media_id: movie.id,
+      type: "movie",
+      title,
+      backdrop_path: movie.backdrop_path || "",
+      poster_path: movie.poster_path || "",
+      release_date: movie.release_date || "",
+      vote_average: movie.vote_average || 0,
+      duration: movieRuntimeSec,
+      last_position: pos,
+      completed: false,
+    });
+  }, [movie, user?.id, title, initialPosition]);
+
   usePlayerEvents({
     saveHistory: true,
     mediaId: movie.id,
@@ -111,6 +144,19 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
     onTimeUpdate: (data) => {
       if (data.currentTime > 0) {
         currentTimeRef.current = data.currentTime;
+        const uid = user?.id || "guest";
+        const pid = getActiveProfileId(uid);
+        saveProfileHistoryItem(uid, pid, {
+          media_id: movie.id,
+          type: "movie",
+          title,
+          backdrop_path: movie.backdrop_path || "",
+          poster_path: movie.poster_path || "",
+          release_date: movie.release_date || "",
+          duration: data.duration || (movie.runtime ? movie.runtime * 60 : 0),
+          last_position: data.currentTime,
+          completed: false,
+        });
       }
     },
   });

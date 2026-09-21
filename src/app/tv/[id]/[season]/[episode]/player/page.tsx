@@ -4,7 +4,7 @@ import { tmdb } from "@/api/tmdb";
 import { Params } from "@/types";
 import { Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
-import { notFound } from "next/navigation";
+import { notFound, useSearchParams } from "next/navigation";
 import { use } from "react";
 import dynamic from "next/dynamic";
 import { NextPage } from "next";
@@ -16,6 +16,8 @@ const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: n
   params,
 }) => {
   const { id, season, episode } = use(params);
+  const searchParams = useSearchParams();
+  const urlStartAt = searchParams?.get("startAt") ? Number(searchParams.get("startAt")) : undefined;
 
   const {
     data: tv,
@@ -82,7 +84,7 @@ const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: n
       episodes={seasonDetail.episodes}
       nextEpisodeNumber={nextEpisodeNumber}
       prevEpisodeNumber={prevEpisodeNumber}
-      startAt={startAt}
+      startAt={urlStartAt ?? startAt}
     />
   );
 };

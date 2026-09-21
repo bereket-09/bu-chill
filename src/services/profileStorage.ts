@@ -61,17 +61,23 @@ export function setActiveProfileId(userId: string, profileId: string): void {
 // WATCHLIST
 // -------------------------------------------------------------
 
-function getWatchlistKey(userId: string, profileId: string): string {
-  return `buchill_watchlist_${userId}_${profileId || "main"}`;
+function getWatchlistKey(userId?: string, profileId?: string): string {
+  const uid = userId || "guest";
+  return `buchill_watchlist_${uid}_${profileId || "main"}`;
 }
 
-export function getProfileWatchlist(userId: string, profileId?: string): ProfileWatchlistItem[] {
-  if (typeof window === "undefined" || !userId) return [];
-  const pid = profileId || getActiveProfileId(userId);
+export function getProfileWatchlist(userId?: string, profileId?: string): ProfileWatchlistItem[] {
+  if (typeof window === "undefined") return [];
+  const uid = userId || "guest";
+  const pid = profileId || getActiveProfileId(uid);
   try {
-    const raw = localStorage.getItem(getWatchlistKey(userId, pid));
+    const raw = localStorage.getItem(getWatchlistKey(uid, pid));
     if (raw) {
       return JSON.parse(raw);
+    }
+    if (uid !== "guest") {
+      const guestRaw = localStorage.getItem(getWatchlistKey("guest", "main"));
+      if (guestRaw) return JSON.parse(guestRaw);
     }
     return [];
   } catch {
@@ -80,15 +86,17 @@ export function getProfileWatchlist(userId: string, profileId?: string): Profile
 }
 
 export function saveProfileWatchlist(
-  userId: string,
-  profileId: string,
+  userId: string | undefined,
+  profileId: string | undefined,
   items: ProfileWatchlistItem[]
 ): void {
-  if (typeof window === "undefined" || !userId) return;
+  if (typeof window === "undefined") return;
+  const uid = userId || "guest";
+  const pid = profileId || "main";
   try {
-    localStorage.setItem(getWatchlistKey(userId, profileId), JSON.stringify(items));
+    localStorage.setItem(getWatchlistKey(uid, pid), JSON.stringify(items));
     window.dispatchEvent(
-      new CustomEvent("buchill_watchlist_changed", { detail: { userId, profileId } })
+      new CustomEvent("buchill_watchlist_changed", { detail: { userId: uid, profileId: pid } })
     );
   } catch (e) {
     console.error("Failed to save profile watchlist:", e);
@@ -96,11 +104,13 @@ export function saveProfileWatchlist(
 }
 
 export function addToProfileWatchlist(
-  userId: string,
-  profileId: string,
+  userId: string | undefined,
+  profileId: string | undefined,
   item: Omit<ProfileWatchlistItem, "created_at"> & { created_at?: string }
 ): void {
-  const current = getProfileWatchlist(userId, profileId);
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  const current = getProfileWatchlist(uid, pid);
   const exists = current.some((x) => x.id === item.id && x.type === item.type);
   if (exists) return;
 
@@ -108,44 +118,50 @@ export function addToProfileWatchlist(
     ...item,
     created_at: item.created_at || new Date().toISOString(),
   };
-  saveProfileWatchlist(userId, profileId, [newItem, ...current]);
+  saveProfileWatchlist(uid, pid, [newItem, ...current]);
 }
 
 export function removeFromProfileWatchlist(
-  userId: string,
-  profileId: string,
+  userId: string | undefined,
+  profileId: string | undefined,
   itemId: number,
   type: ContentType
 ): void {
-  const current = getProfileWatchlist(userId, profileId);
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  const current = getProfileWatchlist(uid, pid);
   const filtered = current.filter((x) => !(x.id === itemId && x.type === type));
-  saveProfileWatchlist(userId, profileId, filtered);
+  saveProfileWatchlist(uid, pid, filtered);
 }
 
 export function clearProfileWatchlist(
-  userId: string,
-  profileId: string,
+  userId: string | undefined,
+  profileId: string | undefined,
   type: "movie" | "tv" | "all" = "all"
 ): void {
+  const uid = userId || "guest";
+  const pid = profileId || "main";
   if (type === "all") {
-    saveProfileWatchlist(userId, profileId, []);
+    saveProfileWatchlist(uid, pid, []);
   } else {
-    const current = getProfileWatchlist(userId, profileId);
+    const current = getProfileWatchlist(uid, pid);
     saveProfileWatchlist(
-      userId,
-      profileId,
+      uid,
+      pid,
       current.filter((x) => x.type !== type)
     );
   }
 }
 
 export function checkInProfileWatchlist(
-  userId: string,
-  profileId: string,
+  userId: string | undefined,
+  profileId: string | undefined,
   itemId: number,
   type: ContentType
 ): boolean {
-  const current = getProfileWatchlist(userId, profileId);
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  const current = getProfileWatchlist(uid, pid);
   return current.some((x) => x.id === itemId && x.type === type);
 }
 
@@ -153,17 +169,26 @@ export function checkInProfileWatchlist(
 // CONTINUE WATCHING & HISTORY
 // -------------------------------------------------------------
 
-function getHistoryKey(userId: string, profileId: string): string {
-  return `buchill_history_${userId}_${profileId || "main"}`;
+function getHistoryKey(userId?: string, profileId?: string): string {
+  const uid = userId || "guest";
+  return `buchill_history_${uid}_${profileId || "main"}`;
 }
 
-export function getProfileHistory(userId: string, profileId?: string): ProfileHistoryItem[] {
-  if (typeof window === "undefined" || !userId) return [];
-  const pid = profileId || getActiveProfileId(userId);
+export function getProfileHistory(userId?: string, profileId?: string): ProfileHistoryItem[] {
+  if (typeof window === "undefined") return [];
+  const uid = userId || "guest";
+  const pid = profileId || getActiveProfileId(uid);
   try {
-    const raw = localStorage.getItem(getHistoryKey(userId, pid));
+    const raw = localStorage.getItem(getHistoryKey(uid, pid));
     if (raw) {
       return JSON.parse(raw);
+    }
+    // Fallback: if authenticated user has no history yet, load guest history
+    if (uid !== "guest") {
+      const guestRaw = localStorage.getItem(getHistoryKey("guest", "main"));
+      if (guestRaw) {
+        return JSON.parse(guestRaw);
+      }
     }
     return [];
   } catch {
@@ -172,15 +197,17 @@ export function getProfileHistory(userId: string, profileId?: string): ProfileHi
 }
 
 export function saveProfileHistory(
-  userId: string,
-  profileId: string,
+  userId: string | undefined,
+  profileId: string | undefined,
   items: ProfileHistoryItem[]
 ): void {
-  if (typeof window === "undefined" || !userId) return;
+  if (typeof window === "undefined") return;
+  const uid = userId || "guest";
+  const pid = profileId || "main";
   try {
-    localStorage.setItem(getHistoryKey(userId, profileId), JSON.stringify(items));
+    localStorage.setItem(getHistoryKey(uid, pid), JSON.stringify(items));
     window.dispatchEvent(
-      new CustomEvent("buchill_history_changed", { detail: { userId, profileId } })
+      new CustomEvent("buchill_history_changed", { detail: { userId: uid, profileId: pid } })
     );
   } catch (e) {
     console.error("Failed to save profile history:", e);
@@ -188,15 +215,17 @@ export function saveProfileHistory(
 }
 
 export function saveProfileHistoryItem(
-  userId: string,
-  profileId: string,
+  userId: string | undefined,
+  profileId: string | undefined,
   item: Partial<ProfileHistoryItem> & {
     media_id: number;
     type: ContentType;
     title: string;
   }
 ): void {
-  const current = getProfileHistory(userId, profileId);
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  const current = getProfileHistory(uid, pid);
   const now = new Date().toISOString();
 
   // Find match by media_id, type, season, episode
@@ -211,8 +240,8 @@ export function saveProfileHistoryItem(
     id: existingIdx >= 0 ? current[existingIdx].id : `${item.media_id}_${Date.now()}`,
     media_id: item.media_id,
     type: item.type,
-    season: item.season || 0,
-    episode: item.episode || 0,
+    season: item.season !== undefined ? item.season : existingIdx >= 0 ? current[existingIdx].season : 0,
+    episode: item.episode !== undefined ? item.episode : existingIdx >= 0 ? current[existingIdx].episode : 0,
     duration: item.duration ?? (existingIdx >= 0 ? current[existingIdx].duration : 0),
     last_position: item.last_position ?? (existingIdx >= 0 ? current[existingIdx].last_position : 0),
     completed: item.completed ?? (existingIdx >= 0 ? current[existingIdx].completed : false),
@@ -232,18 +261,20 @@ export function saveProfileHistoryItem(
   updated.unshift(mergedItem);
 
   // Keep max 50 items per profile
-  saveProfileHistory(userId, profileId, updated.slice(0, 50));
+  saveProfileHistory(uid, pid, updated.slice(0, 50));
 }
 
 export function removeFromProfileHistory(
-  userId: string,
-  profileId: string,
+  userId: string | undefined,
+  profileId: string | undefined,
   mediaId: number,
   type: ContentType,
   season?: number,
   episode?: number
 ): void {
-  const current = getProfileHistory(userId, profileId);
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  const current = getProfileHistory(uid, pid);
   const filtered = current.filter((x) => {
     if (x.media_id !== mediaId || x.type !== type) return true;
     if (type === "tv" && season !== undefined && episode !== undefined) {
@@ -251,11 +282,16 @@ export function removeFromProfileHistory(
     }
     return false;
   });
-  saveProfileHistory(userId, profileId, filtered);
+  saveProfileHistory(uid, pid, filtered);
 }
 
-export function clearProfileHistory(userId: string, profileId: string): void {
-  saveProfileHistory(userId, profileId, []);
+export function clearProfileHistory(
+  userId: string | undefined,
+  profileId: string | undefined
+): void {
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  saveProfileHistory(uid, pid, []);
 }
 
 /**

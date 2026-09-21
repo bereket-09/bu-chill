@@ -9,11 +9,13 @@ import { isEmpty } from "@/utils/helpers";
 import { Spinner } from "@heroui/react";
 import { useQuery } from "@tanstack/react-query";
 import { NextPage } from "next";
-import { notFound } from "next/navigation";
+import { notFound, useSearchParams } from "next/navigation";
 import { use } from "react";
 
 const MoviePlayerPage: NextPage<Params<{ id: number }>> = ({ params }) => {
   const { id } = use(params);
+  const searchParams = useSearchParams();
+  const urlStartAt = searchParams?.get("startAt") ? Number(searchParams.get("startAt")) : undefined;
 
   const {
     data: movie,
@@ -39,7 +41,7 @@ const MoviePlayerPage: NextPage<Params<{ id: number }>> = ({ params }) => {
     document.title = `Watching: ${movie.title} · ${siteConfig.name}`;
   }
 
-  return <MoviePlayer movie={movie} startAt={startAt} />;
+  return <MoviePlayer movie={movie} startAt={urlStartAt ?? startAt} />;
 };
 
 export default MoviePlayerPage;

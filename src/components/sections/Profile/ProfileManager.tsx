@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "@bprogress/next/app";
 import {
@@ -19,6 +19,11 @@ import {
   FaChevronRight,
   FaGear,
   FaShieldHalved,
+  FaPlay,
+  FaXmark,
+  FaClock,
+  FaTv,
+  FaFilm,
 } from "react-icons/fa6";
 import { IoLogInOutline } from "react-icons/io5";
 import { signOut } from "@/actions/auth";
@@ -30,6 +35,13 @@ import {
   DEFAULT_AVATAR_ID,
   resolveAvatarUrl,
 } from "@/constants/avatars";
+import { formatDuration, getImageUrl } from "@/utils/movies";
+import {
+  getProfileHistory,
+  removeFromProfileHistory,
+  ProfileHistoryItem,
+} from "@/services/profileStorage";
+import { getUserHistories } from "@/actions/histories";
 
 export interface UserProfileItem {
   id: string;
@@ -60,6 +72,9 @@ const ProfileManager: React.FC = () => {
   const [profiles, setProfiles] = useState<UserProfileItem[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string>("main");
 
+  // In-progress continue watching items
+  const [continueWatchingItems, setContinueWatchingItems] = useState<ProfileHistoryItem[]>([]);
+
   // Editing state
   const [editingProfile, setEditingProfile] = useState<UserProfileItem | null>(null);
   const [editName, setEditName] = useState<string>("");
@@ -72,12 +87,70 @@ const ProfileManager: React.FC = () => {
   const [preferredServer, setPreferredServer] = useState<string>("auto");
   const [isSigningOut, setIsSigningOut] = useState(false);
 
+  const effectiveUserId = user?.id || "guest";
+
+  const loadWatchingItems = useCallback((uid: string, pid: string) => {
+    const history = getProfileHistory(uid, pid);
+    const inProgress = history.filter(
+      (item) => !item.completed && (!item.duration || item.last_position < item.duration * 0.95)
+    );
+    setContinueWatchingItems(inProgress);
+
+    if (user?.id) {
+      getUserHistories(50)
+        .then((res) => {
+          if (res.success && res.data && res.data.length > 0) {
+            setContinueWatchingItems((prev) => {
+              const map = new Map<string, ProfileHistoryItem>();
+              prev.forEach((item) => {
+                const key = `${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`;
+                map.set(key, item);
+              });
+              res.data!.forEach((s) => {
+                const key = `${s.type}-${s.media_id}-${s.season || 0}-${s.episode || 0}`;
+                if (!map.has(key) && !s.completed) {
+                  map.set(key, {
+                    id: s.id || s.media_id,
+                    media_id: s.media_id,
+                    type: (s.type === "tv" ? "tv" : "movie") as "movie" | "tv",
+                    title: s.title,
+                    poster_path: s.poster_path || undefined,
+                    backdrop_path: s.backdrop_path || undefined,
+                    duration: s.duration,
+                    last_position: s.last_position,
+                    completed: s.completed,
+                    season: s.season,
+                    episode: s.episode,
+                    updated_at: s.updated_at,
+                  });
+                }
+              });
+              return Array.from(map.values());
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user?.id]);
+
+  // Sync with cross-tab and player updates
+  useEffect(() => {
+    const handler = () => {
+      loadWatchingItems(effectiveUserId, activeProfileId);
+    };
+    window.addEventListener("buchill_history_changed", handler);
+    window.addEventListener("buchill_profile_changed", handler);
+    return () => {
+      window.removeEventListener("buchill_history_changed", handler);
+      window.removeEventListener("buchill_profile_changed", handler);
+    };
+  }, [effectiveUserId, activeProfileId, loadWatchingItems]);
+
   // Initialize profiles
   useEffect(() => {
-    if (!user) return;
-
-    const storedProfilesStr = localStorage.getItem(`buchill_profiles_${user.id}`);
-    const storedMainAvatar = localStorage.getItem(`buchill_avatar_${user.id}`) || DEFAULT_AVATAR_ID;
+    const uid = user?.id || "guest";
+    const storedProfilesStr = localStorage.getItem(`buchill_profiles_${uid}`);
+    const storedMainAvatar = localStorage.getItem(`buchill_avatar_${uid}`) || DEFAULT_AVATAR_ID;
 
     let loadedProfiles: UserProfileItem[] = [];
     if (storedProfilesStr) {
@@ -92,7 +165,7 @@ const ProfileManager: React.FC = () => {
       loadedProfiles = [
         {
           id: "main",
-          name: user.username || "User",
+          name: user?.username || "Main Profile",
           avatar: storedMainAvatar,
           isMain: true,
         },
@@ -107,25 +180,28 @@ const ProfileManager: React.FC = () => {
           avatar: "03", // Buzz Lightyear
         },
       ];
-      localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(loadedProfiles));
+      localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loadedProfiles));
     } else {
       const mainIdx = loadedProfiles.findIndex((p) => p.isMain || p.id === "main");
       if (mainIdx >= 0) {
-        loadedProfiles[mainIdx].name = user.username || loadedProfiles[mainIdx].name;
+        if (user?.username) {
+          loadedProfiles[mainIdx].name = user.username;
+        }
         if (storedMainAvatar) loadedProfiles[mainIdx].avatar = storedMainAvatar;
       }
     }
 
     setProfiles(loadedProfiles);
 
-    const activeId = localStorage.getItem(`buchill_active_profile_${user.id}`) || "main";
+    const activeId = localStorage.getItem(`buchill_active_profile_${uid}`) || "main";
     setActiveProfileId(activeId);
+    loadWatchingItems(uid, activeId);
 
     // Playback settings
     setPreferredLang(localStorage.getItem("buchill_preferred_lang") || "en");
     setAutoplayNext(localStorage.getItem("buchill_autoplay") !== "false");
     setPreferredServer(localStorage.getItem("buchill_preferred_server") || "auto");
-  }, [user]);
+  }, [user, loadWatchingItems]);
 
   // Open edit modal for a profile or for adding a new profile
   const handleOpenEdit = (profile: UserProfileItem) => {
@@ -161,7 +237,8 @@ const ProfileManager: React.FC = () => {
 
   // Save profile changes
   const handleSaveProfile = async () => {
-    if (!user || !editingProfile) return;
+    if (!editingProfile) return;
+    const uid = user?.id || "guest";
     const cleanName = editName.trim();
     if (!cleanName) {
       addToast({ title: "Profile name cannot be empty", color: "danger" });
@@ -193,15 +270,17 @@ const ProfileManager: React.FC = () => {
       }
 
       setProfiles(updatedProfiles);
-      localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(updatedProfiles));
+      localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(updatedProfiles));
 
       // If updating the main profile, sync username to Supabase profiles & localStorage avatar
       if (editingProfile.isMain || editingProfile.id === "main") {
-        localStorage.setItem(`buchill_avatar_${user.id}`, avatarId);
+        localStorage.setItem(`buchill_avatar_${uid}`, avatarId);
 
-        const supabase = createClient();
-        await supabase.from("profiles").upsert({ id: user.id, username: cleanName });
-        queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
+        if (user) {
+          const supabase = createClient();
+          await supabase.from("profiles").upsert({ id: user.id, username: cleanName });
+          queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
+        }
       }
 
       addToast({
@@ -224,57 +303,90 @@ const ProfileManager: React.FC = () => {
 
   // Delete secondary profile
   const handleDeleteProfile = () => {
-    if (!user || !editingProfile) return;
+    if (!editingProfile) return;
+    const uid = user?.id || "guest";
     if (editingProfile.isMain || editingProfile.id === "main") {
       addToast({ title: "Cannot delete primary account profile", color: "danger" });
       return;
     }
 
-    if (!confirm(`Delete \"${editingProfile.name}\" profile? Streaming history for this profile will be removed.`)) {
+    if (!confirm(`Delete "${editingProfile.name}" profile? Streaming history for this profile will be removed.`)) {
       return;
     }
 
     const updated = profiles.filter((p) => p.id !== editingProfile.id);
     setProfiles(updated);
-    localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(updated));
+    localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(updated));
 
     if (activeProfileId === editingProfile.id) {
       setActiveProfileId("main");
-      localStorage.setItem(`buchill_active_profile_${user.id}`, "main");
+      localStorage.setItem(`buchill_active_profile_${uid}`, "main");
     }
 
     addToast({ title: "Profile deleted", color: "primary" });
     setViewMode("who_is_watching");
   };
 
-  // Select profile and start streaming
+  // Select profile and switch
   const handleSelectProfile = (profile: UserProfileItem) => {
     if (isManageMode) {
       handleOpenEdit(profile);
       return;
     }
 
-    if (!user) return;
+    const uid = user?.id || "guest";
+    const wasAlreadyActive = activeProfileId === profile.id;
+
     setActiveProfileId(profile.id);
-    localStorage.setItem(`buchill_active_profile_${user.id}`, profile.id);
+    localStorage.setItem(`buchill_active_profile_${uid}`, profile.id);
 
     // Save avatar for immediate navbar sync
     if (profile.avatar) {
-      localStorage.setItem(`buchill_avatar_${user.id}`, profile.avatar);
+      localStorage.setItem(`buchill_avatar_${uid}`, profile.avatar);
       queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
     }
 
     if (typeof window !== "undefined") {
       window.dispatchEvent(
-        new CustomEvent("buchill_profile_changed", { detail: { userId: user.id, profileId: profile.id } })
+        new CustomEvent("buchill_profile_changed", { detail: { userId: uid, profileId: profile.id } })
       );
     }
 
+    loadWatchingItems(uid, profile.id);
+
+    if (wasAlreadyActive) {
+      addToast({
+        title: `Streaming as ${profile.name}`,
+        color: "primary",
+      });
+      router.push("/movies");
+    } else {
+      addToast({
+        title: `Switched to ${profile.name}`,
+        description: "Watch history and preferences updated",
+        color: "primary",
+      });
+    }
+  };
+
+  // Remove an item from continue watching
+  const handleDeleteWatchingItem = (e: React.MouseEvent, item: ProfileHistoryItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const uid = user?.id || "guest";
+    removeFromProfileHistory(
+      uid,
+      activeProfileId,
+      item.media_id,
+      item.type,
+      item.season,
+      item.episode
+    );
+    loadWatchingItems(uid, activeProfileId);
     addToast({
-      title: `Watching as ${profile.name}`,
+      title: "Removed from Continue Watching",
       color: "primary",
     });
-    router.push("/movies");
   };
 
   // Sign out
@@ -297,11 +409,6 @@ const ProfileManager: React.FC = () => {
         <Spinner size="lg" color="primary" label="Loading profiles..." />
       </div>
     );
-  }
-
-  if (!user) {
-    router.push("/auth");
-    return null;
   }
 
   // =========================================================
@@ -427,20 +534,36 @@ const ProfileManager: React.FC = () => {
                 <FaShieldHalved className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-white text-sm">Be•Chill Streaming Account</h4>
-                <p className="text-xs text-white/50">{user.email}</p>
+                <h4 className="font-bold text-white text-sm">
+                  {user ? "Be•Chill Streaming Account" : "Guest Mode (Local Storage)"}
+                </h4>
+                <p className="text-xs text-white/50">
+                  {user ? user.email : "Watch history and profile progress are saved in your browser"}
+                </p>
               </div>
             </div>
-            <Button
-              color="danger"
-              variant="flat"
-              size="sm"
-              isLoading={isSigningOut}
-              onClick={handleSignOut}
-              startContent={<IoLogInOutline className="w-4 h-4 rotate-180" />}
-            >
-              Sign Out
-            </Button>
+            {user ? (
+              <Button
+                color="danger"
+                variant="flat"
+                size="sm"
+                isLoading={isSigningOut}
+                onClick={handleSignOut}
+                startContent={<IoLogInOutline className="w-4 h-4 rotate-180" />}
+              >
+                Sign Out
+              </Button>
+            ) : (
+              <Button
+                color="primary"
+                variant="solid"
+                size="sm"
+                onClick={() => router.push("/auth")}
+                startContent={<IoLogInOutline className="w-4 h-4" />}
+              >
+                Sign In
+              </Button>
+            )}
           </section>
         </div>
       </div>
@@ -448,13 +571,12 @@ const ProfileManager: React.FC = () => {
   }
 
   // =========================================================
-  // VIEW 1: WHO'S WATCHING? (MATCHING USER SCREENSHOT 1)
+  // VIEW 1: WHO'S WATCHING? WITH CONTINUE WATCHING SHELF
   // =========================================================
   return (
     <div className="min-h-[85vh] w-full bg-black text-white flex flex-col font-sans select-none">
       {/* Top Header */}
       <header className="flex items-center justify-end px-6 py-5 md:px-12">
-
         <button
           type="button"
           onClick={() => setIsManageMode((prev) => !prev)}
@@ -476,13 +598,14 @@ const ProfileManager: React.FC = () => {
 
       {/* Main Profile Circles Container */}
       <main className="flex flex-1 flex-col items-center justify-center px-6 pb-20 pt-8 sm:pt-12">
-        <h1 className="mb-12 sm:mb-16 text-center text-2xl font-bold tracking-tight sm:text-4xl text-white/90">
+        <h1 className="mb-10 sm:mb-14 text-center text-2xl font-bold tracking-tight sm:text-4xl text-white/90">
           {isManageMode ? "Edit Profile" : "Who's watching?"}
         </h1>
 
         <div className="flex flex-wrap items-start justify-center gap-8 md:gap-14 max-w-4xl">
           {profiles.map((profile, idx) => {
             const avatarUrl = resolveAvatarUrl(profile.avatar);
+            const isActive = profile.id === activeProfileId;
 
             return (
               <button
@@ -492,7 +615,13 @@ const ProfileManager: React.FC = () => {
                 style={{ animationDelay: `${idx * 80}ms` }}
                 className="group flex flex-col items-center gap-3 outline-none cursor-pointer animate-in fade-in zoom-in-95 duration-300"
               >
-                <div className="relative size-24 sm:size-32 overflow-hidden rounded-full ring-1 ring-white/15 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1.5 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.9)] group-hover:ring-2 group-hover:ring-white bg-default-800 flex items-center justify-center">
+                <div
+                  className={`relative size-24 sm:size-32 overflow-hidden rounded-full transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1.5 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.9)] bg-default-800 flex items-center justify-center ${
+                    isActive && !isManageMode
+                      ? "ring-3 ring-primary ring-offset-4 ring-offset-black shadow-[0_0_24px_rgba(0,255,200,0.35)]"
+                      : "ring-1 ring-white/15 group-hover:ring-2 group-hover:ring-white"
+                  }`}
+                >
                   <img
                     src={avatarUrl}
                     alt={profile.name}
@@ -507,14 +636,21 @@ const ProfileManager: React.FC = () => {
                   )}
                 </div>
 
-                <span className="text-sm sm:text-base font-medium text-white/70 group-hover:text-white transition-colors">
-                  {profile.name}
-                </span>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-sm sm:text-base font-medium text-white/70 group-hover:text-white transition-colors">
+                    {profile.name}
+                  </span>
+                  {isActive && !isManageMode && (
+                    <span className="text-[10px] font-bold tracking-wider text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                      Active
+                    </span>
+                  )}
+                </div>
               </button>
             );
           })}
 
-          {/* Add Profile Button (Matching Screenshot 1) */}
+          {/* Add Profile Button */}
           {profiles.length < 5 && (
             <button
               type="button"
@@ -530,6 +666,187 @@ const ProfileManager: React.FC = () => {
             </button>
           )}
         </div>
+
+        {/* Quick Launch / Action Pill */}
+        {!isManageMode && (
+          <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/movies"
+              className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-black font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(255,255,255,0.25)] transition hover:bg-white/90 hover:scale-105 active:scale-95"
+            >
+              <FaPlay className="text-[11px]" />
+              <span>
+                Browse as {profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}
+              </span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setViewMode("account_settings")}
+              className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:border-white/30 transition cursor-pointer"
+            >
+              <FaGear className="w-3.5 h-3.5" />
+              <span>Streaming Setup</span>
+            </button>
+          </div>
+        )}
+
+        {/* Continue Watching Section */}
+        {!isManageMode && (
+          <section className="w-full max-w-6xl mt-14 sm:mt-18 px-2 sm:px-4">
+            <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="size-2 rounded-full bg-primary animate-pulse" />
+                <h2 className="text-lg sm:text-xl font-bold text-white tracking-wide">
+                  Continue Watching
+                </h2>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-white/70 font-medium">
+                  {profiles.find((p) => p.id === activeProfileId)?.name || "Main Profile"}
+                </span>
+              </div>
+              {continueWatchingItems.length > 0 && (
+                <span className="text-xs text-white/45 font-medium">
+                  {continueWatchingItems.length} {continueWatchingItems.length === 1 ? "title" : "titles"} in progress
+                </span>
+              )}
+            </div>
+
+            {continueWatchingItems.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-center">
+                <div className="size-12 rounded-full bg-white/5 flex items-center justify-center text-white/40 mb-3 border border-white/10">
+                  <FaPlay className="w-4 h-4 ml-0.5 text-white/40" />
+                </div>
+                <p className="text-base font-semibold text-white/80">No titles in progress yet</p>
+                <p className="text-xs text-white/50 max-w-md mt-1.5 leading-relaxed">
+                  Start watching any movie or TV series and your exact season, episode, and stopped time will appear here so you can resume anytime.
+                </p>
+                <Link
+                  href="/movies"
+                  className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-bold text-black transition hover:bg-white/90 active:scale-95 shadow-md"
+                >
+                  <FaFilm className="text-xs" />
+                  <span>Explore Movies & TV Series</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+                {continueWatchingItems.map((item) => {
+                  const resumeUrl =
+                    item.type === "tv"
+                      ? `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player?startAt=${item.last_position || 0}`
+                      : `/movie/${item.media_id}/player?startAt=${item.last_position || 0}`;
+
+                  const progressPercent =
+                    item.duration > 0
+                      ? Math.min(100, Math.max(4, Math.round((item.last_position / item.duration) * 100)))
+                      : 0;
+
+                  const stoppedText =
+                    item.last_position > 5
+                      ? `Stopped at ${formatDuration(item.last_position)}`
+                      : "Just started";
+
+                  const backdropImg = getImageUrl(item.backdrop_path || item.poster_path || "");
+
+                  return (
+                    <div
+                      key={`${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`}
+                      className="group relative rounded-2xl overflow-hidden border border-white/10 bg-neutral-900/60 hover:border-white/25 transition-all duration-300 hover:shadow-[0_12px_32px_rgba(0,0,0,0.8)] flex flex-col"
+                    >
+                      {/* Thumbnail area with overlays */}
+                      <div className="relative aspect-video w-full overflow-hidden bg-white/5">
+                        <img
+                          src={backdropImg}
+                          alt={item.title}
+                          className="size-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                        {/* Media Type / Season & Episode Badge */}
+                        <div className="absolute top-3 left-3 z-10">
+                          {item.type === "tv" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500 text-black shadow-md backdrop-blur-xs">
+                              <FaTv className="text-[10px]" />
+                              <span>S{item.season} • E{item.episode}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-primary text-black shadow-md backdrop-blur-xs">
+                              <FaFilm className="text-[10px]" />
+                              <span>Movie</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Dismiss Button */}
+                        <button
+                          type="button"
+                          title="Remove from Continue Watching"
+                          onClick={(e) => handleDeleteWatchingItem(e, item)}
+                          className="absolute top-3 right-3 z-10 size-7 rounded-full bg-black/60 hover:bg-red-600 text-white/70 hover:text-white flex items-center justify-center transition backdrop-blur-xs border border-white/10 cursor-pointer"
+                        >
+                          <FaXmark className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Center Play Icon Hover */}
+                        <Link
+                          href={resumeUrl}
+                          className="absolute inset-0 flex items-center justify-center"
+                        >
+                          <div className="size-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-xl border border-white/30 group-hover:scale-110">
+                            <FaPlay className="w-4 h-4 ml-0.5 text-white" />
+                          </div>
+                        </Link>
+
+                        {/* Progress Bar at bottom of thumbnail */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-10">
+                          <div
+                            className={`h-full ${
+                              item.type === "tv"
+                                ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+                                : "bg-primary shadow-[0_0_8px_rgba(0,255,200,0.8)]"
+                            }`}
+                            style={{ width: `${item.duration > 0 ? progressPercent : 15}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Card Details */}
+                      <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+                        <div>
+                          <h3 className="font-bold text-sm sm:text-base text-white/90 group-hover:text-white transition line-clamp-1">
+                            {item.title}
+                          </h3>
+                          <div className="flex items-center justify-between text-xs text-white/50 mt-1">
+                            <span className="flex items-center gap-1.5 text-white/70 font-medium">
+                              <FaClock className="text-[10px] text-primary" />
+                              {stoppedText}
+                            </span>
+                            {item.duration > 0 && (
+                              <span className="text-[11px] font-medium text-white/50">
+                                {progressPercent}% watched
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Direct Resume Action Button */}
+                        <Link
+                          href={resumeUrl}
+                          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-white text-black font-bold text-xs sm:text-sm hover:bg-white/90 active:scale-[0.98] transition shadow-md group-hover:shadow-[0_0_16px_rgba(255,255,255,0.2)]"
+                        >
+                          <FaPlay className="text-[11px] text-black" />
+                          <span>
+                            Resume {item.type === "tv" ? `S${item.season} E${item.episode}` : "Movie"}
+                          </span>
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Quick Settings Footer Link */}
         <div className="mt-16 sm:mt-20 flex items-center gap-6">

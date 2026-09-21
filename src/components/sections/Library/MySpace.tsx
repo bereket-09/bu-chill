@@ -177,15 +177,17 @@ export const MySpace: React.FC = () => {
 
   // Reload profile-specific data whenever active profile or user changes
   const reloadData = () => {
-    if (!user) return;
-    const currentPid = getActiveProfileId(user.id);
+    const uid = user?.id || "guest";
+    const currentPid = getActiveProfileId(uid);
     setActiveId(currentPid);
 
-    const wList = getProfileWatchlist(user.id, currentPid);
+    const wList = getProfileWatchlist(uid, currentPid);
     setWatchlistItems(wList);
 
-    const hList = getProfileHistory(user.id, currentPid);
+    const hList = getProfileHistory(uid, currentPid);
     setHistoryItems(hList);
+
+    if (!user) return;
 
     // Sync with Supabase for connected accounts
     getUserHistories(50)
@@ -286,11 +288,13 @@ export const MySpace: React.FC = () => {
     );
   }, [profiles, activeProfileId]);
 
-  // Continue watching items (in-progress, not completed, last_position > 5 seconds)
+  // Continue watching items (in-progress, not completed)
   const continueWatchingItems = useMemo(() => {
-    return historyItems.filter(
-      (item) => !item.completed && item.last_position > 5 && item.duration > 0
-    );
+    return historyItems.filter((item) => {
+      if (item.completed) return false;
+      if (item.duration > 0 && item.last_position >= item.duration * 0.92) return false;
+      return true;
+    });
   }, [historyItems]);
 
   // Already watched items
@@ -514,8 +518,8 @@ export const MySpace: React.FC = () => {
               {continueWatchingItems.map((item) => {
                 const redirectLink =
                   item.type === "movie"
-                    ? `/movie/${item.media_id}/player`
-                    : `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player`;
+                    ? `/movie/${item.media_id}/player${item.last_position > 5 ? `?startAt=${item.last_position}` : ""}`
+                    : `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player${item.last_position > 5 ? `?startAt=${item.last_position}` : ""}`;
                 const progressPct =
                   item.duration > 0
                     ? Math.min(100, Math.round((item.last_position / item.duration) * 100))
@@ -589,8 +593,17 @@ export const MySpace: React.FC = () => {
                         <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
                           {item.title}
                         </h4>
-                        <p className="text-xs text-white/40 mt-1">
-                          {timeAgo(item.updated_at)} • {Math.round(progressPct)}% completed
+                        <p className="text-xs text-white/50 mt-1 flex items-center gap-1.5">
+                          <span className="text-primary font-medium">
+                            {item.last_position > 5
+                              ? `Stopped at ${formatDuration(item.last_position)}`
+                              : "Just started"}
+                          </span>
+                          {item.duration > 0 && (
+                            <span className="text-white/40">
+                              • {Math.round(progressPct)}% watched
+                            </span>
+                          )}
                         </p>
                       </div>
                       <Link

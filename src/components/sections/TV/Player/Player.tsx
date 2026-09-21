@@ -21,6 +21,8 @@ import {
   getStoredProgress,
   saveStoredProgress,
 } from "@/utils/watchProgress";
+import useSupabaseUser from "@/hooks/useSupabaseUser";
+import { getActiveProfileId, saveProfileHistoryItem } from "@/services/profileStorage";
 
 const AdsWarning = dynamic(() => import("@/components/ui/overlay/AdsWarning"));
 const TvShowPlayerHeader = dynamic(() => import("./Header"));
@@ -42,6 +44,7 @@ export interface TvShowPlayerProps {
 
 const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
   id,
+  tv,
   episode,
   episodes,
   startAt,
@@ -126,6 +129,7 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     [id, episode.season_number, episode.episode_number, activePlaybackTime, nativeSources]
   );
 
+  const { data: user } = useSupabaseUser();
   const idle = useIdle(3000);
   const [sourceOpened, sourceHandlers] = useDisclosure(false);
   const [episodeOpened, episodeHandlers] = useDisclosure(false);
@@ -133,6 +137,40 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     "src",
     parseAsInteger.withDefault(0)
   );
+
+  // Immediately record TV series episode watching session on mount
+  useEffect(() => {
+    if (!tv || !episode) return;
+    const uid = user?.id || "guest";
+    const pid = getActiveProfileId(uid);
+    const epDurationSec = episode.runtime ? episode.runtime * 60 : 45 * 60;
+    const pos = initialPosition > 0 ? initialPosition : 1;
+
+    saveStoredProgress({
+      mediaType: "tv",
+      mediaId: id,
+      title: props.seriesName || tv.name,
+      season: episode.season_number,
+      episode: episode.episode_number,
+      currentTime: pos,
+      duration: epDurationSec,
+    });
+
+    saveProfileHistoryItem(uid, pid, {
+      media_id: id,
+      type: "tv",
+      title: props.seriesName || tv.name,
+      season: episode.season_number,
+      episode: episode.episode_number,
+      backdrop_path: episode.still_path || tv.backdrop_path || "",
+      poster_path: tv.poster_path || "",
+      release_date: episode.air_date || tv.first_air_date || "",
+      vote_average: episode.vote_average || tv.vote_average || 0,
+      duration: epDurationSec,
+      last_position: pos,
+      completed: false,
+    });
+  }, [id, episode.season_number, episode.episode_number, tv, episode, user?.id, props.seriesName, initialPosition]);
 
   usePlayerEvents({
     saveHistory: true,
@@ -143,6 +181,21 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     onTimeUpdate: (data) => {
       if (data.currentTime > 0) {
         currentTimeRef.current = data.currentTime;
+        const uid = user?.id || "guest";
+        const pid = getActiveProfileId(uid);
+        saveProfileHistoryItem(uid, pid, {
+          media_id: id,
+          type: "tv",
+          title: props.seriesName || tv.name,
+          season: episode.season_number,
+          episode: episode.episode_number,
+          backdrop_path: episode.still_path || tv.backdrop_path || "",
+          poster_path: tv.poster_path || "",
+          release_date: episode.air_date || tv.first_air_date || "",
+          duration: data.duration || (episode.runtime ? episode.runtime * 60 : 45 * 60),
+          last_position: data.currentTime,
+          completed: false,
+        });
       }
     },
   });
@@ -379,7 +432,7 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
         seriesName={props.seriesName}
         currentSeasonNumber={episode.season_number}
         currentEpisodeNumber={episode.episode_number}
-        seasons={props.tv?.seasons || []}
+        seasons={tv?.seasons || []}
         selectedSource={selectedSource}
       />
     </>
