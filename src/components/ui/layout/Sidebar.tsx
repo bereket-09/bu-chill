@@ -10,8 +10,6 @@ import {
   IoSearch,
   IoTvOutline,
   IoTv,
-  IoMoonOutline,
-  IoMoon,
   IoGridOutline,
   IoGrid,
   IoPersonOutline,
@@ -21,6 +19,7 @@ import {
 } from "react-icons/io5";
 import { LuPopcorn } from "react-icons/lu";
 import { RiLiveLine, RiLiveFill } from "react-icons/ri";
+import { SiCrunchyroll } from "react-icons/si";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import { env } from "@/utils/env";
 import SafeImage from "@/components/ui/other/SafeImage";
@@ -62,8 +61,8 @@ const NAV_ITEMS: NavItem[] = [
     id: "anime",
     label: "Anime",
     href: "/anime",
-    icon: <IoMoonOutline className="w-5 h-5 md:w-[22px] md:h-[22px]" />,
-    activeIcon: <IoMoon className="w-5 h-5 md:w-[22px] md:h-[22px]" />,
+    icon: <SiCrunchyroll className="w-5 h-5 md:w-[22px] md:h-[22px]" />,
+    activeIcon: <SiCrunchyroll className="w-5 h-5 md:w-[22px] md:h-[22px]" />,
   },
   {
     id: "movies",

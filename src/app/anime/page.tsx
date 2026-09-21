@@ -6,7 +6,8 @@ import { BingrMediaItem } from "@/components/ui/card/BingrCard";
 import Link from "next/link";
 import Image from "next/image";
 import { getImageUrl } from "@/utils/movies";
-import { IoPlay, IoStar, IoMoon } from "react-icons/io5";
+import { IoPlay, IoStar } from "react-icons/io5";
+import { SiCrunchyroll } from "react-icons/si";
 
 export const metadata: Metadata = {
   title: `Anime | ${siteConfig.name}`,
@@ -57,8 +58,8 @@ const AnimePage: NextPage = async () => {
           {/* Hero Content */}
           <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 sm:px-8 md:pl-24 lg:pl-28 pb-12 sm:pb-16 max-w-3xl">
             <div className="flex items-center gap-2 mb-2.5">
-              <span className="rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 backdrop-blur-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
-                <IoMoon className="w-3 h-3" />
+              <span className="rounded bg-orange-500/20 text-orange-300 border border-orange-500/30 backdrop-blur-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                <SiCrunchyroll className="w-3 h-3 text-[#f47521]" />
                 Featured Anime
               </span>
               {featured.vote_average && (
