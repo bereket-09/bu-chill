@@ -12,7 +12,7 @@ const HomePage: NextPage = () => {
       <HomeHero />
 
       {/* Netflix-Style Overlapping Content Rows */}
-      <div className="relative z-20 flex flex-col gap-6 md:gap-10 -mt-16 md:-mt-24 px-4 sm:px-8 md:pl-24 md:pr-10 pb-16">
+      <div className="relative z-20 flex flex-col gap-6 md:gap-10 mt-4 md:-mt-20 px-4 sm:px-8 md:pl-24 md:pr-10 pb-32 md:pb-20">
         <ContinueWatching />
         <HomePageList />
       </div>

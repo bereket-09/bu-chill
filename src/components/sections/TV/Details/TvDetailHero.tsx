@@ -187,69 +187,69 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-background via-background/60 to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/80 to-transparent" />
 
-      {/* Bottom-Right Video & Audio Controls */}
+      {/* Video & Audio Controls - Top Right on Mobile, Bottom Right on Desktop */}
       {trailerKey && isVideoLoaded && (
-        <div className="pointer-events-auto absolute right-6 bottom-12 z-30 flex items-center gap-3 md:right-12 md:bottom-20">
+        <div className="pointer-events-auto absolute right-4 top-4 z-30 flex items-center gap-2 md:top-auto md:right-12 md:bottom-20 md:gap-3">
           <button
             type="button"
             onClick={toggleAudio}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md transition-transform hover:scale-110 active:scale-95 shadow-lg"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md transition-transform hover:scale-110 active:scale-95 shadow-lg"
             aria-label={isMuted ? "Unmute trailer" : "Mute trailer"}
           >
             {isMuted ? (
-              <IoVolumeMute className="text-xl" />
+              <IoVolumeMute className="text-lg sm:text-xl" />
             ) : (
-              <IoVolumeHigh className="text-xl text-primary" />
+              <IoVolumeHigh className="text-lg sm:text-xl text-primary" />
             )}
           </button>
 
           <button
             type="button"
             onClick={togglePlayback}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md transition-transform hover:scale-110 active:scale-95 shadow-lg"
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md transition-transform hover:scale-110 active:scale-95 shadow-lg"
             aria-label={isPlaying ? "Pause trailer" : "Play trailer"}
           >
             {isPlaying ? (
-              <FaPause className="text-sm" />
+              <FaPause className="text-xs sm:text-sm" />
             ) : (
-              <FaPlay className="text-sm translate-x-0.5" />
+              <FaPlay className="text-xs sm:text-sm translate-x-0.5" />
             )}
           </button>
         </div>
       )}
 
-      {/* Bottom-Left TV Show Showcase Overlay */}
-      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-end px-4 pb-12 sm:px-8 md:pl-24 lg:pl-28 md:pb-20">
+      {/* Bottom TV Show Showcase Overlay */}
+      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-end px-4 pb-8 sm:px-8 sm:pb-12 md:pl-24 lg:pl-28 md:pb-20">
         <div className="pointer-events-auto max-w-2xl animate-in slide-in-from-bottom-6 duration-700">
           {/* TV Show Logo or Stylized Title */}
-          <div className="mb-4 transition-transform duration-500">
+          <div className="mb-3 sm:mb-4 transition-transform duration-500">
             {logo ? (
               <img
                 src={`https://image.tmdb.org/t/p/w500${logo}`}
                 alt={title}
-                className="max-h-[65px] sm:max-h-[95px] md:max-h-[130px] w-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
+                className="max-h-[50px] sm:max-h-[85px] md:max-h-[130px] w-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
               />
             ) : (
-              <h1 className="text-3xl font-black tracking-tight text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
+              <h1 className="text-2xl font-black tracking-tight text-white drop-shadow-lg sm:text-4xl lg:text-6xl">
                 {title}
               </h1>
             )}
           </div>
 
           {/* Metadata Row: Badge • Rating • Year • Seasons • Episodes */}
-          <div className="mb-4 flex flex-wrap items-center gap-2 text-sm sm:text-base font-medium text-white/90">
-            <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 text-xs font-black text-primary uppercase tracking-wider shadow-sm">
+          <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 text-xs sm:text-sm md:text-base font-medium text-white/90">
+            <span className="rounded bg-primary/20 border border-primary/40 px-2 py-0.5 text-[10px] sm:text-xs font-black text-primary uppercase tracking-wider shadow-sm">
               TV Series
             </span>
 
             {rating && (
               <span className="flex items-center font-bold text-white">
                 <svg
-                  width="14"
-                  height="14"
+                  width="13"
+                  height="13"
                   viewBox="0 0 24 24"
                   fill="#f59e0b"
-                  className="mr-1.5 inline-block"
+                  className="mr-1 inline-block"
                 >
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
@@ -283,14 +283,14 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
 
           {/* Plot Overview */}
           {tv.overview && (
-            <p className="mb-5 line-clamp-3 max-w-xl text-sm leading-relaxed text-white/80 font-normal sm:text-base md:line-clamp-4 drop-shadow">
+            <p className="mb-4 sm:mb-5 line-clamp-2 sm:line-clamp-3 md:line-clamp-4 max-w-xl text-xs sm:text-sm md:text-base leading-relaxed text-white/80 font-normal drop-shadow">
               {tv.overview}
             </p>
           )}
 
           {/* Genres with Pipe Dividers */}
           {tv.genres && tv.genres.length > 0 && (
-            <div className="mb-6 flex flex-wrap items-center text-xs sm:text-sm font-semibold text-white/90">
+            <div className="mb-4 sm:mb-6 flex flex-wrap items-center text-xs sm:text-sm font-semibold text-white/90">
               {tv.genres.map((genre, idx) => (
                 <span key={genre.id} className="flex items-center">
                   {idx > 0 && <span className="mx-2 text-white/30 font-normal">|</span>}
@@ -301,33 +301,24 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
           )}
 
           {/* Action Bar */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            {/* Primary Watch / Resume Button */}
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-4">
+            {/* Primary Watch / Resume Pill Button */}
             <Link
               href={`/tv/${tv.id}/${currentPlaySeason}/${currentPlayEpisode}/player`}
-              className="flex items-center gap-3 group/play focus:outline-none"
+              className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-black shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all duration-200 hover:scale-105 hover:bg-white/90 active:scale-95"
             >
-              <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-[#f9f9f9] text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] transition-all duration-300 group-hover/play:scale-105 group-hover/play:bg-white active:scale-95">
-                <FaPlay className="ml-1 text-lg sm:text-xl text-black" />
-              </div>
-              <div className="hidden sm:flex flex-col">
-                <span className="text-base sm:text-[17px] font-bold text-white leading-tight group-hover/play:text-primary transition-colors">
+              <FaPlay className="ml-0.5 text-xs sm:text-sm text-black" />
+              <div className="flex items-center gap-1.5 leading-none">
+                <span className="text-xs sm:text-sm font-bold uppercase tracking-wide text-black">
                   {savedProgress && savedProgress.currentTime > 10
                     ? `Resume S${currentPlaySeason} E${currentPlayEpisode}`
                     : `Watch S${firstSeasonNumber} E${firstEpisodeNumber}`}
                 </span>
-                <span
-                  className={cn(
-                    "text-xs font-semibold tracking-wider uppercase",
-                    savedProgress && savedProgress.currentTime > 10
-                      ? "text-emerald-400"
-                      : "text-white/50"
-                  )}
-                >
-                  {savedProgress && savedProgress.currentTime > 10
-                    ? `${formatTimeDisplay(savedProgress.currentTime)} watched`
-                    : "Episode 1"}
-                </span>
+                {savedProgress && savedProgress.currentTime > 10 && (
+                  <span className="text-[10px] font-semibold text-emerald-700">
+                    ({formatTimeDisplay(savedProgress.currentTime)})
+                  </span>
+                )}
               </div>
             </Link>
 
@@ -338,7 +329,7 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
                 onClick={onViewEpisodesClick}
                 className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20 active:scale-95 shadow-lg"
               >
-                <FaListUl className="text-primary text-sm" />
+                <FaListUl className="text-primary text-xs sm:text-sm" />
                 <span>Episodes</span>
               </button>
             )}
@@ -349,7 +340,7 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
               onClick={() => setIsServerModalOpen(true)}
               className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20 active:scale-95 shadow-lg"
             >
-              <FaServer className="text-primary text-sm" />
+              <FaServer className="text-primary text-xs sm:text-sm" />
               <span>Select Server</span>
             </button>
 

@@ -60,7 +60,7 @@ const MovieDetailPage: NextPage<Params<{ id: number }>> = ({ params }) => {
         </div>
 
         {/* Interior Content Sections */}
-        <div className="relative z-20 -mt-6 md:-mt-10 w-full px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 pb-24 space-y-8">
+        <div className="relative z-20 -mt-6 md:-mt-10 w-full px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 pb-32 md:pb-24 space-y-8">
           {/* Cast & Characters Grid (Bingr.one 4-column) */}
           <CastsSection casts={(movie.credits?.cast || []) as Cast[]} />
 

@@ -96,9 +96,9 @@ export const HomeHero: React.FC = () => {
       />
 
       {/* Hero Content Overlay */}
-      <div className="absolute inset-0 z-20 flex flex-col justify-end px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 pb-16 md:pb-24 max-w-4xl">
+      <div className="absolute inset-0 z-20 flex flex-col justify-end px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 pb-10 sm:pb-16 md:pb-24 max-w-4xl">
         {/* Badges Row */}
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold">
+        <div className="mb-2 sm:mb-3 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-semibold">
           <Chip
             size="sm"
             color="warning"
@@ -125,25 +125,25 @@ export const HomeHero: React.FC = () => {
         </div>
 
         {/* Title */}
-        <h1 className="mb-3 text-3xl font-black tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl line-clamp-2">
+        <h1 className="mb-2 sm:mb-3 text-2xl font-black tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl line-clamp-2">
           {activeMovie.title}
         </h1>
 
         {/* Synopsis Overview */}
-        <p className="mb-6 line-clamp-3 text-sm text-neutral-300 drop-shadow md:text-base max-w-2xl font-normal leading-relaxed">
+        <p className="mb-4 sm:mb-6 line-clamp-2 sm:line-clamp-3 text-xs sm:text-sm md:text-base text-neutral-300 drop-shadow max-w-2xl font-normal leading-relaxed">
           {activeMovie.overview}
         </p>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           <Button
             as={Link}
             href={`/movie/${activeMovie.id}/player`}
             color="primary"
-            size="lg"
+            size="md"
             radius="full"
-            className="font-bold shadow-lg shadow-primary/30 transition-transform hover:scale-105"
-            startContent={<FaPlay className="text-sm" />}
+            className="sm:h-12 font-bold px-6 shadow-lg shadow-primary/30 transition-transform hover:scale-105"
+            startContent={<FaPlay className="text-xs sm:text-sm" />}
           >
             Play Now
           </Button>
@@ -152,10 +152,10 @@ export const HomeHero: React.FC = () => {
             as={Link}
             href={`/movie/${activeMovie.id}`}
             variant="flat"
-            size="lg"
+            size="md"
             radius="full"
-            className="border border-white/20 bg-white/20 font-semibold text-white backdrop-blur-md transition-transform hover:bg-white/30 hover:scale-105"
-            startContent={<FaInfo className="text-sm" />}
+            className="sm:h-12 border border-white/20 bg-white/20 font-semibold text-white backdrop-blur-md transition-transform hover:bg-white/30 hover:scale-105 px-5"
+            startContent={<FaInfo className="text-xs sm:text-sm" />}
           >
             More Info
           </Button>
@@ -163,24 +163,24 @@ export const HomeHero: React.FC = () => {
       </div>
 
       {/* Bottom Slide Indicators (Dots / Bars) & Slide Controls */}
-      <div className="absolute right-6 bottom-8 z-30 flex items-center gap-2.5 md:right-16">
+      <div className="absolute right-4 bottom-3 sm:right-6 sm:bottom-8 z-30 flex items-center gap-2 md:right-16">
         <button
           type="button"
           onClick={prevSlide}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 hover:text-white hover:bg-black/80 transition-all active:scale-95 shadow-md cursor-pointer"
+          className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 hover:text-white hover:bg-black/80 transition-all active:scale-95 shadow-md cursor-pointer"
           aria-label="Previous slide"
         >
-          <ChevronLeft className="text-sm" />
+          <ChevronLeft className="text-xs sm:text-sm" />
         </button>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           {featuredMovies.map((movie, idx) => (
             <button
               key={movie.id}
               type="button"
               onClick={() => setActiveIndex(idx)}
               className={`h-1.5 transition-all duration-300 rounded-full cursor-pointer ${
-                idx === activeIndex ? "w-8 bg-primary shadow-sm shadow-primary" : "w-3 bg-white/30 hover:bg-white/60"
+                idx === activeIndex ? "w-6 sm:w-8 bg-primary shadow-sm shadow-primary" : "w-2 sm:w-3 bg-white/30 hover:bg-white/60"
               }`}
               aria-label={`Go to slide ${idx + 1}`}
             />
@@ -190,10 +190,10 @@ export const HomeHero: React.FC = () => {
         <button
           type="button"
           onClick={nextSlide}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 hover:text-white hover:bg-black/80 transition-all active:scale-95 shadow-md cursor-pointer"
+          className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white/70 hover:text-white hover:bg-black/80 transition-all active:scale-95 shadow-md cursor-pointer"
           aria-label="Next slide"
         >
-          <ChevronRight className="text-sm" />
+          <ChevronRight className="text-xs sm:text-sm" />
         </button>
       </div>
     </div>
