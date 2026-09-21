@@ -7,14 +7,12 @@ import { AppendToResponse } from "tmdb-ts/dist/types/options";
 import { TvShowDetails } from "tmdb-ts/dist/types/tv-shows";
 import { cn } from "@/utils/helpers";
 import { getImageUrl, mutateTvShowTitle } from "@/utils/movies";
-import { getTvShowPlayers } from "@/utils/players";
 import { SavedMovieDetails } from "@/types/movie";
 import { IoVolumeHigh, IoVolumeMute } from "react-icons/io5";
-import { FaPlay, FaPause, FaServer, FaListUl } from "react-icons/fa6";
+import { FaPlay, FaPause, FaListUl } from "react-icons/fa6";
 import BookmarkButton from "@/components/ui/button/BookmarkButton";
 import ShareButton from "@/components/ui/button/ShareButton";
 import Trailer from "@/components/ui/overlay/Trailer";
-import ServerSelectionModal from "@/components/ui/overlay/ServerSelectionModal";
 import { ArrowLeft } from "@/utils/icons";
 import { WatchProgressItem, formatTimeDisplay } from "@/utils/watchProgress";
 import { siteConfig } from "@/config/site";
@@ -25,7 +23,6 @@ interface TvDetailHeroProps {
 }
 
 export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesClick }) => {
-  const [isServerModalOpen, setIsServerModalOpen] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
@@ -64,7 +61,6 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
 
   const currentPlaySeason = savedProgress?.season ?? firstSeasonNumber;
   const currentPlayEpisode = savedProgress?.episode ?? firstEpisodeNumber;
-  const players = getTvShowPlayers(tv.id, currentPlaySeason, currentPlayEpisode);
   const title = mutateTvShowTitle(tv);
 
   useEffect(() => {
@@ -334,16 +330,6 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
               </button>
             )}
 
-            {/* Select Server Button (Desktop only - mobile switches inside player) */}
-            <button
-              type="button"
-              onClick={() => setIsServerModalOpen(true)}
-              className="hidden sm:flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-white/20 active:scale-95 shadow-lg"
-            >
-              <FaServer className="text-primary text-xs sm:text-sm" />
-              <span>Select Server</span>
-            </button>
-
             {/* Watch Trailer Modal Trigger */}
             <Trailer videos={tv.videos?.results || []} />
 
@@ -355,17 +341,6 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
           </div>
         </div>
       </div>
-
-      {/* Bingr-style Server Selection Modal */}
-      <ServerSelectionModal
-        isOpen={isServerModalOpen}
-        onClose={() => setIsServerModalOpen(false)}
-        tvId={tv.id}
-        season={currentPlaySeason}
-        episode={currentPlayEpisode}
-        players={players}
-        title={`Stream ${title} S${currentPlaySeason}E${currentPlayEpisode}`}
-      />
     </div>
   );
 };
