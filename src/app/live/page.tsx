@@ -6,6 +6,7 @@ import {
   ChannelCategory,
   CHANNEL_CATEGORIES,
   CURATED_CHANNELS,
+  POPULAR_M3U_PLAYLISTS,
   getStoredCustomChannels,
   getStoredFavorites,
   saveStoredCustomChannels,
@@ -32,7 +33,7 @@ import {
   IoFilter,
   IoGlobeOutline,
 } from "react-icons/io5";
-import { MdTv } from "react-icons/md";
+import { MdTv, MdOutlineFeaturedPlayList } from "react-icons/md";
 
 const CATEGORY_META: Record<string, { icon: string; label: string }> = {
   All: { icon: "📺", label: "All Channels" },
@@ -52,6 +53,9 @@ export default function LiveTvPage() {
   });
 
   const [customChannels, setCustomChannels] = useState<Channel[]>([]);
+  const [playlistChannels, setPlaylistChannels] = useState<Channel[]>(CURATED_CHANNELS);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>("iptv-eng");
+  const [isLoadingChannels, setIsLoadingChannels] = useState<boolean>(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<ChannelCategory>("All");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
@@ -65,16 +69,39 @@ export default function LiveTvPage() {
     setCustomChannels(getStoredCustomChannels());
   }, []);
 
-  // Combined channels list (Curated + User's Custom Channels)
+  // Fetch playlist channels from API (cached server-side M3U feeds)
+  useEffect(() => {
+    let isCancelled = false;
+    setIsLoadingChannels(true);
+    fetch(`/api/live/channels?playlist=${selectedPlaylistId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isCancelled && data.channels && data.channels.length > 0) {
+          setPlaylistChannels(data.channels);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load playlist channels:", err);
+      })
+      .finally(() => {
+        if (!isCancelled) setIsLoadingChannels(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedPlaylistId]);
+
+  // Combined channels list (User's Custom Channels + Current Playlist Channels)
   const allChannels = useMemo(() => {
-    const combined = [...customChannels, ...CURATED_CHANNELS];
+    const combined = [...customChannels, ...playlistChannels];
     const seen = new Set<string>();
     return combined.filter((ch) => {
       if (seen.has(ch.id)) return false;
       seen.add(ch.id);
       return true;
     });
-  }, [customChannels]);
+  }, [customChannels, playlistChannels]);
 
   // Available countries
   const availableCountries = useMemo(() => {
@@ -281,6 +308,26 @@ export default function LiveTvPage() {
                 >
                   <IoClose className="w-3.5 h-3.5" />
                 </button>
+              )}
+            </div>
+
+            {/* Playlist Feed Selector */}
+            <div className="flex items-center bg-[#121319] border border-white/10 rounded-xl px-2.5 sm:px-3 py-2 gap-1.5 text-xs shrink-0">
+              <MdOutlineFeaturedPlayList className="w-3.5 h-3.5 text-primary shrink-0" />
+              <select
+                value={selectedPlaylistId}
+                onChange={(e) => setSelectedPlaylistId(e.target.value)}
+                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer max-w-[130px] sm:max-w-none truncate"
+                aria-label="Select M3U Playlist Feed"
+              >
+                {POPULAR_M3U_PLAYLISTS.map((p) => (
+                  <option key={p.id} value={p.id} className="bg-[#121319] text-white">
+                    {p.name} ({p.channelCountEstimate})
+                  </option>
+                ))}
+              </select>
+              {isLoadingChannels && (
+                <span className="w-2 h-2 rounded-full bg-primary animate-ping shrink-0" />
               )}
             </div>
 
