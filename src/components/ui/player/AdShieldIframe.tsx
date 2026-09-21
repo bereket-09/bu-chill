@@ -39,6 +39,12 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
   const [countdown, setCountdown] = useState(timeoutSeconds);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Auto-dismiss "Server issues? Try next" prompt after iframe loads
+  const [showServerIssuePrompt, setShowServerIssuePrompt] = useState(false);
+  const [isPromptFading, setIsPromptFading] = useState(false);
+  const promptFadeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const promptRemoveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Maintain stable refs so parent re-renders never restart the effect
   const isLoadedRef = useRef(false);
   const hasTriggeredRef = useRef(false);
@@ -66,6 +72,22 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
     });
   };
 
+  const handlePromptMouseEnter = () => {
+    if (promptFadeTimerRef.current) clearTimeout(promptFadeTimerRef.current);
+    if (promptRemoveTimerRef.current) clearTimeout(promptRemoveTimerRef.current);
+    setIsPromptFading(false);
+  };
+
+  const handlePromptMouseLeave = () => {
+    promptFadeTimerRef.current = setTimeout(() => {
+      setIsPromptFading(true);
+    }, 1200);
+
+    promptRemoveTimerRef.current = setTimeout(() => {
+      setShowServerIssuePrompt(false);
+    }, 1700);
+  };
+
   // Reset loading & timer ONLY when `src` or `timeoutSeconds` actually changes
   useEffect(() => {
     isLoadedRef.current = false;
@@ -74,6 +96,11 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
     setIsLoaded(false);
     setIsPaused(false);
     setCountdown(timeoutSeconds);
+    setShowServerIssuePrompt(false);
+    setIsPromptFading(false);
+
+    if (promptFadeTimerRef.current) clearTimeout(promptFadeTimerRef.current);
+    if (promptRemoveTimerRef.current) clearTimeout(promptRemoveTimerRef.current);
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -120,10 +147,12 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      if (promptFadeTimerRef.current) clearTimeout(promptFadeTimerRef.current);
+      if (promptRemoveTimerRef.current) clearTimeout(promptRemoveTimerRef.current);
     };
   }, [src, timeoutSeconds]);
 
-  // When iframe fires load event, immediately cancel watchdog timer forever
+  // When iframe fires load event, immediately cancel watchdog timer and schedule prompt auto-dismiss
   const handleIframeLoad = () => {
     isLoadedRef.current = true;
     setIsLoaded(true);
@@ -134,6 +163,21 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
     }
 
     onLoadRef.current?.();
+
+    // Show prompt briefly upon iframe load, then automatically fade out and disappear
+    setShowServerIssuePrompt(true);
+    setIsPromptFading(false);
+
+    if (promptFadeTimerRef.current) clearTimeout(promptFadeTimerRef.current);
+    if (promptRemoveTimerRef.current) clearTimeout(promptRemoveTimerRef.current);
+
+    promptFadeTimerRef.current = setTimeout(() => {
+      setIsPromptFading(true);
+    }, 2500);
+
+    promptRemoveTimerRef.current = setTimeout(() => {
+      setShowServerIssuePrompt(false);
+    }, 3000);
   };
 
   // When iframe fires error event, single-fire switch if not loaded yet
@@ -218,13 +262,25 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
         </div>
       )}
 
-      {/* Persistent Subtle "Switch Server" Quick Button (visible when loaded for fast recovery if player is blank) */}
-      {isLoaded && onNextServer && (
-        <div className="pointer-events-auto absolute bottom-4 left-4 z-30 opacity-40 hover:opacity-100 transition-opacity duration-300">
+      {/* Transient Quick "Switch Server" Button (auto-disappears after iframe loads) */}
+      {showServerIssuePrompt && onNextServer && (
+        <div
+          onMouseEnter={handlePromptMouseEnter}
+          onMouseLeave={handlePromptMouseLeave}
+          className={cn(
+            "pointer-events-auto absolute bottom-4 left-4 z-30 transition-all duration-500 ease-out",
+            isPromptFading
+              ? "opacity-0 translate-y-2 pointer-events-none"
+              : "opacity-80 hover:opacity-100 translate-y-0"
+          )}
+        >
           <button
             type="button"
-            onClick={onNextServer}
-            className="flex items-center gap-1.5 rounded-full border border-white/15 bg-black/75 px-3 py-1.5 text-[11px] font-medium text-white/80 backdrop-blur-md hover:bg-black/90 hover:text-white shadow-lg transition-all active:scale-95"
+            onClick={() => {
+              setShowServerIssuePrompt(false);
+              onNextServer();
+            }}
+            className="flex items-center gap-1.5 rounded-full border border-white/15 bg-black/85 px-3 py-1.5 text-[11px] font-medium text-white/90 backdrop-blur-md hover:bg-black hover:text-white shadow-lg transition-all active:scale-95"
             title="Video not loading inside server? Switch to next server"
           >
             <IoRefresh className="text-xs text-primary" />
