@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "@bprogress/next/app";
 import {
   Button,
   Select,
@@ -13,9 +12,6 @@ import {
   Chip,
 } from "@heroui/react";
 import {
-  FaCheck,
-  FaPen,
-  FaPlus,
   FaPlay,
   FaTrash,
   FaXmark,
@@ -25,21 +21,15 @@ import {
   FaTv,
   FaStar,
 } from "react-icons/fa6";
-import { LuPopcorn } from "react-icons/lu";
+import { LuPopcorn, LuUsers } from "react-icons/lu";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
-import { queryClient } from "@/app/providers";
 import {
-  AVATAR_PRESETS,
   DEFAULT_AVATAR_ID,
   resolveAvatarUrl,
 } from "@/constants/avatars";
-import {
-  UserProfileItem,
-  EditProfileView,
-} from "@/components/sections/Profile/ProfileManager";
+import { UserProfileItem } from "@/components/sections/Profile/ProfileManager";
 import {
   getActiveProfileId,
-  setActiveProfileId,
   getProfileWatchlist,
   removeFromProfileWatchlist,
   clearProfileWatchlist,
@@ -75,19 +65,11 @@ const SORT_OPTIONS: { key: SortOption; label: string }[] = [
 ];
 
 export const MySpace: React.FC = () => {
-  const router = useRouter();
   const { data: user, isLoading: isUserLoading } = useSupabaseUser();
 
   // Profile state
   const [profiles, setProfiles] = useState<UserProfileItem[]>([]);
   const [activeProfileId, setActiveId] = useState<string>("main");
-  const [isEditMode, setIsEditMode] = useState<boolean>(false);
-
-  // Editing profile modal state
-  const [editingProfile, setEditingProfile] = useState<UserProfileItem | null>(null);
-  const [editName, setEditName] = useState<string>("");
-  const [editAvatarIndex, setEditAvatarIndex] = useState<number>(0);
-  const [isSavingProfile, setIsSavingProfile] = useState<boolean>(false);
 
   // Rotating tagline index
   const [taglineIdx, setTaglineIdx] = useState(0);
@@ -206,146 +188,6 @@ export const MySpace: React.FC = () => {
     );
   }, [profiles, activeProfileId]);
 
-  // Switch profile handler
-  const handleSelectProfile = (profile: UserProfileItem) => {
-    if (!user) return;
-
-    if (isEditMode) {
-      handleOpenEditProfile(profile);
-      return;
-    }
-
-    setActiveProfileId(user.id, profile.id);
-    setActiveId(profile.id);
-
-    if (profile.avatar) {
-      localStorage.setItem(`buchill_avatar_${user.id}`, profile.avatar);
-      queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
-    }
-
-    addToast({
-      title: `Switched to ${profile.name}`,
-      description: "Showing profile-specific watchlist and history",
-      color: "primary",
-    });
-
-    reloadData();
-  };
-
-  // Open edit modal for an existing profile
-  const handleOpenEditProfile = (profile: UserProfileItem) => {
-    setEditingProfile(profile);
-    setEditName(profile.name);
-    const idx = AVATAR_PRESETS.findIndex(
-      (a) => a.id === profile.avatar || a.url === profile.avatar
-    );
-    setEditAvatarIndex(idx >= 0 ? idx : 0);
-  };
-
-  // Open modal to add a new profile
-  const handleOpenAddProfile = () => {
-    if (profiles.length >= 5) {
-      addToast({
-        title: "Profile limit reached",
-        description: "You can create up to 5 streaming profiles.",
-        color: "warning",
-      });
-      return;
-    }
-    const newProfile: UserProfileItem = {
-      id: `profile_${Date.now()}`,
-      name: "",
-      avatar: DEFAULT_AVATAR_ID,
-    };
-    setEditingProfile(newProfile);
-    setEditName("");
-    setEditAvatarIndex(0);
-  };
-
-  // Save profile edits
-  const handleSaveProfile = async () => {
-    if (!user || !editingProfile) return;
-    const cleanName = editName.trim();
-    if (!cleanName) {
-      addToast({ title: "Profile name cannot be empty", color: "danger" });
-      return;
-    }
-
-    const selectedAvatarItem = AVATAR_PRESETS[editAvatarIndex] || AVATAR_PRESETS[0];
-    const avatarId = selectedAvatarItem.id;
-
-    setIsSavingProfile(true);
-    try {
-      let updatedProfiles = [...profiles];
-      const existingIdx = updatedProfiles.findIndex((p) => p.id === editingProfile.id);
-
-      if (existingIdx >= 0) {
-        updatedProfiles[existingIdx] = {
-          ...updatedProfiles[existingIdx],
-          name: cleanName,
-          avatar: avatarId,
-        };
-      } else {
-        updatedProfiles.push({
-          id: editingProfile.id,
-          name: cleanName,
-          avatar: avatarId,
-        });
-      }
-
-      setProfiles(updatedProfiles);
-      localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(updatedProfiles));
-
-      if (editingProfile.isMain || editingProfile.id === "main") {
-        localStorage.setItem(`buchill_avatar_${user.id}`, avatarId);
-        queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
-      }
-
-      addToast({
-        title: "Profile saved successfully!",
-        color: "success",
-      });
-
-      setEditingProfile(null);
-      setIsEditMode(false);
-      reloadData();
-    } catch (err: any) {
-      addToast({
-        title: "Failed to save profile",
-        description: err?.message || "Please try again",
-        color: "danger",
-      });
-    } finally {
-      setIsSavingProfile(false);
-    }
-  };
-
-  // Delete secondary profile
-  const handleDeleteProfile = () => {
-    if (!user || !editingProfile) return;
-    if (editingProfile.isMain || editingProfile.id === "main") {
-      addToast({ title: "Cannot delete primary account profile", color: "danger" });
-      return;
-    }
-
-    if (!confirm(`Delete "${editingProfile.name}" profile? Streaming history will be lost.`)) {
-      return;
-    }
-
-    const updated = profiles.filter((p) => p.id !== editingProfile.id);
-    setProfiles(updated);
-    localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(updated));
-
-    if (activeProfileId === editingProfile.id) {
-      setActiveProfileId(user.id, "main");
-      setActiveId("main");
-    }
-
-    addToast({ title: "Profile deleted", color: "primary" });
-    setEditingProfile(null);
-    reloadData();
-  };
-
   // Continue watching items (in-progress, not completed, last_position > 5 seconds)
   const continueWatchingItems = useMemo(() => {
     return historyItems.filter(
@@ -443,25 +285,6 @@ export const MySpace: React.FC = () => {
     return null;
   }
 
-  // If editing a profile in modal overlay
-  if (editingProfile) {
-    return (
-      <EditProfileView
-        profile={editingProfile}
-        name={editName}
-        setName={setEditName}
-        selectedIndex={editAvatarIndex}
-        setSelectedIndex={setEditAvatarIndex}
-        onSave={handleSaveProfile}
-        onCancel={() => setEditingProfile(null)}
-        onDelete={
-          editingProfile.isMain || editingProfile.id === "main" ? undefined : handleDeleteProfile
-        }
-        isSaving={isSavingProfile}
-      />
-    );
-  }
-
   return (
     <div className="relative min-h-screen w-full bg-black text-white font-sans overflow-x-hidden select-none pb-24">
       {/* Bingr-style Top Starfield Background Vignette */}
@@ -508,7 +331,14 @@ export const MySpace: React.FC = () => {
               <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>Signed in as <strong className="text-white/80">{user.email}</strong></span>
               <span className="text-white/30">•</span>
-              <span className="text-primary font-medium">Active: {activeProfile.name}</span>
+              <span className="inline-flex items-center gap-1.5 text-white/90 font-medium">
+                <img
+                  src={resolveAvatarUrl(activeProfile.avatar)}
+                  alt={activeProfile.name}
+                  className="size-4.5 rounded-full object-cover ring-1 ring-white/20"
+                />
+                <span className="text-primary font-semibold">{activeProfile.name}</span>
+              </span>
             </div>
           </div>
 
@@ -517,9 +347,10 @@ export const MySpace: React.FC = () => {
               <Button
                 variant="flat"
                 size="sm"
+                startContent={<LuUsers className="w-3.5 h-3.5 text-white/70" />}
                 className="bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold"
               >
-                Who&apos;s Watching?
+                Switch Profile
               </Button>
             </Link>
 
@@ -537,119 +368,14 @@ export const MySpace: React.FC = () => {
         </header>
 
         {/* ================================================================= */}
-        {/* SECTION 2: PROFILES TRAY (EXACT MATCH TO BINGR MY SPACE)           */}
-        {/* ================================================================= */}
-        <section className="mb-14">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white/90">
-                Profiles
-              </h2>
-              <span className="text-xs text-white/40 hidden sm:inline">
-                (Click to switch library & watchlist)
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsEditMode((prev) => !prev)}
-              className="flex items-center gap-2 text-xs sm:text-sm font-semibold bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full transition-colors border border-white/10 text-white/80 hover:text-white cursor-pointer"
-            >
-              {isEditMode ? (
-                <>
-                  <FaCheck className="w-3.5 h-3.5 text-primary" />
-                  <span>Done</span>
-                </>
-              ) : (
-                <>
-                  <FaPen className="w-3 h-3 text-white/60" />
-                  <span>Edit Profiles</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Profiles Row */}
-          <div className="flex flex-wrap items-start gap-6 sm:gap-10">
-            {profiles.map((p) => {
-              const avatarUrl = resolveAvatarUrl(p.avatar);
-              const isActive = p.id === activeProfileId;
-
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handleSelectProfile(p)}
-                  className="group flex flex-col items-center gap-2.5 outline-none cursor-pointer"
-                >
-                  <div className="relative">
-                    <div
-                      className={`relative size-20 sm:size-28 md:size-32 overflow-hidden rounded-full transition-all duration-300 ${
-                        isActive
-                          ? "ring-4 ring-primary ring-offset-4 ring-offset-black shadow-[0_0_24px_rgba(244,63,94,0.4)] scale-105"
-                          : "ring-1 ring-white/15 opacity-80 group-hover:opacity-100 group-hover:scale-105 group-hover:ring-2 group-hover:ring-white/40"
-                      }`}
-                    >
-                      {/* Edit Pencil Overlay */}
-                      {isEditMode && (
-                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/65 backdrop-blur-[2px]">
-                          <FaPen className="w-6 h-6 text-white drop-shadow-md" />
-                        </div>
-                      )}
-
-                      <img
-                        src={avatarUrl}
-                        alt={p.name}
-                        className="size-full object-cover"
-                      />
-                    </div>
-
-                    {/* Active Profile Checkmark Badge */}
-                    {!isEditMode && isActive && (
-                      <div className="absolute -bottom-1 -right-1 sm:bottom-0 sm:right-0 z-20 flex size-6 sm:size-7 items-center justify-center rounded-full bg-white text-black border-2 border-black shadow-lg">
-                        <FaCheck className="w-3 h-3 font-bold" />
-                      </div>
-                    )}
-                  </div>
-
-                  <span
-                    className={`text-xs sm:text-sm font-medium tracking-wide transition-colors ${
-                      isActive ? "text-white font-bold" : "text-white/60 group-hover:text-white"
-                    }`}
-                  >
-                    {p.name}
-                  </span>
-                </button>
-              );
-            })}
-
-            {/* Add Profile Button */}
-            {profiles.length < 5 && (
-              <button
-                type="button"
-                onClick={handleOpenAddProfile}
-                className="group flex flex-col items-center gap-2.5 outline-none cursor-pointer"
-              >
-                <div className="flex size-20 sm:size-28 md:size-32 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/[0.03] text-white/50 transition-all duration-300 group-hover:border-white/60 group-hover:bg-white/10 group-hover:text-white group-hover:scale-105">
-                  <FaPlus className="w-6 h-6 sm:w-8 sm:h-8" />
-                </div>
-                <span className="text-xs sm:text-sm font-medium text-white/50 group-hover:text-white transition-colors">
-                  Add
-                </span>
-              </button>
-            )}
-          </div>
-        </section>
-
-        {/* ================================================================= */}
-        {/* SECTION 3: CONTINUE WATCHING (ISOLATED TO ACTIVE PROFILE)         */}
+        {/* CONTINUE WATCHING (ISOLATED TO ACTIVE PROFILE)                    */}
         {/* ================================================================= */}
         {continueWatchingItems.length > 0 && (
           <section className="mb-14">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/90">
-                  Continue Watching for {activeProfile.name}
+                  Continue Watching
                 </h3>
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
                   {continueWatchingItems.length}
@@ -969,7 +695,7 @@ export const MySpace: React.FC = () => {
                     🍿
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">
-                    {activeProfile.name}&apos;s Watchlist is empty
+                    Your Watchlist is empty
                   </h3>
                   <p className="text-sm text-white/50 max-w-md mb-8 leading-relaxed">
                     Explore trending movies and series to save them to your personal streaming queue.
@@ -1066,7 +792,7 @@ export const MySpace: React.FC = () => {
                     🎬
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">
-                    No watch history yet for {activeProfile.name}
+                    Your Watch History is empty
                   </h3>
                   <p className="text-sm text-white/50 max-w-md mb-8 leading-relaxed">
                     Movies and episodes you watch to completion will appear here so you can revisit them anytime.
@@ -1085,27 +811,27 @@ export const MySpace: React.FC = () => {
 
       {/* Confirmation Modal: Clear Watchlist */}
       <ConfirmationModal
-        title={`Clear ${activeProfile.name}'s Watchlist?`}
+        title="Clear Your Watchlist?"
         isOpen={clearWatchlistOpened}
         onClose={closeClearWatchlist}
         onConfirm={handleConfirmClearWatchlist}
         confirmLabel="Clear All"
       >
         <p className="text-white/80 text-sm">
-          Are you sure you want to remove all {contentFilter === "all" ? "items" : contentFilter === "movie" ? "movies" : "TV shows"} from {activeProfile.name}&apos;s watchlist?
+          Are you sure you want to remove all {contentFilter === "all" ? "items" : contentFilter === "movie" ? "movies" : "TV shows"} from your watchlist?
         </p>
       </ConfirmationModal>
 
       {/* Confirmation Modal: Clear History */}
       <ConfirmationModal
-        title={`Clear ${activeProfile.name}'s Watch History?`}
+        title="Clear Your Watch History?"
         isOpen={clearHistoryOpened}
         onClose={closeClearHistory}
         onConfirm={handleConfirmClearHistory}
         confirmLabel="Clear History"
       >
         <p className="text-white/80 text-sm">
-          Are you sure you want to clear the watch history for {activeProfile.name}?
+          Are you sure you want to clear your watch history?
         </p>
       </ConfirmationModal>
     </div>
