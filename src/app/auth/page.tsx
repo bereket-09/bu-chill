@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "@bprogress/next/app";
 import { IoHelpCircleOutline } from "react-icons/io5";
 import { Switch } from "@heroui/react";
 import { CleanAuthModal } from "@/components/sections/Auth/CleanAuthModal";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
+import ThreeDMarquee from "@/components/ui/background/ThreeDMarquee";
+import { tmdb } from "@/api/tmdb";
+import { getImageUrl } from "@/utils/movies";
+import { isEmpty, shuffleArray } from "@/utils/helpers";
+import { useQuery } from "@tanstack/react-query";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -32,11 +37,43 @@ export default function AuthPage() {
     localStorage.setItem("buchill_show_ads", String(val));
   };
 
+  // Fetch trending movies and TV shows for the 3D Animated Movie Tiles Marquee
+  const { data: movies } = useQuery({
+    queryFn: () => tmdb.trending.trending("movie", "day"),
+    queryKey: ["movie-auth-posters"],
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const { data: tvShows } = useQuery({
+    queryFn: () => tmdb.trending.trending("tv", "day"),
+    queryKey: ["tv-auth-posters"],
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const IMAGES = useMemo(() => {
+    if (!movies?.results && !tvShows?.results) return [];
+    const moviePosters = (movies?.results || [])
+      .filter((movie) => movie.poster_path)
+      .map((movie) => getImageUrl(movie.poster_path, "poster"));
+    const tvPosters = (tvShows?.results || [])
+      .filter((show) => show.poster_path)
+      .map((show) => getImageUrl(show.poster_path, "poster"));
+    return shuffleArray([...moviePosters, ...tvPosters]);
+  }, [movies?.results, tvShows?.results]);
+
   return (
     <div className="relative min-h-screen w-full bg-black text-white font-sans flex flex-col justify-between overflow-x-hidden select-none">
-      {/* Subtle Starfield / Theater Glow Background */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(255,255,255,0.06)_0%,_rgba(0,0,0,0)_70%)]" />
-      <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-primary/10 rounded-full blur-[140px] -z-10" />
+      {/* 3D Animated Moving Movie Tiles Marquee Background */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-30 dark:opacity-40">
+        {!isEmpty(IMAGES) && (
+          <ThreeDMarquee className="absolute inset-0 scale-105" images={IMAGES} aspect="poster" />
+        )}
+      </div>
+
+      {/* Dark Vignette & Gradient Overlays for High Legibility */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-black/80 via-black/55 to-black/90" />
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.85)_100%)] backdrop-blur-[1px]" />
+      <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 w-[500px] h-[350px] bg-primary/15 rounded-full blur-[140px] -z-10" />
 
       {/* Top Header */}
       <header className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12">
