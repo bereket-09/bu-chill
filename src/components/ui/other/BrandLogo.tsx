@@ -23,7 +23,7 @@ const BrandLogo: React.FC<BrandLogoProps> = ({ animate = false, className }) => 
         )}
       >
         <span className="bg-gradient-to-r from-red-500 via-rose-500 to-primary bg-clip-text text-transparent group-hover:drop-shadow-[0_0_15px_rgba(244,63,94,0.6)] transition-all">
-          Bu
+          Be
         </span>
         <span className="mx-1 text-sm text-white/40 group-hover:text-primary transition-colors font-light">
           •

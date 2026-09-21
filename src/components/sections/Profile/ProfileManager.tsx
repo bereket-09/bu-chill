@@ -427,7 +427,7 @@ const ProfileManager: React.FC = () => {
                 <FaShieldHalved className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-white text-sm">Bu•Chill Streaming Account</h4>
+                <h4 className="font-bold text-white text-sm">Be•Chill Streaming Account</h4>
                 <p className="text-xs text-white/50">{user.email}</p>
               </div>
             </div>
@@ -457,7 +457,7 @@ const ProfileManager: React.FC = () => {
         <Link href="/" className="flex items-center gap-2 group transition-transform hover:scale-105">
           <span className="text-3xl drop-shadow-md">🍿</span>
           <span className="text-xl font-extrabold tracking-tight text-white/90 group-hover:text-white">
-            Bu<span className="text-primary">•</span>Chill
+            Be<span className="text-primary">•</span>Chill
           </span>
         </Link>
 

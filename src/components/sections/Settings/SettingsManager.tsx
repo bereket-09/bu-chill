@@ -102,7 +102,7 @@ const SettingsManager: React.FC = () => {
     setOtherDevices((prev) => prev.filter((d) => d.id !== deviceId));
     addToast({
       title: "Session Revoked",
-      description: "Device has been signed out of your Bu-Chill account.",
+      description: "Device has been signed out of your Be Chill account.",
       color: "primary",
     });
   };
@@ -178,7 +178,7 @@ const SettingsManager: React.FC = () => {
                 />
               </button>
 
-              {/* Tab 2: Bu-Chill API */}
+              {/* Tab 2: Be Chill API */}
               <button
                 type="button"
                 onClick={() => {
@@ -195,7 +195,7 @@ const SettingsManager: React.FC = () => {
                   <LuTerminal className="w-5 h-5 text-white/90" />
                   <div className="flex flex-col">
                     <span className="font-semibold text-sm sm:text-base text-white/90">
-                      Bu-Chill API
+                      Be Chill API
                     </span>
                     <span className="text-xs text-white/50">Developer Access</span>
                   </div>
@@ -274,7 +274,7 @@ const SettingsManager: React.FC = () => {
               <div className="space-y-10 animate-in fade-in duration-200">
                 {/* Donate Row */}
                 <div className="flex items-center justify-between pr-0 lg:pr-8">
-                  <span className="text-lg font-semibold text-white/90">Donate to Bu-Chill</span>
+                  <span className="text-lg font-semibold text-white/90">Donate to Be Chill</span>
                   <a
                     href="https://buymeacoffee.com"
                     target="_blank"
@@ -350,18 +350,18 @@ const SettingsManager: React.FC = () => {
               </div>
             )}
 
-            {/* TAB 2: BU-CHILL API */}
+            {/* TAB 2: BE CHILL API */}
             {activeTab === "api" && (
               <div className="flex flex-col pt-2 animate-in fade-in duration-200">
                 <h3 className="text-xs font-bold text-white/80 tracking-widest uppercase mb-8">
-                  Bu-Chill API
+                  Be Chill API
                 </h3>
 
                 <div className="flex items-start justify-between gap-6 pr-0 lg:pr-8 mb-8">
                   <div className="flex flex-col gap-1.5">
                     <span className="text-lg font-semibold text-white/90">Embeddable Player</span>
                     <p className="text-sm font-medium text-white/50 leading-relaxed max-w-lg">
-                      Drop the Bu-Chill player into your own site with a single{" "}
+                      Drop the Be Chill player into your own site with a single{" "}
                       <code className="px-1.5 py-0.5 rounded bg-[#1a1c22] text-white/80 text-xs font-mono">
                         &lt;iframe&gt;
                       </code>
@@ -435,7 +435,7 @@ const SettingsManager: React.FC = () => {
                   <div className="flex flex-col gap-2">
                     <h4 className="text-base font-semibold text-white/90">Join the Community</h4>
                     <p className="text-sm font-medium text-white/50 max-w-md leading-relaxed">
-                      Bu-Chill is actively evolving! Join our Discord server to request movies/series,
+                      Be Chill is actively evolving! Join our Discord server to request movies/series,
                       report streaming links, or hang out with fellow movie fans.
                     </p>
                   </div>
@@ -453,7 +453,7 @@ const SettingsManager: React.FC = () => {
                 {/* Legal Policy Links */}
                 <div className="mt-12 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 text-sm font-medium text-white/40 max-w-2xl">
                   <Link href="/about" className="hover:text-white/80 transition-colors underline underline-offset-4">
-                    About Bu-Chill
+                    About Be Chill
                   </Link>
                   <span className="hidden sm:inline">•</span>
                   <a href="#" className="hover:text-white/80 transition-colors underline underline-offset-4">
@@ -473,7 +473,7 @@ const SettingsManager: React.FC = () => {
                 <div className="mt-8 flex flex-col items-start gap-1">
                   <span className="text-[11px] uppercase tracking-wider text-white/30">Build</span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full border border-white/10 bg-white/[0.03] text-xs font-mono text-white/60">
-                    bu-chill-v1.4.2 (Production)
+                    be-chill-v1.4.2 (Production)
                   </span>
                 </div>
               </div>

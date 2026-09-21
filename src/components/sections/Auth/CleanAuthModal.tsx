@@ -184,8 +184,8 @@ export const CleanAuthModal: React.FC<CleanAuthModalProps> = ({
         {/* Modal Header */}
         <div className="px-6 sm:px-10 pt-7 pb-2 text-center">
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-            {mode === "login" && "Welcome back to Bu-Chill"}
-            {mode === "register" && "Create your Bu-Chill account"}
+            {mode === "login" && "Welcome back to Be Chill"}
+            {mode === "register" && "Create your Be Chill account"}
             {mode === "forgot" && "Reset your password"}
           </h2>
           <p className="mt-1.5 text-xs sm:text-sm text-white/55 leading-relaxed">
@@ -214,14 +214,14 @@ export const CleanAuthModal: React.FC<CleanAuthModalProps> = ({
               {/* Center brand badge inside QR */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <span className="px-2 py-0.5 rounded-md bg-black text-white text-[10px] font-bold tracking-tight shadow-md border border-white/20">
-                  bu-chill
+                  be-chill
                 </span>
               </div>
             </div>
 
             <p className="mt-4 text-sm font-semibold text-white/90">Use Camera App to Scan QR</p>
             <p className="mt-1 text-xs text-white/50 leading-relaxed max-w-[210px]">
-              Click on the link generated to redirect to the Bu-Chill mobile app
+              Click on the link generated to redirect to the Be Chill mobile app
             </p>
 
             <div className="mt-4 inline-flex items-center px-3.5 py-1 rounded-full bg-white/[0.04] border border-white/10 text-xs font-mono text-white/70">
@@ -376,7 +376,7 @@ export const CleanAuthModal: React.FC<CleanAuthModalProps> = ({
             <div className="text-center pt-2 text-xs text-white/50">
               {mode === "login" && (
                 <>
-                  New to Bu-Chill?{" "}
+                  New to Be Chill?{" "}
                   <button
                     type="button"
                     onClick={() => setMode("register")}

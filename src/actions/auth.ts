@@ -182,7 +182,7 @@ const signUpAction: AuthAction<RegisterFormInput> = async (data) => {
 
   return {
     success: true,
-    message: `Account created successfully! Welcome to Bu-Chill, ${username}.`,
+    message: `Account created successfully! Welcome to Be Chill, ${username}.`,
   };
 };
 

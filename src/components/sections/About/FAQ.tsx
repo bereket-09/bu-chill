@@ -5,9 +5,9 @@ import { Accordion, AccordionItem, Link } from "@heroui/react";
 
 const FAQS = [
   {
-    title: "🍿 What is Bu-Chill?",
+    title: "🍿 What is Be Chill?",
     description:
-      "Just like every other top streaming service, Bu-Chill is a next-gen streaming platform that helps you easily access movies, TV shows, and 24/7 Live TV channels in one clean place.",
+      "Just like every other top streaming service, Be Chill is a next-gen streaming platform that helps you easily access movies, TV shows, and 24/7 Live TV channels in one clean place.",
   },
   {
     title: "❓ So what do we actually do?",

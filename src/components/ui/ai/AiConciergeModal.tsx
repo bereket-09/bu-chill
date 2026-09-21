@@ -56,7 +56,7 @@ export const AiConciergeModal: React.FC = () => {
       id: "welcome",
       role: "assistant",
       content:
-        "Hey! 🍿 I'm your **Bu-Chill AI Concierge**. Tell me what mood, vibe, or genre you're feeling, and I'll curate the perfect movies or shows for you.",
+        "Hey! 🍿 I'm your **Be Chill AI Concierge**. Tell me what mood, vibe, or genre you're feeling, and I'll curate the perfect movies or shows for you.",
     },
   ]);
 
@@ -133,7 +133,7 @@ export const AiConciergeModal: React.FC = () => {
         {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: "Failed to connect to Bu-Chill AI. Please check your network connection.",
+          content: "Failed to connect to Be Chill AI. Please check your network connection.",
         },
       ]);
     } finally {
@@ -161,8 +161,8 @@ export const AiConciergeModal: React.FC = () => {
               ? "bg-amber-500 text-black border-amber-400 scale-95 shadow-amber-500/40"
               : "bg-[#11121a]/95 hover:bg-[#181a24] text-white border-white/20 hover:border-amber-400/60 backdrop-blur-xl hover:scale-110 shadow-black/80"
           )}
-          title="Bu-Chill AI Concierge"
-          aria-label="Toggle Bu-Chill AI Concierge"
+          title="Be Chill AI Concierge"
+          aria-label="Toggle Be Chill AI Concierge"
         >
           <div className="relative flex items-center justify-center">
             <IoSparkles
@@ -200,7 +200,7 @@ export const AiConciergeModal: React.FC = () => {
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <span className="font-bold text-sm text-white tracking-wide">
-                      Bu-Chill AI
+                      Be Chill AI
                     </span>
                     <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -386,7 +386,7 @@ export const AiConciergeModal: React.FC = () => {
               {isLoading && (
                 <div className="mr-auto flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/[0.06] border border-white/10 text-white/70 text-xs animate-pulse">
                   <IoSparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-                  <span>Bu-Chill AI is thinking...</span>
+                  <span>Be Chill AI is thinking...</span>
                 </div>
               )}
 

@@ -42,7 +42,7 @@ const FEATURES = [
     bg: "bg-purple-400/10 border-purple-400/20",
     title: "AI Taste Concierge",
     description:
-      "Receive hyper-personalized movie and show recommendations tailored to your exact taste by Bu-Chill AI.",
+      "Receive hyper-personalized movie and show recommendations tailored to your exact taste by Be Chill AI.",
   },
 ];
 
@@ -59,7 +59,7 @@ const UnauthorizedNotice: React.FC<UnauthorizedNoticeProps> = ({
       {/* Pill Badge */}
       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-primary/10 border border-primary/25 text-primary-400 mb-6 shadow-sm backdrop-blur-md">
         <LuPopcorn className="w-4 h-4 text-primary" />
-        <span>Bu•Chill My Space</span>
+        <span>Be•Chill My Space</span>
       </div>
 
       {/* Hero Header */}

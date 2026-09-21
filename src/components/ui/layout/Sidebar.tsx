@@ -205,12 +205,12 @@ const SidebarInner: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             }`}
         />
 
-        {/* Top Brand Logo (Emoji Popcorn + Bu-Chill) */}
+        {/* Top Brand Logo (Emoji Popcorn + Be Chill) */}
         <div className="absolute top-8 left-0 w-full flex items-center px-6 z-[60]">
           <Link
             href="/"
             className="flex items-center gap-3 transition-transform hover:scale-105 active:scale-95 outline-none focus:outline-none"
-            aria-label="Bu-Chill"
+            aria-label="Be Chill"
           >
             <div className="flex h-9 w-9 shrink-0 items-center justify-center text-2xl filter drop-shadow-[0_0_12px_rgba(244,63,94,0.6)]">
               🍿
@@ -219,7 +219,7 @@ const SidebarInner: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               className={`font-black tracking-wider text-[17px] text-white whitespace-nowrap transition-all duration-300 ${isHovered ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3 pointer-events-none"
                 }`}
             >
-              BU<span className="text-primary mx-1">•</span>CHILL
+              BE<span className="text-primary mx-1">•</span>CHILL
             </span>
           </Link>
         </div>

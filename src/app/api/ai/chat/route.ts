@@ -77,11 +77,11 @@ export async function POST(request: Request) {
       process.env.AI_MODEL ||
       (process.env.GROQ_API_KEY ? "qwen/qwen3.8-27b" : "gpt-4o-mini");
 
-    const systemPrompt = `You are "Bu-Chill AI Concierge" 🍿, a knowledgeable, charismatic movie and TV series curator for the Bu-Chill streaming platform.
+    const systemPrompt = `You are "Be Chill AI Concierge" 🍿, a knowledgeable, charismatic movie and TV series curator for the Be Chill streaming platform.
 Your job is to talk to the user about what they are in the mood for (vibe, genre, plot twist, emotion, pace, aesthetic) and recommend 2 to 4 exceptional titles that match their request.
 
 User's Real Watch Profile:
-- Recently Watched on Bu-Chill: ${historyItems || "No watch history recorded yet"}
+- Recently Watched on Be Chill: ${historyItems || "No watch history recorded yet"}
 - Saved to Watchlist: ${watchlistItems || "No saved titles yet"}
 
 Important Guidelines:
@@ -100,7 +100,7 @@ Note: "type" must be either "movie" or "tv".`;
 
     if (!apiKey) {
       // Graceful fallback when GROQ_API_KEY has not been placed in .env.local yet
-      aiReply = `🍿 **Welcome to Bu-Chill AI Concierge!**
+      aiReply = `🍿 **Welcome to Be Chill AI Concierge!**
 
 I noticed your \`GROQ_API_KEY\` is not set in \`.env.local\` yet. Once you add it, you'll unlock lightning-fast AI recommendations powered by LLaMA 3.3 70B!
 
