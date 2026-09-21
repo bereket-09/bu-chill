@@ -453,13 +453,7 @@ const ProfileManager: React.FC = () => {
   return (
     <div className="min-h-[85vh] w-full bg-black text-white flex flex-col font-sans select-none">
       {/* Top Header */}
-      <header className="flex items-center justify-between px-6 py-5 md:px-12">
-        <Link href="/" className="flex items-center gap-2 group transition-transform hover:scale-105">
-          <span className="text-3xl drop-shadow-md">🍿</span>
-          <span className="text-xl font-extrabold tracking-tight text-white/90 group-hover:text-white">
-            Be<span className="text-primary">•</span>Chill
-          </span>
-        </Link>
+      <header className="flex items-center justify-end px-6 py-5 md:px-12">
 
         <button
           type="button"
