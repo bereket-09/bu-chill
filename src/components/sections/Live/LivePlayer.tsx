@@ -332,62 +332,62 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
       {/* ================= ON-SCREEN TV OSD BANNER ================= */}
       <div
         className={cn(
-          "absolute top-6 left-6 z-30 flex items-center gap-3.5 p-2.5 pr-5 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/15 shadow-2xl transition-all duration-500 pointer-events-none",
+          "absolute top-3 left-3 sm:top-6 sm:left-6 z-20 flex items-center gap-2.5 sm:gap-3.5 p-2 sm:p-2.5 pr-3.5 sm:pr-5 rounded-xl sm:rounded-2xl bg-black/85 backdrop-blur-xl border border-white/15 shadow-2xl transition-all duration-500 pointer-events-none max-w-[55%] sm:max-w-xs",
           showOsd
             ? "opacity-100 translate-y-0"
             : "opacity-0 -translate-y-4"
         )}
       >
-        <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-white/10 p-1 border border-white/10 shrink-0">
+        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl overflow-hidden bg-white/10 p-1 border border-white/10 shrink-0">
           {channel.logo ? (
-            <SafeImage src={channel.logo} alt={channel.name} fill className="object-contain p-1" unoptimized />
+            <SafeImage src={channel.logo} alt={channel.name} fill className="object-contain p-0.5 sm:p-1" unoptimized />
           ) : (
-            <div className="w-full h-full flex items-center justify-center font-black text-xs text-white">
+            <div className="w-full h-full flex items-center justify-center font-black text-[10px] sm:text-xs text-white">
               {channel.name.slice(0, 2).toUpperCase()}
             </div>
           )}
         </div>
         <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1 text-[10px] font-black uppercase text-red-500 tracking-wider">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase text-red-500 tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-              LIVE NOW
+              LIVE
             </span>
             {(channel.group || channel.category) && (
-              <span className="text-[10px] font-bold text-white/50 uppercase px-1.5 py-0.2 rounded bg-white/10">
+              <span className="text-[9px] sm:text-[10px] font-bold text-white/50 uppercase px-1 sm:px-1.5 py-0.2 rounded bg-white/10 truncate max-w-[80px] sm:max-w-none">
                 {channel.group || channel.category}
               </span>
             )}
           </div>
-          <h3 className="text-sm font-black text-white truncate max-w-xs">{channel.name}</h3>
+          <h3 className="text-xs sm:text-sm font-black text-white truncate">{channel.name}</h3>
         </div>
       </div>
 
       {/* Top Floating Action Controls */}
       <div
         className={cn(
-          "absolute top-4 right-4 z-30 flex items-center gap-2 transition-opacity duration-300",
+          "absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex items-center gap-1.5 sm:gap-2 transition-opacity duration-300",
           showControls || showChannelDrawer ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
         {/* Ad Shield Indicator */}
         <div
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-950/80 text-emerald-300 backdrop-blur-md border border-emerald-500/30 text-xs font-bold shadow-lg select-none"
+          className="flex items-center gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-emerald-950/80 text-emerald-300 backdrop-blur-md border border-emerald-500/30 text-xs font-bold shadow-lg select-none"
           title="Ad Shield: Popups, redirects, and clickjack ads are blocked"
         >
           <IoShieldCheckmark className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden sm:inline">Ad Shield Active</span>
+          <span className="hidden sm:inline">Ad Shield</span>
         </div>
 
         {/* Quick Channel Switcher Trigger Button */}
         <button
           type="button"
           onClick={() => setShowChannelDrawer((prev) => !prev)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
           title="Open Channel Switcher (Press C)"
         >
-          <MdTv className="w-4 h-4 text-primary" />
-          <span>Channels</span>
+          <MdTv className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+          <span className="hidden sm:inline">Channels</span>
         </button>
 
         {/* Favorite Toggle */}
@@ -395,7 +395,7 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
           <button
             type="button"
             onClick={onToggleFavorite}
-            className="p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 shadow-lg transition-all"
+            className="p-1.5 sm:p-2 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 shadow-lg transition-all"
             aria-label="Toggle Favorite"
           >
             {isFavorite ? (
@@ -410,19 +410,19 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
       {/* Bottom Video Controls Overlay */}
       <div
         className={cn(
-          "absolute bottom-0 inset-x-0 z-30 p-4 bg-gradient-to-t from-black/95 via-black/50 to-transparent flex items-center justify-between transition-opacity duration-300",
+          "absolute bottom-0 inset-x-0 z-30 p-2.5 sm:p-4 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex items-center justify-between transition-opacity duration-300",
           showControls || showChannelDrawer ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
         {/* Left: Play/Pause, Channel Nav, Volume */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           <button
             type="button"
             onClick={togglePlay}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black hover:bg-white/90 active:scale-95 transition-all shadow"
+            className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-white text-black hover:bg-white/90 active:scale-95 transition-all shadow shrink-0"
             aria-label={isPlaying ? "Pause" : "Play"}
           >
-            {isPlaying ? <IoPause className="w-4 h-4 fill-black" /> : <IoPlay className="w-4 h-4 fill-black translate-x-0.5" />}
+            {isPlaying ? <IoPause className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-black" /> : <IoPlay className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-black translate-x-0.5" />}
           </button>
 
           {/* Previous / Next Channel Zappers */}
@@ -430,25 +430,25 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
             <button
               type="button"
               onClick={onPrevChannel}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
               title="Previous Channel (Arrow Up)"
             >
-              <MdKeyboardArrowUp className="w-5 h-5" />
+              <MdKeyboardArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           )}
           {onNextChannel && (
             <button
               type="button"
               onClick={onNextChannel}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
               title="Next Channel (Arrow Down)"
             >
-              <MdKeyboardArrowDown className="w-5 h-5" />
+              <MdKeyboardArrowDown className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           )}
 
           {/* Volume Control */}
-          <div className="flex items-center gap-2 pl-2">
+          <div className="flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2">
             <button
               type="button"
               onClick={toggleMute}
@@ -456,9 +456,9 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
               aria-label={isMuted ? "Unmute" : "Mute"}
             >
               {isMuted || volume === 0 ? (
-                <IoVolumeMute className="w-5 h-5 text-red-400" />
+                <IoVolumeMute className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
               ) : (
-                <IoVolumeHigh className="w-5 h-5" />
+                <IoVolumeHigh className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </button>
             <input
@@ -468,44 +468,44 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
               step={0.05}
               value={isMuted ? 0 : volume}
               onChange={handleVolumeChange}
-              className="w-16 sm:w-24 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary"
+              className="hidden md:inline-block w-16 sm:w-24 h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-primary"
             />
           </div>
 
-          <span className="hidden sm:flex items-center gap-1.5 text-[11px] font-black text-red-500 uppercase tracking-widest pl-2">
+          <span className="hidden md:flex items-center gap-1.5 text-[11px] font-black text-red-500 uppercase tracking-widest pl-2">
             <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
             LIVE
           </span>
         </div>
 
         {/* Right: Aspect Ratio, Stream Refresh, Fullscreen */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={toggleAspectRatio}
-            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors flex items-center gap-1"
+            className="p-1.5 sm:p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-colors flex items-center gap-1"
             title={`Aspect: ${aspectRatio}`}
           >
-            <MdAspectRatio className="w-4 h-4" />
+            <MdAspectRatio className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline capitalize text-[11px]">{aspectRatio}</span>
           </button>
 
           <button
             type="button"
             onClick={initHls}
-            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-1.5 sm:p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
             title="Reconnect Stream"
           >
-            <MdRefresh className="w-5 h-5" />
+            <MdRefresh className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="p-1.5 sm:p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
             aria-label="Toggle Fullscreen"
           >
-            {isFullscreen ? <MdFullscreenExit className="w-5 h-5" /> : <MdFullscreen className="w-5 h-5" />}
+            {isFullscreen ? <MdFullscreenExit className="w-4 h-4 sm:w-5 sm:h-5" /> : <MdFullscreen className="w-4 h-4 sm:w-5 sm:h-5" />}
           </button>
         </div>
       </div>

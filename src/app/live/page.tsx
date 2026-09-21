@@ -15,6 +15,7 @@ import {
 import LivePlayer from "@/components/sections/Live/LivePlayer";
 import LiveChannelCard from "@/components/sections/Live/LiveChannelCard";
 import CustomM3UModal from "@/components/sections/Live/CustomM3UModal";
+import { cn } from "@/utils/helpers";
 import { useQueryState } from "nuqs";
 import { siteConfig } from "@/config/site";
 import { useDocumentTitle } from "@mantine/hooks";
@@ -194,23 +195,23 @@ export default function LiveTvPage() {
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans overflow-x-hidden">
-      <div className="w-full px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-6 pb-28 md:pb-8 space-y-8 select-none">
+      <div className="w-full px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-4 sm:py-6 pb-36 md:pb-12 space-y-6 sm:space-y-8 select-none">
         {/* ================= PAGE HEADER ================= */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
           <div>
-            <div className="flex items-center gap-3">
-              <span className="p-2 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30">
-                <MdTv className="w-6 h-6" />
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="p-1.5 sm:p-2 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30">
+                <MdTv className="w-5 h-5 sm:w-6 sm:h-6" />
               </span>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Live TV Channels
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                Live TV
               </h1>
-              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-red-600 text-white uppercase tracking-wider animate-pulse shadow-md shadow-red-600/50">
-                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+              <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-black bg-red-600 text-white uppercase tracking-wider shadow-md shadow-red-600/50">
+                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
                 24/7 LIVE
               </span>
             </div>
-            <p className="text-white/40 text-xs sm:text-sm mt-1">
+            <p className="text-white/40 text-xs sm:text-sm mt-1 hidden sm:block">
               Stream 24/7 global news, sports, movies, documentaries, and custom IPTV m3u playlists.
             </p>
           </div>
@@ -220,17 +221,17 @@ export default function LiveTvPage() {
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-xs sm:text-sm transition-all shadow"
+              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-xs sm:text-sm transition-all shadow"
             >
               <IoAddCircleOutline className="w-4 h-4 text-primary" />
-              <span>Import M3U Playlist</span>
+              <span>Import M3U</span>
             </button>
 
             {customChannels.length > 0 && (
               <button
                 type="button"
                 onClick={handleClearCustom}
-                className="p-2.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-red-400 text-xs transition-colors"
+                className="p-2 sm:p-2.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 border border-red-500/20 text-red-400 text-xs transition-colors"
                 title="Clear imported playlist"
               >
                 <IoTrashOutline className="w-4 h-4" />
@@ -254,18 +255,17 @@ export default function LiveTvPage() {
           </div>
         )}
 
-        {/* ================= CONTROLS: CATEGORY SELECTOR & FILTER SUITE ================= */}
-        <div className="space-y-4 pt-2">
-          {/* Upper Filter Bar: Search + Category Select Dropdown + Country Filter + View Mode */}
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+        {/* ================= CONTROLS: STREAMLINED SEARCH & FILTER TOOLBAR ================= */}
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             {/* Live Search Input */}
-            <div className="flex items-center bg-[#121319] rounded-xl border border-white/10 focus-within:border-white/30 px-3.5 py-2.5 max-w-md w-full shadow">
+            <div className="flex items-center bg-[#121319] rounded-xl border border-white/10 focus-within:border-white/30 px-3.5 py-2 flex-1 min-w-[180px] shadow">
               <IoSearchOutline className="w-4 h-4 text-white/40 mr-2.5 shrink-0" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search channel name, country, or category..."
+                placeholder="Search channels or country..."
                 className="w-full bg-transparent text-xs sm:text-sm font-medium text-white placeholder-white/40 focus:outline-none"
               />
               {searchQuery && (
@@ -273,95 +273,72 @@ export default function LiveTvPage() {
                   type="button"
                   onClick={() => setSearchQuery("")}
                   className="text-white/40 hover:text-white p-0.5 rounded-full"
+                  aria-label="Clear search"
                 >
                   <IoClose className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Filter Dropdowns & View Mode */}
-            <div className="flex items-center flex-wrap gap-2.5">
-              {/* Category Selector Dropdown */}
-              <div className="flex items-center bg-[#121319] border border-white/10 rounded-xl px-3 py-2 gap-2 text-xs">
-                <IoFilter className="w-3.5 h-3.5 text-white/40" />
-                <span className="text-white/40 font-medium hidden sm:inline">Category:</span>
+            {/* Country / Region Filter Dropdown */}
+            {availableCountries.length > 0 && (
+              <div className="flex items-center bg-[#121319] border border-white/10 rounded-xl px-2.5 sm:px-3 py-2 gap-1.5 text-xs shrink-0">
+                <IoGlobeOutline className="w-3.5 h-3.5 text-white/40" />
                 <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value as ChannelCategory)}
-                  className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
-                  aria-label="Filter by Category"
+                  value={selectedCountry}
+                  onChange={(e) => setSelectedCountry(e.target.value)}
+                  className="bg-transparent text-white font-bold focus:outline-none cursor-pointer max-w-[100px] sm:max-w-none truncate"
+                  aria-label="Filter by Country"
                 >
-                  {CHANNEL_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat} className="bg-[#121319] text-white">
-                      {cat === "All"
-                        ? `All Categories (${allChannels.length})`
-                        : cat === "Favorites"
-                        ? `⭐ Favorites (${favorites.length})`
-                        : `${cat} (${categoryCounts[cat] || 0})`}
+                  <option value="all" className="bg-[#121319] text-white">
+                    All Regions
+                  </option>
+                  {availableCountries.map((c) => (
+                    <option key={c} value={c} className="bg-[#121319] text-white">
+                      {c}
                     </option>
                   ))}
                 </select>
               </div>
+            )}
 
-              {/* Country / Region Filter Dropdown */}
-              {availableCountries.length > 0 && (
-                <div className="flex items-center bg-[#121319] border border-white/10 rounded-xl px-3 py-2 gap-2 text-xs">
-                  <IoGlobeOutline className="w-3.5 h-3.5 text-white/40" />
-                  <span className="text-white/40 font-medium hidden sm:inline">Country:</span>
-                  <select
-                    value={selectedCountry}
-                    onChange={(e) => setSelectedCountry(e.target.value)}
-                    className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
-                    aria-label="Filter by Country"
-                  >
-                    <option value="all" className="bg-[#121319] text-white">
-                      All Regions ({allChannels.length})
-                    </option>
-                    {availableCountries.map((c) => (
-                      <option key={c} value={c} className="bg-[#121319] text-white">
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            {/* View Mode Toggle: Grouped Sections vs Grid */}
+            <div className="flex items-center bg-[#121319] p-0.5 rounded-xl border border-white/10 shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode("grouped")}
+                className={cn(
+                  "flex items-center justify-center p-2 rounded-lg text-xs font-bold transition-all",
+                  viewMode === "grouped" && !isFiltering
+                    ? "bg-white text-black shadow"
+                    : "text-white/50 hover:text-white"
+                )}
+                title="Group by Category"
+                aria-label="Group by Category"
+              >
+                <IoLayersOutline className="w-4 h-4" />
+              </button>
 
-              {/* View Mode Toggle: Grouped Sections vs Grid */}
-              <div className="flex items-center bg-[#121319] p-1 rounded-xl border border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grouped")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    viewMode === "grouped" && !isFiltering
-                      ? "bg-white text-black shadow"
-                      : "text-white/50 hover:text-white"
-                  }`}
-                  title="Group by Category"
-                >
-                  <IoLayersOutline className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">By Category</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grid")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    viewMode === "grid" || isFiltering
-                      ? "bg-white text-black shadow"
-                      : "text-white/50 hover:text-white"
-                  }`}
-                  title="Unified Grid"
-                >
-                  <IoGridOutline className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Grid</span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={cn(
+                  "flex items-center justify-center p-2 rounded-lg text-xs font-bold transition-all",
+                  viewMode === "grid" || isFiltering
+                    ? "bg-white text-black shadow"
+                    : "text-white/50 hover:text-white"
+                )}
+                title="Unified Grid"
+                aria-label="Grid View"
+              >
+                <IoGridOutline className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Quick Category Selector Pills Carousel */}
+          {/* Category Selector Pills Carousel */}
           <div
-            className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1"
+            className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1 snap-x"
             style={{ scrollbarWidth: "none" }}
           >
             {CHANNEL_CATEGORIES.map((cat) => {
@@ -379,19 +356,21 @@ export default function LiveTvPage() {
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border ${
+                  className={cn(
+                    "snap-start shrink-0 flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border select-none",
                     isActive
-                      ? "bg-white text-black border-white shadow-md scale-105"
+                      ? "bg-white text-black border-white shadow-md scale-[1.02]"
                       : "bg-[#121319] text-white/60 hover:text-white hover:bg-[#1a1c24] border-white/5"
-                  }`}
+                  )}
                 >
                   <span className="text-sm">{meta.icon}</span>
                   <span>{cat}</span>
                   {count > 0 && (
                     <span
-                      className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                      className={cn(
+                        "ml-0.5 text-[10px] px-1.5 py-0.2 rounded-full font-black",
                         isActive ? "bg-black/20 text-black" : "bg-white/10 text-white/70"
-                      }`}
+                      )}
                     >
                       {count}
                     </span>
@@ -430,7 +409,7 @@ export default function LiveTvPage() {
           </div>
         ) : viewMode === "grouped" && !isFiltering ? (
           /* ================= GROUPED BY CATEGORY VIEW ================= */
-          <div className="space-y-10 pb-20">
+          <div className="space-y-8 pb-36 md:pb-12">
             {Array.from(groupedChannels.entries()).map(([catName, channels]) => {
               const meta = CATEGORY_META[catName] || { icon: "📺", label: catName };
               return (
@@ -478,7 +457,7 @@ export default function LiveTvPage() {
           </div>
         ) : (
           /* ================= UNIFIED GRID VIEW ================= */
-          <div className="space-y-3 pb-20">
+          <div className="space-y-3 pb-36 md:pb-12">
             <div className="text-xs font-semibold text-white/40 px-1">
               Showing {filteredChannels.length} {filteredChannels.length === 1 ? "channel" : "channels"}
             </div>

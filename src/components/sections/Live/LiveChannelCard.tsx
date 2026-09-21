@@ -49,26 +49,26 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
         }
       }}
       className={cn(
-        "group relative flex items-center gap-3.5 rounded-2xl border p-3.5 transition-all cursor-pointer select-none text-left",
+        "group relative flex items-center gap-2.5 sm:gap-3.5 rounded-xl sm:rounded-2xl border p-2.5 sm:p-3.5 transition-all cursor-pointer select-none text-left",
         isActive
           ? "border-primary/80 bg-primary/10 shadow-xl shadow-primary/20 scale-[1.02]"
           : "border-white/10 bg-[#121319] hover:border-white/25 hover:bg-[#181a24] hover:scale-[1.01]"
       )}
     >
       {/* Channel Logo / Fallback */}
-      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/60 p-1 shadow-inner">
+      <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-lg sm:rounded-xl border border-white/15 bg-black/60 p-1 shadow-inner">
         {channel.logo ? (
           <SafeImage
             src={channel.logo}
             alt={channel.name}
             fallbackTitle={channel.name}
             fill
-            sizes="48px"
-            className="object-contain p-1 transition-transform group-hover:scale-105"
+            sizes="(max-width: 640px) 40px, 48px"
+            className="object-contain p-0.5 sm:p-1 transition-transform group-hover:scale-105"
             unoptimized
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center font-bold text-white/60 text-xs">
+          <div className="flex h-full w-full items-center justify-center font-bold text-white/60 text-[10px] sm:text-xs">
             {channel.name.slice(0, 2).toUpperCase()}
           </div>
         )}
@@ -76,21 +76,21 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
 
       {/* Channel Metadata */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <h4
             className={cn(
-              "text-sm font-bold truncate leading-snug",
+              "text-xs sm:text-sm font-bold truncate leading-snug",
               isActive ? "text-primary" : "text-white group-hover:text-white"
             )}
           >
             {channel.name}
           </h4>
           {isActive && (
-            <span className="flex items-center gap-1 rounded bg-primary/20 px-1.5 py-0.5 text-[9px] font-black uppercase text-primary tracking-wider shrink-0">
+            <span className="flex items-center gap-1 rounded bg-primary/20 px-1 sm:px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase text-primary tracking-wider shrink-0">
               <span className="inline-flex gap-0.5">
-                <span className="h-2 w-0.5 rounded-full bg-primary animate-pulse" />
-                <span className="h-3 w-0.5 rounded-full bg-primary animate-pulse delay-75" />
-                <span className="h-1.5 w-0.5 rounded-full bg-primary animate-pulse delay-150" />
+                <span className="h-1.5 sm:h-2 w-0.5 rounded-full bg-primary animate-pulse" />
+                <span className="h-2.5 sm:h-3 w-0.5 rounded-full bg-primary animate-pulse delay-75" />
+                <span className="h-1 sm:h-1.5 w-0.5 rounded-full bg-primary animate-pulse delay-150" />
               </span>
               ON AIR
             </span>
@@ -98,19 +98,19 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
         </div>
 
         {/* Category & Country Pills */}
-        <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+        <div className="flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5 flex-wrap">
           <span
             className={cn(
-              "flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold border",
+              "flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold border",
               catStyle.badge
             )}
           >
-            <span className="text-[10px]">{catStyle.icon}</span>
+            <span className="text-[9px] sm:text-[10px]">{catStyle.icon}</span>
             <span>{categoryName}</span>
           </span>
 
           {channel.country && (
-            <span className="rounded-md bg-white/5 border border-white/5 px-1.5 py-0.5 text-[10px] font-semibold text-white/50">
+            <span className="rounded-md bg-white/5 border border-white/5 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold text-white/50">
               {channel.country}
             </span>
           )}
@@ -122,12 +122,12 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
         type="button"
         onClick={onToggleFavorite}
         className={cn(
-          "shrink-0 p-1.5 rounded-full transition-all hover:scale-110",
+          "shrink-0 p-1 sm:p-1.5 rounded-full transition-all hover:scale-110",
           isFavorite ? "text-yellow-400" : "text-white/30 hover:text-white/80"
         )}
         aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
       >
-        {isFavorite ? <IoStar className="text-lg" /> : <IoStarOutline className="text-lg" />}
+        {isFavorite ? <IoStar className="text-base sm:text-lg" /> : <IoStarOutline className="text-base sm:text-lg" />}
       </button>
     </div>
   );
