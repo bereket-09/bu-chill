@@ -53,7 +53,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "tv",
-    label: "TV",
+    label: "TV Series",
     href: "/tv",
     icon: <IoTvOutline className="w-5 h-5 md:w-[22px] md:h-[22px]" />,
     activeIcon: <IoTv className="w-5 h-5 md:w-[22px] md:h-[22px]" />,
