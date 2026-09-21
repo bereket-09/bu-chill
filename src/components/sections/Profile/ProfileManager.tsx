@@ -264,6 +264,12 @@ const ProfileManager: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
     }
 
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("buchill_profile_changed", { detail: { userId: user.id, profileId: profile.id } })
+      );
+    }
+
     addToast({
       title: `Watching as ${profile.name}`,
       color: "primary",
@@ -551,7 +557,7 @@ const ProfileManager: React.FC = () => {
 // (MATCHING USER SCREENSHOT 2)
 // =======================================================================
 
-interface EditProfileViewProps {
+export interface EditProfileViewProps {
   profile: UserProfileItem;
   name: string;
   setName: (val: string) => void;
@@ -563,7 +569,7 @@ interface EditProfileViewProps {
   isSaving: boolean;
 }
 
-const EditProfileView: React.FC<EditProfileViewProps> = ({
+export const EditProfileView: React.FC<EditProfileViewProps> = ({
   profile,
   name,
   setName,

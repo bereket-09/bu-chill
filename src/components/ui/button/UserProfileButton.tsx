@@ -17,7 +17,7 @@ import {
   Spinner,
 } from "@heroui/react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const UserProfileButton: React.FC = () => {
   const router = useRouter();
@@ -25,16 +25,24 @@ const UserProfileButton: React.FC = () => {
   const { data: user, isLoading } = useSupabaseUser();
   const { mobile } = useBreakpoints();
 
+  const [avatarVersion, setAvatarVersion] = useState(0);
+
+  useEffect(() => {
+    const onProfileChange = () => setAvatarVersion((v) => v + 1);
+    window.addEventListener("buchill_profile_changed", onProfileChange);
+    return () => window.removeEventListener("buchill_profile_changed", onProfileChange);
+  }, []);
+
   const ITEMS: DropdownItemProps[] = useMemo(
     () => [
       {
-        label: "Account & Profile",
-        href: "/profile",
+        label: "My Space",
+        href: "/library",
         icon: <User className="text-lg" />,
       },
       {
-        label: "My Space / Watchlist",
-        href: "/library",
+        label: "Switch Profile",
+        href: "/profile",
         icon: <User className="text-lg" />,
       },
       {

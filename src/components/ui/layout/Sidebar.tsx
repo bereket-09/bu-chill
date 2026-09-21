@@ -111,6 +111,14 @@ const SidebarInner: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const { data: user } = useSupabaseUser();
   const [isVisibleMobile, setIsVisibleMobile] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [avatarVersion, setAvatarVersion] = useState(0);
+
+  // Update avatar immediately when profile switches
+  useEffect(() => {
+    const onProfileChange = () => setAvatarVersion((v) => v + 1);
+    window.addEventListener("buchill_profile_changed", onProfileChange);
+    return () => window.removeEventListener("buchill_profile_changed", onProfileChange);
+  }, []);
 
   // Auto-hide mobile dock on scroll down
   useEffect(() => {
@@ -173,7 +181,7 @@ const SidebarInner: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       case "categories":
         return pathName.startsWith("/categories");
       case "space":
-        return pathName.startsWith("/library");
+        return pathName.startsWith("/profile") || pathName.startsWith("/library");
       default:
         return false;
     }

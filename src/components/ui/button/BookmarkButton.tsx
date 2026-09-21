@@ -49,6 +49,14 @@ const BookmarkButton: React.FC<BookmarkButtonProps> = ({ data, isTooltipDisabled
     };
 
     checkWatchlistStatus();
+
+    const handleUpdate = () => checkWatchlistStatus();
+    window.addEventListener("buchill_profile_changed", handleUpdate);
+    window.addEventListener("buchill_watchlist_changed", handleUpdate);
+    return () => {
+      window.removeEventListener("buchill_profile_changed", handleUpdate);
+      window.removeEventListener("buchill_watchlist_changed", handleUpdate);
+    };
   }, [user, data.id, data.type]);
 
   const handleBookmark = () => {
