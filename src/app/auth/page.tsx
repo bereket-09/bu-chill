@@ -10,7 +10,6 @@ import {
   FaEye,
   FaEyeSlash,
   FaGoogle,
-  FaGithub,
   FaUser,
 } from "react-icons/fa6";
 import { IoHelpCircleOutline } from "react-icons/io5";
@@ -166,7 +165,7 @@ function AuthContent() {
     }
   };
 
-  const handleOAuth = async (provider: "google" | "github") => {
+  const handleOAuth = async (provider: "google") => {
     try {
       const supabase = createClient();
       const redirectUrl =
@@ -384,15 +383,6 @@ function AuthContent() {
                     >
                       <FaGoogle className="w-4 h-4 text-red-400" />
                       <span>Continue with Google</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleOAuth("github")}
-                      className="flex items-center justify-center gap-3 h-10 sm:h-11 rounded-lg border border-white/[0.1] bg-white/[0.025] hover:bg-white/[0.06] text-xs sm:text-sm font-medium text-white/90 transition-all cursor-pointer"
-                    >
-                      <FaGithub className="w-4 h-4" />
-                      <span>Continue with GitHub</span>
                     </button>
                   </div>
                 </>
