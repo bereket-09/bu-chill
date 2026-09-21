@@ -42,27 +42,20 @@ const API_PRESETS = [
   {
     key: "movie",
     label: "Movie",
-    title: "Avatar: The Way of Water",
-    id: "76600",
-    type: "movie",
+    title: "Swapped",
+    url: "https://bingr.one/watch/movie/1007757",
   },
   {
     key: "tv",
     label: "Series",
-    title: "Stranger Things",
-    id: "66732",
-    type: "tv",
-    season: 1,
-    episode: 1,
+    title: "The Boys",
+    url: "https://bingr.one/watch/tv/76479/1/1",
   },
   {
     key: "anime",
     label: "Anime",
-    title: "Demon Slayer",
-    id: "85937",
-    type: "tv",
-    season: 1,
-    episode: 1,
+    title: "Death Note",
+    url: "https://bingr.one/watch/anime/1535/1",
   },
 ];
 
@@ -115,13 +108,7 @@ const SettingsManager: React.FC = () => {
   };
 
   const currentPreset = API_PRESETS.find((p) => p.key === selectedApiPreset) || API_PRESETS[0];
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://bu-chill.vercel.app";
-  const embedUrl =
-    currentPreset.type === "movie"
-      ? `${origin}/movie/${currentPreset.id}/player`
-      : `${origin}/tv/${currentPreset.id}/${currentPreset.season}/${currentPreset.episode}/player`;
-
-  const iframeSnippet = `<iframe src="${embedUrl}"\n  width="100%" height="100%"\n  frameborder="0"\n  allow="autoplay; fullscreen; picture-in-picture"\n  allowfullscreen></iframe>`;
+  const iframeSnippet = `<iframe src="${currentPreset.url}"\n        width="100%" height="100%"\n        frameborder="0"\n        allow="autoplay; fullscreen; picture-in-picture"\n        allowfullscreen></iframe>`;
 
   const handleCopyCode = async () => {
     try {

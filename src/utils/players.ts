@@ -41,6 +41,15 @@ export const getMoviePlayers = (
       resumable: true,
     },
     {
+      title: "Bingr Stream (Ultra Fast / No Ads)",
+      source: `https://bingr.one/watch/movie/${id}`,
+      type: "embed",
+      recommended: true,
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
       title: "Videasy (Fast English HD)",
       source: withEnglishDefaults(`https://player.videasy.to/movie/${id}?color=f5a524`, startAt),
       type: "embed",
@@ -144,6 +153,15 @@ export const getTvShowPlayers = (
         `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
         startAt
       ),
+      type: "embed",
+      recommended: true,
+      fast: true,
+      ads: false,
+      resumable: true,
+    },
+    {
+      title: "Bingr Stream (Ultra Fast / No Ads)",
+      source: `https://bingr.one/watch/tv/${id}/${season}/${episode}`,
       type: "embed",
       recommended: true,
       fast: true,
