@@ -2,9 +2,9 @@ import { siteConfig } from "@/config/site";
 import { Metadata, NextPage } from "next/types";
 import { cache, Suspense } from "react";
 import dynamic from "next/dynamic";
+import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
-const UnauthorizedNotice = dynamic(() => import("@/components/ui/notice/Unauthorized"));
 const MySpace = dynamic(() => import("@/components/sections/Library/MySpace"));
 
 export const metadata: Metadata = {
@@ -26,18 +26,13 @@ const getUser = cache(async () => {
 const LibraryPage: NextPage = async () => {
   const { user, error } = await getUser();
 
+  if (error || !user) {
+    redirect("/auth");
+  }
+
   return (
     <Suspense>
-      {error || !user ? (
-        <div className="w-full min-h-screen px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-8">
-          <UnauthorizedNotice
-            title="Welcome to My Space"
-            description="Create a free account to save your favorite movies and TV shows, resume watching across devices, and unlock AI recommendations."
-          />
-        </div>
-      ) : (
-        <MySpace />
-      )}
+      <MySpace />
     </Suspense>
   );
 };

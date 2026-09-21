@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export const env = createEnv({
   server: {
-    PROTECTED_PATHS: z.string().default("/auth/reset-password,/profile"),
+    PROTECTED_PATHS: z.string().default("/auth/reset-password,/profile,/library"),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   },
   client: {

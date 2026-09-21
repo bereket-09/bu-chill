@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Button,
   Select,
@@ -69,7 +70,15 @@ const SORT_OPTIONS: { key: SortOption; label: string }[] = [
 ];
 
 export const MySpace: React.FC = () => {
+  const router = useRouter();
   const { data: user, isLoading: isUserLoading } = useSupabaseUser();
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.replace("/auth");
+    }
+  }, [isUserLoading, user, router]);
 
   // Profile state
   const [profiles, setProfiles] = useState<UserProfileItem[]>([]);

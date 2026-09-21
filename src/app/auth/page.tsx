@@ -195,14 +195,7 @@ function AuthContent() {
       <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 w-[550px] h-[380px] bg-primary/15 rounded-full blur-[140px] -z-10" />
 
       {/* Top Header */}
-      <header className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12">
-        <Link href="/" className="flex items-center gap-2 group transition-transform hover:scale-105">
-          <span className="text-3xl drop-shadow-md">🍿</span>
-          <span className="text-xl font-extrabold tracking-tight text-white/90 group-hover:text-white">
-            Be<span className="text-primary">•</span>Chill
-          </span>
-        </Link>
-
+      <header className="relative z-10 flex items-center justify-end px-6 py-5 md:px-12">
         <Link
           href="/settings"
           className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-1.5 text-xs sm:text-sm font-medium text-white/80 hover:bg-white/10 hover:text-white hover:border-white/30 transition-all"
