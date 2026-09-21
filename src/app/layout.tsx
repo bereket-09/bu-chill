@@ -24,7 +24,11 @@ export const metadata: Metadata = {
   description: siteConfig.description,
   manifest: "/manifest.json",
   icons: {
-    icon: siteConfig.favicon,
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
   twitter: {
     card: "summary",
