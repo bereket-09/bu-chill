@@ -35,6 +35,11 @@ const UserProfileButton: React.FC = () => {
       {
         label: "My Space / Watchlist",
         href: "/library",
+        icon: <User className="text-lg" />,
+      },
+      {
+        label: "Help & Settings",
+        href: "/settings",
         icon: <Gear className="text-lg" />,
       },
       {

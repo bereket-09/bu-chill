@@ -533,14 +533,13 @@ const ProfileManager: React.FC = () => {
 
         {/* Quick Settings Footer Link */}
         <div className="mt-16 sm:mt-20 flex items-center gap-6">
-          <button
-            type="button"
-            onClick={() => setViewMode("account_settings")}
+          <Link
+            href="/settings"
             className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-white/40 hover:text-white transition-colors cursor-pointer"
           >
             <FaGear className="w-3.5 h-3.5" />
-            <span>Streaming Preferences</span>
-          </button>
+            <span>Help & Settings</span>
+          </Link>
         </div>
       </main>
     </div>
