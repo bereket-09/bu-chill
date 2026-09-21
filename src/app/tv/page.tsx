@@ -9,7 +9,7 @@ import { getImageUrl } from "@/utils/movies";
 import { IoPlay, IoStar } from "react-icons/io5";
 
 export const metadata: Metadata = {
-  title: `TV Series | ${siteConfig.name}`,
+  title: `TV | ${siteConfig.name}`,
   description: "Binge-watch the best TV shows, trending series, and episodic dramas.",
 };
 
