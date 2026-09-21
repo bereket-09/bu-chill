@@ -1,7 +1,6 @@
 import { siteConfig } from "@/config/site";
 import { Metadata, NextPage } from "next";
 import Link from "next/link";
-import { Button } from "@heroui/react";
 import {
   FaPlay,
   FaTv,
@@ -73,25 +72,19 @@ const AboutPage: NextPage = () => {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 mt-8">
-            <Link href="/movies">
-              <Button
-                color="primary"
-                size="md"
-                startContent={<FaPlay className="w-3.5 h-3.5 ml-0.5" />}
-                className="font-bold px-6 shadow-xl shadow-primary/25"
-              >
-                Start Streaming Movies
-              </Button>
+            <Link
+              href="/movies"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-xl shadow-primary/25 hover:opacity-90 active:scale-95 transition-all"
+            >
+              <FaPlay className="w-3.5 h-3.5 ml-0.5" />
+              <span>Start Streaming Movies</span>
             </Link>
-            <Link href="/tv">
-              <Button
-                variant="bordered"
-                size="md"
-                startContent={<FaTv className="w-3.5 h-3.5" />}
-                className="font-bold px-6 border-white/20 text-white hover:bg-white/10"
-              >
-                Browse TV Series
-              </Button>
+            <Link
+              href="/tv"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-6 py-3 text-sm font-bold text-white hover:bg-white/10 active:scale-95 transition-all"
+            >
+              <FaTv className="w-3.5 h-3.5" />
+              <span>Browse TV Series</span>
             </Link>
           </div>
         </div>
@@ -165,10 +158,11 @@ const AboutPage: NextPage = () => {
               <IoHelpCircleOutline className="w-4 h-4 text-primary" />
               <span>Have questions about streaming or want to contribute?</span>
             </div>
-            <Link href="/support">
-              <Button size="sm" variant="flat" color="primary">
-                Visit Help & Support
-              </Button>
+            <Link
+              href="/support"
+              className="inline-flex items-center rounded-xl bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 px-4 py-2 text-xs font-semibold transition-all active:scale-95"
+            >
+              Visit Help & Support
             </Link>
           </div>
         </section>
