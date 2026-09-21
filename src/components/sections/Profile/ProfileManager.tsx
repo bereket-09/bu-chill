@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "@bprogress/next/app";
 import {
   Button,
-  Input,
   Select,
   SelectItem,
   Switch,
@@ -16,30 +15,28 @@ import {
   FaCheck,
   FaPen,
   FaPlus,
-  FaArrowLeft,
+  FaChevronLeft,
+  FaChevronRight,
   FaGear,
   FaShieldHalved,
-  FaClock,
 } from "react-icons/fa6";
-import { LuPopcorn, LuSparkles, LuHistory } from "react-icons/lu";
-import { RiRobot3Fill, RiBookmarkFill } from "react-icons/ri";
-import { IoLogInOutline, IoPersonOutline } from "react-icons/io5";
+import { IoLogInOutline } from "react-icons/io5";
 import { signOut } from "@/actions/auth";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import { createClient } from "@/utils/supabase/client";
 import { queryClient } from "@/app/providers";
+import {
+  AVATAR_PRESETS,
+  DEFAULT_AVATAR_ID,
+  resolveAvatarUrl,
+} from "@/constants/avatars";
 
-// Netflix-style circular avatar presets
-export const AVATAR_PRESETS = [
-  { id: "robot", name: "Cyber Bot", url: "https://api.dicebear.com/7.x/bottts/svg?seed=Felix" },
-  { id: "popcorn", name: "Cinema Pop", url: "https://api.dicebear.com/7.x/fun-emoji/svg?seed=popcorn" },
-  { id: "anime", name: "Anime Star", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=Midnight" },
-  { id: "cyber", name: "Neon Runner", url: "https://api.dicebear.com/7.x/bottts/svg?seed=Neon" },
-  { id: "ninja", name: "Shadow", url: "https://api.dicebear.com/7.x/adventurer/svg?seed=Shadow" },
-  { id: "cat", name: "Astro Cat", url: "https://api.dicebear.com/7.x/bottts/svg?seed=Whiskers" },
-  { id: "gamer", name: "Retro Pixel", url: "https://api.dicebear.com/7.x/pixel-art/svg?seed=Gamer" },
-  { id: "chill", name: "Bu-Chill", url: "https://api.dicebear.com/7.x/fun-emoji/svg?seed=Chill" },
-];
+export interface UserProfileItem {
+  id: string;
+  name: string;
+  avatar: string;
+  isMain?: boolean;
+}
 
 export const AUDIO_LANGUAGES = [
   { key: "en", label: "English (Default)" },
@@ -55,102 +52,223 @@ const ProfileManager: React.FC = () => {
   const router = useRouter();
   const { data: user, isLoading } = useSupabaseUser();
 
-  // Mode: "who_is_watching" | "account_setup"
-  const [viewMode, setViewMode] = useState<"who_is_watching" | "account_setup">("who_is_watching");
+  // Mode: "who_is_watching" | "edit_profile" | "account_settings"
+  const [viewMode, setViewMode] = useState<"who_is_watching" | "edit_profile" | "account_settings">("who_is_watching");
   const [isManageMode, setIsManageMode] = useState(false);
 
-  // Profile Edit State
-  const [selectedAvatar, setSelectedAvatar] = useState<string>("");
-  const [usernameInput, setUsernameInput] = useState<string>("");
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  // Profiles list
+  const [profiles, setProfiles] = useState<UserProfileItem[]>([]);
+  const [activeProfileId, setActiveProfileId] = useState<string>("main");
 
-  // Playback Preferences (saved in localStorage, 0 Vercel calls)
+  // Editing state
+  const [editingProfile, setEditingProfile] = useState<UserProfileItem | null>(null);
+  const [editName, setEditName] = useState<string>("");
+  const [editAvatarIndex, setEditAvatarIndex] = useState<number>(0);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Playback Preferences
   const [preferredLang, setPreferredLang] = useState<string>("en");
   const [autoplayNext, setAutoplayNext] = useState<boolean>(true);
   const [preferredServer, setPreferredServer] = useState<string>("auto");
-
-  // Sign out state
   const [isSigningOut, setIsSigningOut] = useState(false);
 
-  // Sync initial user data
+  // Initialize profiles
   useEffect(() => {
-    if (user) {
-      setUsernameInput(user.username || "");
-      const storedAvatar = localStorage.getItem(`buchill_avatar_${user.id}`);
-      if (storedAvatar) {
-        setSelectedAvatar(storedAvatar);
-      } else {
-        setSelectedAvatar(AVATAR_PRESETS[0].url);
+    if (!user) return;
+
+    const storedProfilesStr = localStorage.getItem(`buchill_profiles_${user.id}`);
+    const storedMainAvatar = localStorage.getItem(`buchill_avatar_${user.id}`) || DEFAULT_AVATAR_ID;
+
+    let loadedProfiles: UserProfileItem[] = [];
+    if (storedProfilesStr) {
+      try {
+        loadedProfiles = JSON.parse(storedProfilesStr);
+      } catch (e) {
+        console.error("Failed to parse stored profiles", e);
       }
     }
 
-    // Load playback prefs
-    const savedLang = localStorage.getItem("buchill_preferred_lang") || "en";
-    const savedAutoplay = localStorage.getItem("buchill_autoplay") !== "false";
-    const savedServer = localStorage.getItem("buchill_preferred_server") || "auto";
+    if (!loadedProfiles || loadedProfiles.length === 0) {
+      loadedProfiles = [
+        {
+          id: "main",
+          name: user.username || "User",
+          avatar: storedMainAvatar,
+          isMain: true,
+        },
+        {
+          id: "kids",
+          name: "Kids & Anime",
+          avatar: "08", // Grogu
+        },
+        {
+          id: "chill",
+          name: "Guest Chill",
+          avatar: "03", // Buzz Lightyear
+        },
+      ];
+      localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(loadedProfiles));
+    } else {
+      const mainIdx = loadedProfiles.findIndex((p) => p.isMain || p.id === "main");
+      if (mainIdx >= 0) {
+        loadedProfiles[mainIdx].name = user.username || loadedProfiles[mainIdx].name;
+        if (storedMainAvatar) loadedProfiles[mainIdx].avatar = storedMainAvatar;
+      }
+    }
 
-    setPreferredLang(savedLang);
-    setAutoplayNext(savedAutoplay);
-    setPreferredServer(savedServer);
+    setProfiles(loadedProfiles);
+
+    const activeId = localStorage.getItem(`buchill_active_profile_${user.id}`) || "main";
+    setActiveProfileId(activeId);
+
+    // Playback settings
+    setPreferredLang(localStorage.getItem("buchill_preferred_lang") || "en");
+    setAutoplayNext(localStorage.getItem("buchill_autoplay") !== "false");
+    setPreferredServer(localStorage.getItem("buchill_preferred_server") || "auto");
   }, [user]);
 
-  // Save profile username directly to Supabase client PostgREST (0 Vercel function invocations)
-  const handleSaveProfile = async () => {
-    if (!user) return;
-    const cleanName = usernameInput.trim();
-    if (!cleanName) {
-      addToast({ title: "Username cannot be empty", color: "danger" });
+  // Open edit modal for a profile or for adding a new profile
+  const handleOpenEdit = (profile: UserProfileItem) => {
+    setEditingProfile(profile);
+    setEditName(profile.name);
+
+    // Find avatar index in presets
+    const idx = AVATAR_PRESETS.findIndex((a) => a.id === profile.avatar || a.url === profile.avatar);
+    setEditAvatarIndex(idx >= 0 ? idx : 0);
+    setViewMode("edit_profile");
+  };
+
+  const handleAddNewProfile = () => {
+    if (profiles.length >= 5) {
+      addToast({
+        title: "Profile Limit Reached",
+        description: "You can have up to 5 streaming profiles per account.",
+        color: "warning",
+      });
       return;
     }
 
-    setIsSavingProfile(true);
+    const newProfile: UserProfileItem = {
+      id: `profile_${Date.now()}`,
+      name: "",
+      avatar: DEFAULT_AVATAR_ID,
+    };
+    setEditingProfile(newProfile);
+    setEditName("");
+    setEditAvatarIndex(0);
+    setViewMode("edit_profile");
+  };
+
+  // Save profile changes
+  const handleSaveProfile = async () => {
+    if (!user || !editingProfile) return;
+    const cleanName = editName.trim();
+    if (!cleanName) {
+      addToast({ title: "Profile name cannot be empty", color: "danger" });
+      return;
+    }
+
+    const selectedAvatarItem = AVATAR_PRESETS[editAvatarIndex] || AVATAR_PRESETS[0];
+    const avatarId = selectedAvatarItem.id;
+
+    setIsSaving(true);
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("profiles")
-        .upsert({ id: user.id, username: cleanName });
+      let updatedProfiles = [...profiles];
+      const existingIdx = updatedProfiles.findIndex((p) => p.id === editingProfile.id);
 
-      if (error) throw error;
-
-      // Save custom avatar preference
-      if (selectedAvatar) {
-        localStorage.setItem(`buchill_avatar_${user.id}`, selectedAvatar);
+      if (existingIdx >= 0) {
+        // Update existing
+        updatedProfiles[existingIdx] = {
+          ...updatedProfiles[existingIdx],
+          name: cleanName,
+          avatar: avatarId,
+        };
+      } else {
+        // Add new
+        updatedProfiles.push({
+          id: editingProfile.id,
+          name: cleanName,
+          avatar: avatarId,
+        });
       }
 
-      // Invalidate React Query cache so avatar/username updates instantly in UI
-      queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
+      setProfiles(updatedProfiles);
+      localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(updatedProfiles));
+
+      // If updating the main profile, sync username to Supabase profiles & localStorage avatar
+      if (editingProfile.isMain || editingProfile.id === "main") {
+        localStorage.setItem(`buchill_avatar_${user.id}`, avatarId);
+
+        const supabase = createClient();
+        await supabase.from("profiles").upsert({ id: user.id, username: cleanName });
+        queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
+      }
 
       addToast({
-        title: "Profile updated successfully!",
+        title: "Profile saved successfully!",
         color: "success",
       });
+
       setViewMode("who_is_watching");
+      setIsManageMode(false);
     } catch (err: any) {
       addToast({
-        title: "Failed to update profile",
-        description: err?.message || "An error occurred",
+        title: "Failed to save profile",
+        description: err?.message || "Please try again",
         color: "danger",
       });
     } finally {
-      setIsSavingProfile(false);
+      setIsSaving(false);
     }
   };
 
-  // Save playback preferences to localStorage
-  const handleUpdateLanguage = (lang: string) => {
-    setPreferredLang(lang);
-    localStorage.setItem("buchill_preferred_lang", lang);
-    addToast({ title: `Preferred audio set to ${lang.toUpperCase()}`, color: "primary" });
+  // Delete secondary profile
+  const handleDeleteProfile = () => {
+    if (!user || !editingProfile) return;
+    if (editingProfile.isMain || editingProfile.id === "main") {
+      addToast({ title: "Cannot delete primary account profile", color: "danger" });
+      return;
+    }
+
+    if (!confirm(`Delete \"${editingProfile.name}\" profile? Streaming history for this profile will be removed.`)) {
+      return;
+    }
+
+    const updated = profiles.filter((p) => p.id !== editingProfile.id);
+    setProfiles(updated);
+    localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(updated));
+
+    if (activeProfileId === editingProfile.id) {
+      setActiveProfileId("main");
+      localStorage.setItem(`buchill_active_profile_${user.id}`, "main");
+    }
+
+    addToast({ title: "Profile deleted", color: "primary" });
+    setViewMode("who_is_watching");
   };
 
-  const handleToggleAutoplay = (val: boolean) => {
-    setAutoplayNext(val);
-    localStorage.setItem("buchill_autoplay", String(val));
-  };
+  // Select profile and start streaming
+  const handleSelectProfile = (profile: UserProfileItem) => {
+    if (isManageMode) {
+      handleOpenEdit(profile);
+      return;
+    }
 
-  const handleUpdateServer = (srv: string) => {
-    setPreferredServer(srv);
-    localStorage.setItem("buchill_preferred_server", srv);
+    if (!user) return;
+    setActiveProfileId(profile.id);
+    localStorage.setItem(`buchill_active_profile_${user.id}`, profile.id);
+
+    // Save avatar for immediate navbar sync
+    if (profile.avatar) {
+      localStorage.setItem(`buchill_avatar_${user.id}`, profile.avatar);
+      queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
+    }
+
+    addToast({
+      title: `Watching as ${profile.name}`,
+      color: "primary",
+    });
+    router.push("/movies");
   };
 
   // Sign out
@@ -169,8 +287,8 @@ const ProfileManager: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-[70dvh] items-center justify-center">
-        <Spinner size="lg" color="primary" label="Loading profile..." />
+      <div className="flex h-[75dvh] items-center justify-center">
+        <Spinner size="lg" color="primary" label="Loading profiles..." />
       </div>
     );
   }
@@ -180,415 +298,513 @@ const ProfileManager: React.FC = () => {
     return null;
   }
 
-  const currentAvatarUrl = selectedAvatar || `${AVATAR_PRESETS[0].url}`;
-
-  // ==========================================
-  // VIEW 1: NETFLIX "WHO'S WATCHING?" SCREEN
-  // ==========================================
-  if (viewMode === "who_is_watching") {
+  // =========================================================
+  // VIEW 2: EDIT PROFILE (AVATAR CAROUSEL + NAME INPUT)
+  // =========================================================
+  if (viewMode === "edit_profile" && editingProfile) {
     return (
-      <div className="relative min-h-[80dvh] flex flex-col items-center justify-center py-12 px-4 select-none">
-        {/* Ambient background theater lights */}
-        <div className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 w-[450px] sm:w-[650px] h-[350px] bg-red-600/10 dark:bg-primary/15 rounded-full blur-[130px] -z-10" />
-
-        <div className="text-center mb-10 sm:mb-14">
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">
-            Who&apos;s Watching?
-          </h1>
-          <p className="mt-2 text-sm sm:text-base text-default-400">
-            {isManageMode
-              ? "Select a profile to customize avatar, username, and streaming setup."
-              : "Choose your profile to start streaming."}
-          </p>
-        </div>
-
-        {/* Profile Circle Cards Grid */}
-        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 max-w-4xl">
-          {/* Main User Profile Card */}
-          <button
-            type="button"
-            onClick={() => {
-              if (isManageMode) {
-                setViewMode("account_setup");
-              } else {
-                router.push("/movies");
-              }
-            }}
-            className="group flex flex-col items-center gap-3 cursor-pointer focus:outline-none"
-          >
-            <div className="relative">
-              <div className="size-24 sm:size-32 rounded-full overflow-hidden border-2 border-transparent group-hover:border-white group-hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] group-focus:border-white transition-all duration-200 transform group-hover:scale-105 bg-default-800 flex items-center justify-center">
-                <img
-                  src={currentAvatarUrl}
-                  alt={user.username}
-                  className="size-full object-cover"
-                />
-              </div>
-
-              {/* Edit Icon Overlay in Manage Mode */}
-              {isManageMode && (
-                <div className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center border-2 border-white transition-opacity">
-                  <FaPen className="w-6 h-6 text-white" />
-                </div>
-              )}
-            </div>
-
-            <span className="text-sm sm:text-base font-medium text-default-400 group-hover:text-white transition-colors">
-              {user.username}
-            </span>
-          </button>
-
-          {/* Kids / Family Profile Card */}
-          <button
-            type="button"
-            onClick={() => {
-              if (isManageMode) {
-                setViewMode("account_setup");
-              } else {
-                router.push("/anime");
-              }
-            }}
-            className="group flex flex-col items-center gap-3 cursor-pointer focus:outline-none opacity-85 hover:opacity-100 transition-opacity"
-          >
-            <div className="relative">
-              <div className="size-24 sm:size-32 rounded-full overflow-hidden border-2 border-transparent group-hover:border-white group-hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] transition-all duration-200 transform group-hover:scale-105 bg-cyan-950/60 flex items-center justify-center">
-                <img
-                  src={AVATAR_PRESETS[1].url}
-                  alt="Kids & Anime"
-                  className="size-full object-cover"
-                />
-              </div>
-            </div>
-            <span className="text-sm sm:text-base font-medium text-default-400 group-hover:text-white transition-colors">
-              Kids & Anime
-            </span>
-          </button>
-
-          {/* Chill / Guest Profile Card */}
-          <button
-            type="button"
-            onClick={() => {
-              if (isManageMode) {
-                setViewMode("account_setup");
-              } else {
-                router.push("/movies");
-              }
-            }}
-            className="group flex flex-col items-center gap-3 cursor-pointer focus:outline-none opacity-85 hover:opacity-100 transition-opacity"
-          >
-            <div className="relative">
-              <div className="size-24 sm:size-32 rounded-full overflow-hidden border-2 border-transparent group-hover:border-white group-hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] transition-all duration-200 transform group-hover:scale-105 bg-purple-950/60 flex items-center justify-center">
-                <img
-                  src={AVATAR_PRESETS[7].url}
-                  alt="Guest / Chill"
-                  className="size-full object-cover"
-                />
-              </div>
-            </div>
-            <span className="text-sm sm:text-base font-medium text-default-400 group-hover:text-white transition-colors">
-              Guest Chill
-            </span>
-          </button>
-
-          {/* Add Profile Placeholder */}
-          <button
-            type="button"
-            onClick={() => {
-              addToast({
-                title: "Multiple profiles enabled",
-                description: "You can customize your current profile or manage settings.",
-                color: "primary",
-              });
-              setViewMode("account_setup");
-            }}
-            className="group flex flex-col items-center gap-3 cursor-pointer focus:outline-none"
-          >
-            <div className="size-24 sm:size-32 rounded-full border-2 border-dashed border-default-500/50 group-hover:border-white group-hover:bg-white/5 flex items-center justify-center transition-all duration-200 transform group-hover:scale-105">
-              <FaPlus className="w-8 h-8 text-default-500 group-hover:text-white transition-colors" />
-            </div>
-            <span className="text-sm sm:text-base font-medium text-default-500 group-hover:text-white transition-colors">
-              Add Profile
-            </span>
-          </button>
-        </div>
-
-        {/* Action Controls */}
-        <div className="mt-14 flex items-center gap-4">
-          <Button
-            variant="bordered"
-            size="md"
-            className={`font-semibold tracking-wider uppercase text-xs sm:text-sm px-6 border-default-400 ${
-              isManageMode
-                ? "bg-white text-black border-white hover:bg-white/90"
-                : "text-default-400 hover:text-white hover:border-white"
-            }`}
-            onClick={() => setIsManageMode(!isManageMode)}
-          >
-            {isManageMode ? "Done" : "Manage Profiles"}
-          </Button>
-
-          <Button
-            variant="flat"
-            size="md"
-            startContent={<FaGear className="w-4 h-4" />}
-            className="text-xs sm:text-sm text-default-400 hover:text-white"
-            onClick={() => setViewMode("account_setup")}
-          >
-            Account Details & Setup
-          </Button>
-        </div>
-      </div>
+      <EditProfileView
+        profile={editingProfile}
+        name={editName}
+        setName={setEditName}
+        selectedIndex={editAvatarIndex}
+        setSelectedIndex={setEditAvatarIndex}
+        onSave={handleSaveProfile}
+        onCancel={() => setViewMode("who_is_watching")}
+        onDelete={editingProfile.isMain || editingProfile.id === "main" ? undefined : handleDeleteProfile}
+        isSaving={isSaving}
+      />
     );
   }
 
-  // ==========================================
-  // VIEW 2: NETFLIX ACCOUNT DETAILS & SETUP
-  // ==========================================
-  return (
-    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
-      {/* Top Breadcrumb / Back */}
-      <div className="flex items-center justify-between pb-6 mb-8 border-b border-default-200/50 dark:border-white/10">
-        <Button
-          variant="light"
-          size="sm"
-          startContent={<FaArrowLeft className="w-4 h-4" />}
-          onClick={() => setViewMode("who_is_watching")}
-          className="text-default-400 hover:text-white"
-        >
-          Back to Who&apos;s Watching
-        </Button>
+  // =========================================================
+  // VIEW 3: ACCOUNT & STREAMING SETTINGS
+  // =========================================================
+  if (viewMode === "account_settings") {
+    return (
+      <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6 text-white">
+        <div className="flex items-center justify-between pb-6 mb-8 border-b border-white/10">
+          <Button
+            variant="light"
+            size="sm"
+            startContent={<FaChevronLeft className="w-3.5 h-3.5" />}
+            onClick={() => setViewMode("who_is_watching")}
+            className="text-white/70 hover:text-white"
+          >
+            Back to Profiles
+          </Button>
+          <span className="text-xs font-bold uppercase tracking-widest text-primary">
+            Streaming & Setup
+          </span>
+        </div>
 
-        <span className="text-xs uppercase font-bold tracking-widest text-primary">
-          Account Setup
-        </span>
-      </div>
+        <div className="space-y-8">
+          {/* Playback Settings */}
+          <section className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 sm:p-8 backdrop-blur-md">
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              <FaGear className="text-primary w-5 h-5" />
+              Playback & Streaming Setup
+            </h2>
+            <p className="text-sm text-white/50 mt-1">
+              Default audio languages, episode auto-play, and preferred providers.
+            </p>
 
-      <div className="space-y-10">
-        {/* 1. PROFILE IDENTITY & CIRCLE AVATAR SELECTOR */}
-        <section className="bg-default-50/50 dark:bg-white/[0.02] border border-default-200/60 dark:border-white/10 rounded-2xl p-6 sm:p-8 backdrop-blur-md">
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <IoPersonOutline className="text-primary w-5 h-5" />
-            Profile Identity & Avatar
-          </h2>
-          <p className="text-sm text-default-500 mt-1">
-            Choose your signature circular avatar and update your streaming alias.
-          </p>
-
-          <div className="mt-6 flex flex-col sm:flex-row items-center sm:items-start gap-8">
-            {/* Active Avatar Preview */}
-            <div className="flex flex-col items-center gap-2 shrink-0">
-              <div className="size-28 sm:size-32 rounded-full overflow-hidden border-3 border-primary shadow-[0_0_20px_rgba(229,9,20,0.3)] bg-default-800">
-                <img
-                  src={currentAvatarUrl}
-                  alt="Current Avatar"
-                  className="size-full object-cover"
-                />
-              </div>
-              <span className="text-xs font-semibold text-primary uppercase tracking-wider">
-                Current Avatar
-              </span>
-            </div>
-
-            {/* Avatar Selector Gallery */}
-            <div className="flex-1 w-full">
-              <label className="text-xs font-semibold text-default-400 uppercase tracking-wider block mb-3">
-                Select a Netflix Avatar
-              </label>
-              <div className="grid grid-cols-4 sm:grid-cols-8 gap-3">
-                {AVATAR_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    title={preset.name}
-                    onClick={() => setSelectedAvatar(preset.url)}
-                    className={`size-14 rounded-full overflow-hidden border-2 transition-all transform hover:scale-110 focus:outline-none ${
-                      selectedAvatar === preset.url
-                        ? "border-primary scale-105 shadow-md shadow-primary/40 ring-2 ring-primary/30"
-                        : "border-transparent opacity-70 hover:opacity-100 hover:border-white/50"
-                    }`}
+            <div className="mt-6 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3 border-b border-white/5">
+                <div>
+                  <h3 className="font-semibold text-white text-sm">Default Audio Language</h3>
+                  <p className="text-xs text-white/50">Automatically select language when available.</p>
+                </div>
+                <div className="w-full sm:w-56">
+                  <Select
+                    label="Language"
+                    selectedKeys={[preferredLang]}
+                    onChange={(e) => {
+                      setPreferredLang(e.target.value);
+                      localStorage.setItem("buchill_preferred_lang", e.target.value);
+                    }}
+                    size="sm"
+                    variant="bordered"
                   >
-                    <img
-                      src={preset.url}
-                      alt={preset.name}
-                      className="size-full object-cover bg-default-800"
-                    />
-                  </button>
-                ))}
+                    {AUDIO_LANGUAGES.map((l) => (
+                      <SelectItem key={l.key}>{l.label}</SelectItem>
+                    ))}
+                  </Select>
+                </div>
               </div>
 
-              {/* Username Input */}
-              <div className="mt-6 flex flex-col sm:flex-row items-end gap-3">
-                <Input
-                  label="Display Username"
-                  placeholder="Enter your streaming username"
-                  value={usernameInput}
-                  onValueChange={setUsernameInput}
-                  variant="bordered"
-                  className="flex-1"
-                  isRequired
-                />
-                <Button
+              <div className="flex items-center justify-between py-3 border-b border-white/5">
+                <div>
+                  <h3 className="font-semibold text-white text-sm">Autoplay Next Episode</h3>
+                  <p className="text-xs text-white/50">Continuously binge episodes without manual clicks.</p>
+                </div>
+                <Switch
+                  isSelected={autoplayNext}
+                  onValueChange={(val) => {
+                    setAutoplayNext(val);
+                    localStorage.setItem("buchill_autoplay", String(val));
+                  }}
                   color="primary"
-                  variant="shadow"
-                  className="font-semibold h-12 px-6"
-                  isLoading={isSavingProfile}
-                  onClick={handleSaveProfile}
-                >
-                  Save Profile
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 2. STREAMING & PLAYBACK SETUP (English Default, Autoplay, Server) */}
-        <section className="bg-default-50/50 dark:bg-white/[0.02] border border-default-200/60 dark:border-white/10 rounded-2xl p-6 sm:p-8 backdrop-blur-md">
-          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <FaGear className="text-primary w-5 h-5" />
-            Playback & Streaming Setup
-          </h2>
-          <p className="text-sm text-default-500 mt-1">
-            Configure default audio language, autoplay triggers, and video servers.
-          </p>
-
-          <div className="mt-6 space-y-6">
-            {/* Preferred Language */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3 border-b border-default-200/40 dark:border-white/5">
-              <div>
-                <h3 className="font-semibold text-foreground text-sm">
-                  Default Audio Language
-                </h3>
-                <p className="text-xs text-default-500">
-                  Player will automatically request this audio track when available (defaults to English).
-                </p>
-              </div>
-              <div className="w-full sm:w-56">
-                <Select
-                  label="Audio Language"
-                  selectedKeys={[preferredLang]}
-                  onChange={(e) => handleUpdateLanguage(e.target.value)}
                   size="sm"
-                  variant="bordered"
-                >
-                  {AUDIO_LANGUAGES.map((l) => (
-                    <SelectItem key={l.key}>{l.label}</SelectItem>
-                  ))}
-                </Select>
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3">
+                <div>
+                  <h3 className="font-semibold text-white text-sm">Preferred Video Server</h3>
+                  <p className="text-xs text-white/50">Default streaming engine priority.</p>
+                </div>
+                <div className="w-full sm:w-56">
+                  <Select
+                    label="Server"
+                    selectedKeys={[preferredServer]}
+                    onChange={(e) => {
+                      setPreferredServer(e.target.value);
+                      localStorage.setItem("buchill_preferred_server", e.target.value);
+                    }}
+                    size="sm"
+                    variant="bordered"
+                  >
+                    <SelectItem key="auto">Auto (Fastest)</SelectItem>
+                    <SelectItem key="embed">Universal Embed</SelectItem>
+                    <SelectItem key="hls">Direct HLS Satellite</SelectItem>
+                  </Select>
+                </div>
               </div>
             </div>
+          </section>
 
-            {/* Autoplay Next Episode */}
-            <div className="flex items-center justify-between py-3 border-b border-default-200/40 dark:border-white/5">
-              <div>
-                <h3 className="font-semibold text-foreground text-sm">
-                  Autoplay Next Episode
-                </h3>
-                <p className="text-xs text-default-500">
-                  Automatically start the next episode when the current one ends.
-                </p>
-              </div>
-              <Switch
-                isSelected={autoplayNext}
-                onValueChange={handleToggleAutoplay}
-                color="primary"
-                size="sm"
-              />
-            </div>
-
-            {/* Stream Server Preference */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3">
-              <div>
-                <h3 className="font-semibold text-foreground text-sm">
-                  Preferred Video Server
-                </h3>
-                <p className="text-xs text-default-500">
-                  Default streaming provider priority (Embed Player vs Direct HLS).
-                </p>
-              </div>
-              <div className="w-full sm:w-56">
-                <Select
-                  label="Server Mode"
-                  selectedKeys={[preferredServer]}
-                  onChange={(e) => handleUpdateServer(e.target.value)}
-                  size="sm"
-                  variant="bordered"
-                >
-                  <SelectItem key="auto">Auto (Best Quality)</SelectItem>
-                  <SelectItem key="embed">Universal Embed (Zero CORS)</SelectItem>
-                  <SelectItem key="hls">Direct HLS Satellite</SelectItem>
-                </Select>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 3. ACCOUNT MEMBERSHIP & QUICK STATS */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Watchlist Card */}
-          <div className="p-5 rounded-2xl border border-default-200/60 dark:border-white/10 bg-default-50/50 dark:bg-white/[0.02] backdrop-blur-md flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-amber-400/10 border border-amber-400/20 text-amber-400">
-                <RiBookmarkFill className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-foreground text-sm">Personal Watchlist</h4>
-                <p className="text-xs text-default-500">Saved movies & series</p>
-              </div>
-            </div>
-            <Button
-              as={Link}
-              href="/library"
-              size="sm"
-              variant="flat"
-              color="warning"
-              className="text-xs font-semibold"
-            >
-              View Library
-            </Button>
-          </div>
-
-          {/* Account Membership Card */}
-          <div className="p-5 rounded-2xl border border-default-200/60 dark:border-white/10 bg-default-50/50 dark:bg-white/[0.02] backdrop-blur-md flex items-center justify-between">
+          {/* Account Card */}
+          <section className="p-6 rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-md flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-3 rounded-xl bg-emerald-400/10 border border-emerald-400/20 text-emerald-400">
                 <FaShieldHalved className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-foreground text-sm">Bu•Chill Streaming</h4>
-                <p className="text-xs text-default-500">{user.email}</p>
+                <h4 className="font-bold text-white text-sm">Bu•Chill Streaming Account</h4>
+                <p className="text-xs text-white/50">{user.email}</p>
               </div>
             </div>
-            <span className="text-xs font-semibold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2.5 py-1 rounded-full">
-              Active
-            </span>
-          </div>
-        </section>
-
-        {/* 4. SECURITY & NETFLIX SIGN OUT */}
-        <section className="pt-6 border-t border-default-200/50 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Button
-            as={Link}
-            href="/auth/reset-password"
-            variant="light"
-            size="sm"
-            className="text-xs text-default-500 hover:text-foreground"
-          >
-            Reset Account Password
-          </Button>
-
-          <Button
-            color="danger"
-            variant="flat"
-            size="md"
-            className="font-semibold text-sm px-8"
-            startContent={<IoLogInOutline className="w-5 h-5 rotate-180" />}
-            isLoading={isSigningOut}
-            onClick={handleSignOut}
-          >
-            Sign Out of Bu•Chill
-          </Button>
-        </section>
+            <Button
+              color="danger"
+              variant="flat"
+              size="sm"
+              isLoading={isSigningOut}
+              onClick={handleSignOut}
+              startContent={<IoLogInOutline className="w-4 h-4 rotate-180" />}
+            >
+              Sign Out
+            </Button>
+          </section>
+        </div>
       </div>
+    );
+  }
+
+  // =========================================================
+  // VIEW 1: WHO'S WATCHING? (MATCHING USER SCREENSHOT 1)
+  // =========================================================
+  return (
+    <div className="min-h-[85vh] w-full bg-black text-white flex flex-col font-sans select-none">
+      {/* Top Header */}
+      <header className="flex items-center justify-between px-6 py-5 md:px-12">
+        <Link href="/" className="flex items-center gap-2 group transition-transform hover:scale-105">
+          <span className="text-3xl drop-shadow-md">🍿</span>
+          <span className="text-xl font-extrabold tracking-tight text-white/90 group-hover:text-white">
+            Bu<span className="text-primary">•</span>Chill
+          </span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setIsManageMode((prev) => !prev)}
+          className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/15 hover:text-white hover:border-white/30"
+        >
+          {isManageMode ? (
+            <>
+              <FaCheck className="w-3.5 h-3.5 text-primary" />
+              <span>Done</span>
+            </>
+          ) : (
+            <>
+              <FaPen className="w-3.5 h-3.5 text-white/70" />
+              <span>Edit</span>
+            </>
+          )}
+        </button>
+      </header>
+
+      {/* Main Profile Circles Container */}
+      <main className="flex flex-1 flex-col items-center justify-center px-6 pb-20 pt-8 sm:pt-12">
+        <h1 className="mb-12 sm:mb-16 text-center text-2xl font-bold tracking-tight sm:text-4xl text-white/90">
+          {isManageMode ? "Edit Profile" : "Who's watching?"}
+        </h1>
+
+        <div className="flex flex-wrap items-start justify-center gap-8 md:gap-14 max-w-4xl">
+          {profiles.map((profile, idx) => {
+            const avatarUrl = resolveAvatarUrl(profile.avatar);
+
+            return (
+              <button
+                key={profile.id}
+                type="button"
+                onClick={() => handleSelectProfile(profile)}
+                style={{ animationDelay: `${idx * 80}ms` }}
+                className="group flex flex-col items-center gap-3 outline-none cursor-pointer animate-in fade-in zoom-in-95 duration-300"
+              >
+                <div className="relative size-24 sm:size-32 overflow-hidden rounded-full ring-1 ring-white/15 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1.5 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.9)] group-hover:ring-2 group-hover:ring-white bg-default-800 flex items-center justify-center">
+                  <img
+                    src={avatarUrl}
+                    alt={profile.name}
+                    className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+
+                  {/* Edit Pencil Overlay when in Manage Mode */}
+                  {isManageMode && (
+                    <div className="absolute inset-0 bg-black/65 rounded-full flex items-center justify-center border-2 border-white/80 backdrop-blur-[1px] transition-opacity duration-200">
+                      <FaPen className="w-6 h-6 text-white drop-shadow-md" />
+                    </div>
+                  )}
+                </div>
+
+                <span className="text-sm sm:text-base font-medium text-white/70 group-hover:text-white transition-colors">
+                  {profile.name}
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Add Profile Button (Matching Screenshot 1) */}
+          {profiles.length < 5 && (
+            <button
+              type="button"
+              onClick={handleAddNewProfile}
+              className="group flex flex-col items-center gap-3 outline-none cursor-pointer animate-in fade-in zoom-in-95 duration-300"
+            >
+              <div className="flex size-24 sm:size-32 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/[0.03] text-white/60 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1.5 group-hover:border-white group-hover:bg-white/10 group-hover:text-white">
+                <FaPlus className="w-8 h-8 sm:w-10 sm:h-10 text-white/60 group-hover:text-white transition-colors" />
+              </div>
+              <span className="text-sm sm:text-base font-medium text-white/70 group-hover:text-white transition-colors">
+                Add
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* Quick Settings Footer Link */}
+        <div className="mt-16 sm:mt-20 flex items-center gap-6">
+          <button
+            type="button"
+            onClick={() => setViewMode("account_settings")}
+            className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-white/40 hover:text-white transition-colors cursor-pointer"
+          >
+            <FaGear className="w-3.5 h-3.5" />
+            <span>Streaming Preferences</span>
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+// =======================================================================
+// VIEW 2 IMPLEMENTATION: EDIT PROFILE WITH INTERACTIVE AVATAR CAROUSEL
+// (MATCHING USER SCREENSHOT 2)
+// =======================================================================
+
+interface EditProfileViewProps {
+  profile: UserProfileItem;
+  name: string;
+  setName: (val: string) => void;
+  selectedIndex: number;
+  setSelectedIndex: (idx: number) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onDelete?: () => void;
+  isSaving: boolean;
+}
+
+const EditProfileView: React.FC<EditProfileViewProps> = ({
+  profile,
+  name,
+  setName,
+  selectedIndex,
+  setSelectedIndex,
+  onSave,
+  onCancel,
+  onDelete,
+  isSaving,
+}) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+      if (e.key === "ArrowRight") {
+        setSelectedIndex(Math.min(AVATAR_PRESETS.length - 1, selectedIndex + 1));
+      }
+      if (e.key === "ArrowLeft") {
+        setSelectedIndex(Math.max(0, selectedIndex - 1));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel, selectedIndex, setSelectedIndex]);
+
+  const canSave = name.trim().length > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-black text-white font-sans select-none overflow-y-auto animate-in fade-in duration-200">
+      {/* Top Bar (Back Arrow, Centered Title) */}
+      <div className="flex items-center justify-between px-6 py-5 md:px-12 relative shrink-0 border-b border-white/5">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full p-2.5 text-white/80 hover:bg-white/10 hover:text-white transition-colors focus:outline-none cursor-pointer"
+          title="Back"
+        >
+          <FaChevronLeft className="w-5 h-5" />
+        </button>
+
+        <h2 className="absolute left-1/2 -translate-x-1/2 text-lg font-bold tracking-tight md:text-xl text-white/90">
+          Edit Profile
+        </h2>
+
+        <div className="w-9" />
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:py-12 gap-8 sm:gap-10 max-w-4xl mx-auto w-full">
+        {/* Avatar Carousel */}
+        <div className="w-full">
+          <AvatarCarousel
+            items={AVATAR_PRESETS}
+            selectedIndex={selectedIndex}
+            onChange={setSelectedIndex}
+          />
+        </div>
+
+        {/* Profile Name Input */}
+        <div className="w-full max-w-sm mt-2">
+          <input
+            autoFocus
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Profile Name"
+            maxLength={20}
+            className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3.5 text-base text-white placeholder-white/40 outline-none transition focus:border-white focus:bg-white/10 text-center sm:text-left"
+          />
+        </div>
+
+        {/* Action Button: Save & Continue */}
+        <div className="w-full max-w-sm flex flex-col items-center gap-4">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!canSave || isSaving}
+            className="w-full rounded-lg bg-white py-3.5 sm:py-4 text-sm font-semibold text-black shadow-lg transition hover:brightness-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+          >
+            {isSaving ? "Saving..." : "Save & Continue"}
+          </button>
+
+          {/* Delete Profile Button (for non-primary profiles) */}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="text-sm font-medium text-red-400/80 hover:text-red-400 transition-colors pt-2 cursor-pointer"
+            >
+              Delete profile
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =======================================================================
+// INTERACTIVE HORIZONTAL AVATAR CAROUSEL WITH TOUCH/DRAG SUPPORT
+// =======================================================================
+
+interface AvatarCarouselProps {
+  items: typeof AVATAR_PRESETS;
+  selectedIndex: number;
+  onChange: (index: number) => void;
+}
+
+const AvatarCarousel: React.FC<AvatarCarouselProps> = ({
+  items,
+  selectedIndex,
+  onChange,
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const ITEM_WIDTH = 120; // px spacing per avatar item
+
+  // Pointer drag & swipe tracking
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    let startX = 0;
+    let isDown = false;
+    let dragDist = 0;
+
+    const onPointerDown = (e: PointerEvent) => {
+      isDown = true;
+      startX = e.clientX;
+      dragDist = 0;
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isDown) return;
+      dragDist = e.clientX - startX;
+    };
+
+    const onPointerUp = () => {
+      if (!isDown) return;
+      isDown = false;
+      const step = -Math.round(dragDist / ITEM_WIDTH);
+      if (Math.abs(dragDist) > 15 && step !== 0) {
+        onChange(Math.max(0, Math.min(items.length - 1, selectedIndex + step)));
+      }
+    };
+
+    el.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+  }, [selectedIndex, onChange, items.length]);
+
+  return (
+    <div className="relative w-full mx-auto flex items-center justify-center overflow-hidden py-6">
+      {/* Left Chevron Button */}
+      <button
+        type="button"
+        aria-label="Previous Avatar"
+        onClick={() => onChange(Math.max(0, selectedIndex - 1))}
+        disabled={selectedIndex === 0}
+        className="absolute left-2 sm:left-6 md:left-12 z-20 rounded-full p-3 text-white/60 transition hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:pointer-events-none bg-black/40 backdrop-blur-sm focus:outline-none cursor-pointer"
+      >
+        <FaChevronLeft className="w-5 h-5" />
+      </button>
+
+      {/* Drag & Carousel Track */}
+      <div
+        ref={containerRef}
+        className="relative h-44 sm:h-52 w-full overflow-hidden touch-pan-y select-none cursor-grab active:cursor-grabbing flex items-center justify-center"
+      >
+        <div
+          className="absolute top-1/2 flex items-center"
+          style={{
+            left: "50%",
+            transform: `translate(calc(-50px - ${selectedIndex * ITEM_WIDTH}px), -50%)`,
+            transition: "transform 400ms cubic-bezier(.22,.9,.3,1)",
+            gap: "20px",
+          }}
+        >
+          {items.map((item, idx) => {
+            const dist = idx - selectedIndex;
+            const absDist = Math.abs(dist);
+            const isCenter = dist === 0;
+            const scale = isCenter ? 1.4 : 1;
+            const opacity = absDist > 8 ? 0 : Math.max(0.15, 1 - absDist * 0.12);
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onChange(idx)}
+                style={{
+                  width: "100px",
+                  transform: `scale(${scale})`,
+                  opacity,
+                  transition: "transform 400ms cubic-bezier(.22,.9,.3,1), opacity 300ms",
+                }}
+                className="relative flex shrink-0 items-center justify-center outline-none focus:outline-none cursor-pointer"
+                title={item.name}
+              >
+                <div
+                  className={`relative overflow-hidden rounded-full transition-all duration-300 ${
+                    isCenter
+                      ? "h-20 w-20 sm:h-24 sm:w-24 ring-2 ring-white ring-offset-4 ring-offset-black shadow-[0_0_25px_rgba(255,255,255,0.4)]"
+                      : "h-16 w-16 sm:h-20 sm:w-20 ring-0 opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <img
+                    src={item.url}
+                    alt={item.name}
+                    draggable={false}
+                    className="size-full object-cover pointer-events-none"
+                  />
+                </div>
+
+                {/* Selected Checkmark Badge (Bottom Right) */}
+                {isCenter && (
+                  <div className="absolute -bottom-1 -right-1 sm:-bottom-1.5 sm:-right-1.5 flex size-6 sm:size-7 items-center justify-center rounded-full bg-white text-black shadow-lg animate-in zoom-in-75 duration-200">
+                    <FaCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2]" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Right Chevron Button */}
+      <button
+        type="button"
+        aria-label="Next Avatar"
+        onClick={() => onChange(Math.min(items.length - 1, selectedIndex + 1))}
+        disabled={selectedIndex === items.length - 1}
+        className="absolute right-2 sm:right-6 md:right-12 z-20 rounded-full p-3 text-white/60 transition hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:pointer-events-none bg-black/40 backdrop-blur-sm focus:outline-none cursor-pointer"
+      >
+        <FaChevronRight className="w-5 h-5" />
+      </button>
     </div>
   );
 };

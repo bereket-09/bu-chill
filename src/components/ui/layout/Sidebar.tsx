@@ -24,6 +24,7 @@ import { RiLiveLine, RiLiveFill } from "react-icons/ri";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import { env } from "@/utils/env";
 import SafeImage from "@/components/ui/other/SafeImage";
+import { resolveAvatarUrl } from "@/constants/avatars";
 
 interface NavItem {
   id: "home" | "search" | "tv" | "anime" | "movies" | "sports" | "live" | "categories" | "space";
@@ -128,7 +129,10 @@ const SidebarInner: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return <>{children}</>;
   }
 
-  const avatarUrl = user?.email ? `${env.NEXT_PUBLIC_AVATAR_PROVIDER_URL}${user.email}` : null;
+  const storedAvatar = typeof window !== "undefined" && user?.id
+    ? localStorage.getItem(`buchill_avatar_${user.id}`)
+    : null;
+  const avatarUrl = user ? resolveAvatarUrl(storedAvatar || user?.user_metadata?.avatar) : null;
 
   // Granular, mutually exclusive active status calculation
   const content = searchParams.get("content");

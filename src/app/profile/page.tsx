@@ -24,7 +24,7 @@ const ProfilePage: NextPage = async () => {
   }
 
   return (
-    <div className="w-full min-h-screen px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 py-8">
+    <div className="w-full min-h-screen md:pl-20 lg:pl-24 bg-black text-white">
       <ProfileManager />
     </div>
   );

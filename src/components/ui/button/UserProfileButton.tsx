@@ -5,6 +5,7 @@ import { DropdownItemProps } from "@/types/component";
 import { env } from "@/utils/env";
 import { Gear, Logout, User } from "@/utils/icons";
 import { useRouter } from "@bprogress/next/app";
+import { resolveAvatarUrl } from "@/constants/avatars";
 import {
   addToast,
   Avatar,
@@ -62,7 +63,10 @@ const UserProfileButton: React.FC = () => {
   if (isLoading) return null;
 
   const guest = !user;
-  const avatar = `${env.NEXT_PUBLIC_AVATAR_PROVIDER_URL}${user?.email}`;
+  const storedAvatar = typeof window !== "undefined" && user?.id
+    ? localStorage.getItem(`buchill_avatar_${user.id}`)
+    : null;
+  const avatar = resolveAvatarUrl(storedAvatar || user?.user_metadata?.avatar);
 
   const ProfileButton = (
     <Button

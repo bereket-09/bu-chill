@@ -1,0 +1,242 @@
+[
+  {
+    "id": "01",
+    "filename": "01.png",
+    "path": "/avatars/01.png",
+    "isDefault": true
+  },
+  {
+    "id": "02",
+    "filename": "02.png",
+    "path": "/avatars/02.png",
+    "isDefault": false
+  },
+  {
+    "id": "03",
+    "filename": "03.png",
+    "path": "/avatars/03.png",
+    "isDefault": false
+  },
+  {
+    "id": "04",
+    "filename": "04.png",
+    "path": "/avatars/04.png",
+    "isDefault": false
+  },
+  {
+    "id": "05",
+    "filename": "05.png",
+    "path": "/avatars/05.png",
+    "isDefault": false
+  },
+  {
+    "id": "06",
+    "filename": "06.png",
+    "path": "/avatars/06.png",
+    "isDefault": false
+  },
+  {
+    "id": "07",
+    "filename": "07.png",
+    "path": "/avatars/07.png",
+    "isDefault": false
+  },
+  {
+    "id": "08",
+    "filename": "08.png",
+    "path": "/avatars/08.png",
+    "isDefault": false
+  },
+  {
+    "id": "09",
+    "filename": "09.png",
+    "path": "/avatars/09.png",
+    "isDefault": false
+  },
+  {
+    "id": "10",
+    "filename": "10.png",
+    "path": "/avatars/10.png",
+    "isDefault": false
+  },
+  {
+    "id": "11",
+    "filename": "11.png",
+    "path": "/avatars/11.png",
+    "isDefault": false
+  },
+  {
+    "id": "12",
+    "filename": "12.png",
+    "path": "/avatars/12.png",
+    "isDefault": false
+  },
+  {
+    "id": "13",
+    "filename": "13.png",
+    "path": "/avatars/13.png",
+    "isDefault": false
+  },
+  {
+    "id": "14",
+    "filename": "14.png",
+    "path": "/avatars/14.png",
+    "isDefault": false
+  },
+  {
+    "id": "15",
+    "filename": "15.png",
+    "path": "/avatars/15.png",
+    "isDefault": false
+  },
+  {
+    "id": "16",
+    "filename": "16.png",
+    "path": "/avatars/16.png",
+    "isDefault": false
+  },
+  {
+    "id": "17",
+    "filename": "17.png",
+    "path": "/avatars/17.png",
+    "isDefault": false
+  },
+  {
+    "id": "18",
+    "filename": "18.png",
+    "path": "/avatars/18.png",
+    "isDefault": false
+  },
+  {
+    "id": "19",
+    "filename": "19.png",
+    "path": "/avatars/19.png",
+    "isDefault": false
+  },
+  {
+    "id": "20",
+    "filename": "20.png",
+    "path": "/avatars/20.png",
+    "isDefault": false
+  },
+  {
+    "id": "21",
+    "filename": "21.png",
+    "path": "/avatars/21.png",
+    "isDefault": false
+  },
+  {
+    "id": "22",
+    "filename": "22.png",
+    "path": "/avatars/22.png",
+    "isDefault": false
+  },
+  {
+    "id": "23",
+    "filename": "23.png",
+    "path": "/avatars/23.png",
+    "isDefault": false
+  },
+  {
+    "id": "24",
+    "filename": "24.png",
+    "path": "/avatars/24.png",
+    "isDefault": false
+  },
+  {
+    "id": "25",
+    "filename": "25.png",
+    "path": "/avatars/25.png",
+    "isDefault": false
+  },
+  {
+    "id": "26",
+    "filename": "26.png",
+    "path": "/avatars/26.png",
+    "isDefault": false
+  },
+  {
+    "id": "27",
+    "filename": "27.png",
+    "path": "/avatars/27.png",
+    "isDefault": false
+  },
+  {
+    "id": "28",
+    "filename": "28.png",
+    "path": "/avatars/28.png",
+    "isDefault": false
+  },
+  {
+    "id": "g01",
+    "filename": "g01.svg",
+    "path": "/avatars/g01.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g02",
+    "filename": "g02.svg",
+    "path": "/avatars/g02.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g03",
+    "filename": "g03.svg",
+    "path": "/avatars/g03.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g04",
+    "filename": "g04.svg",
+    "path": "/avatars/g04.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g05",
+    "filename": "g05.svg",
+    "path": "/avatars/g05.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g06",
+    "filename": "g06.svg",
+    "path": "/avatars/g06.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g07",
+    "filename": "g07.svg",
+    "path": "/avatars/g07.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g08",
+    "filename": "g08.svg",
+    "path": "/avatars/g08.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g09",
+    "filename": "g09.svg",
+    "path": "/avatars/g09.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g10",
+    "filename": "g10.svg",
+    "path": "/avatars/g10.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g11",
+    "filename": "g11.svg",
+    "path": "/avatars/g11.svg",
+    "isDefault": false
+  },
+  {
+    "id": "g12",
+    "filename": "g12.svg",
+    "path": "/avatars/g12.svg",
+    "isDefault": false
+  }
+]
