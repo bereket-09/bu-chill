@@ -24,6 +24,7 @@ import {
   IoClose,
   IoStar,
   IoAddCircleOutline,
+  IoAdd,
   IoTrashOutline,
   IoRadioOutline,
   IoGridOutline,
@@ -221,10 +222,11 @@ export default function LiveTvPage() {
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-xs sm:text-sm transition-all shadow"
+              className="p-2 sm:p-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white transition-all shadow active:scale-95"
+              title="Import M3U Playlist"
+              aria-label="Import M3U Playlist"
             >
-              <IoAddCircleOutline className="w-4 h-4 text-primary" />
-              <span>Import M3U</span>
+              <IoAdd className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
             </button>
 
             {customChannels.length > 0 && (
