@@ -31,14 +31,18 @@ import { UserProfileItem } from "@/components/sections/Profile/ProfileManager";
 import {
   getActiveProfileId,
   getProfileWatchlist,
+  saveProfileWatchlist,
   removeFromProfileWatchlist,
   clearProfileWatchlist,
   getProfileHistory,
+  saveProfileHistory,
   removeFromProfileHistory,
   clearProfileHistory,
   ProfileWatchlistItem,
   ProfileHistoryItem,
 } from "@/services/profileStorage";
+import { getUserHistories } from "@/actions/histories";
+import { getWatchlist } from "@/actions/library";
 import { formatDuration, getImageUrl, timeAgo } from "@/utils/movies";
 import ConfirmationModal from "@/components/ui/overlay/ConfirmationModal";
 import { useDisclosure } from "@mantine/hooks";
@@ -77,7 +81,7 @@ export const MySpace: React.FC = () => {
   // Library & Watchlist filters
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
   const [sortOption, setSortOption] = useState<SortOption>("created_at");
-  const [activeTab, setActiveTab] = useState<"watchlist" | "history">("watchlist");
+  const [activeTab, setActiveTab] = useState<"watching" | "watchlist" | "history">("watching");
 
   // Profile data
   const [watchlistItems, setWatchlistItems] = useState<ProfileWatchlistItem[]>([]);
@@ -159,6 +163,77 @@ export const MySpace: React.FC = () => {
 
     const hList = getProfileHistory(user.id, currentPid);
     setHistoryItems(hList);
+
+    // Sync with Supabase for connected accounts
+    getUserHistories(50)
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setHistoryItems((prev) => {
+            const map = new Map<string, ProfileHistoryItem>();
+            prev.forEach((item) => {
+              const key = `${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`;
+              map.set(key, item);
+            });
+            res.data!.forEach((s) => {
+              const key = `${s.type}-${s.media_id}-${s.season || 0}-${s.episode || 0}`;
+              if (!map.has(key)) {
+                map.set(key, {
+                  id: s.id || s.media_id,
+                  media_id: s.media_id,
+                  type: (s.type === "tv" ? "tv" : "movie") as "movie" | "tv",
+                  title: s.title,
+                  poster_path: s.poster_path || undefined,
+                  backdrop_path: s.backdrop_path || undefined,
+                  duration: s.duration,
+                  last_position: s.last_position,
+                  completed: s.completed,
+                  season: s.season,
+                  episode: s.episode,
+                  updated_at: s.updated_at,
+                });
+              }
+            });
+            const merged = Array.from(map.values());
+            if (currentPid === "main" && prev.length === 0) {
+              saveProfileHistory(user.id, "main", merged);
+            }
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
+
+    getWatchlist("all", 1, 100)
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setWatchlistItems((prev) => {
+            const map = new Map<string, ProfileWatchlistItem>();
+            prev.forEach((item) => map.set(`${item.type}-${item.id}`, item));
+            res.data!.forEach((s) => {
+              const key = `${s.type}-${s.id}`;
+              if (!map.has(key)) {
+                map.set(key, {
+                  id: s.id,
+                  type: s.type,
+                  title: s.title,
+                  poster_path: s.poster_path || null,
+                  backdrop_path: s.backdrop_path,
+                  release_date: s.release_date,
+                  vote_average: s.vote_average,
+                  adult: s.adult,
+                  created_at: s.created_at,
+                });
+              }
+            });
+            const merged = Array.from(map.values());
+            if (currentPid === "main" && prev.length === 0) {
+              saveProfileWatchlist(user.id, "main", merged);
+            }
+            return merged;
+          });
+        }
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -370,7 +445,7 @@ export const MySpace: React.FC = () => {
         {/* ================================================================= */}
         {/* CONTINUE WATCHING (ISOLATED TO ACTIVE PROFILE)                    */}
         {/* ================================================================= */}
-        {continueWatchingItems.length > 0 && (
+        {continueWatchingItems.length > 0 && activeTab !== "watching" && (
           <section className="mb-14">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -443,7 +518,7 @@ export const MySpace: React.FC = () => {
                           )
                         }
                         title="Remove from continue watching"
-                        className="absolute top-2 left-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                        className="absolute top-2 left-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                       >
                         <FaXmark className="w-3 h-3" />
                       </button>
@@ -474,22 +549,42 @@ export const MySpace: React.FC = () => {
         )}
 
         {/* ================================================================= */}
-        {/* SECTION 4: WATCHLIST & HISTORY TABS                               */}
+        {/* SECTION: WATCHING, WATCHLIST & HISTORY TABS                       */}
         {/* ================================================================= */}
         <section className="mb-14">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-6">
-            {/* View Switcher Tabs: Watchlist vs History */}
-            <div className="flex items-center gap-2">
+            {/* View Switcher Tabs: Watching vs Watchlist vs History */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button
+                type="button"
+                onClick={() => setActiveTab("watching")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 cursor-pointer ${
+                  activeTab === "watching"
+                    ? "bg-white text-black shadow-lg"
+                    : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white"
+                }`}
+              >
+                <FaPlay className="w-3 h-3 text-primary" />
+                <span>Watching</span>
+                <span
+                  className={`ml-1 text-xs px-1.5 py-0.2 rounded-full ${
+                    activeTab === "watching" ? "bg-black/15 text-black" : "bg-white/15 text-white"
+                  }`}
+                >
+                  {continueWatchingItems.length}
+                </span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab("watchlist")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 cursor-pointer ${
                   activeTab === "watchlist"
                     ? "bg-white text-black shadow-lg"
                     : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white"
                 }`}
               >
-                <LuPopcorn className="w-4 h-4" />
+                <LuPopcorn className="w-4 h-4 text-primary" />
                 <span>Watchlist</span>
                 <span
                   className={`ml-1 text-xs px-1.5 py-0.2 rounded-full ${
@@ -503,14 +598,14 @@ export const MySpace: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab("history")}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all shrink-0 cursor-pointer ${
                   activeTab === "history"
                     ? "bg-white text-black shadow-lg"
                     : "bg-white/5 hover:bg-white/10 text-white/70 hover:text-white"
                 }`}
               >
                 <FaClockRotateLeft className="w-3.5 h-3.5" />
-                <span>History / Watched</span>
+                <span>Already Watched</span>
                 <span
                   className={`ml-1 text-xs px-1.5 py-0.2 rounded-full ${
                     activeTab === "history" ? "bg-black/15 text-black" : "bg-white/15 text-white"
@@ -610,7 +705,135 @@ export const MySpace: React.FC = () => {
             )}
           </div>
 
-          {/* TAB 1: WATCHLIST CONTENT */}
+          {/* TAB 1: WATCHING CONTENT */}
+          {activeTab === "watching" && (
+            <div>
+              {continueWatchingItems.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                  {continueWatchingItems.map((item) => {
+                    const redirectLink =
+                      item.type === "movie"
+                        ? `/movie/${item.media_id}/player`
+                        : `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player`;
+                    const progressPct =
+                      item.duration > 0
+                        ? Math.min(100, Math.round((item.last_position / item.duration) * 100))
+                        : 0;
+                    const backdrop = getImageUrl(item.backdrop_path || item.poster_path || "");
+
+                    return (
+                      <div
+                        key={`${item.type}-${item.media_id}-${item.season}-${item.episode}`}
+                        className="group relative flex flex-col rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:scale-[1.02] hover:shadow-2xl"
+                      >
+                        {/* Thumbnail Image */}
+                        <div className="relative aspect-video w-full overflow-hidden bg-neutral-800">
+                          <img
+                            src={backdrop}
+                            alt={item.title}
+                            className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+
+                          {/* Play Button Overlay */}
+                          <Link
+                            href={redirectLink}
+                            className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <div className="flex size-12 items-center justify-center rounded-full bg-primary text-white shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
+                              <FaPlay className="w-4 h-4 ml-0.5" />
+                            </div>
+                          </Link>
+
+                          {/* TV Tag (Season / Episode) */}
+                          {item.type === "tv" && (
+                            <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-amber-400 border border-white/10">
+                              S{item.season} E{item.episode}
+                            </span>
+                          )}
+
+                          {/* Time Left Badge */}
+                          <span className="absolute bottom-2 left-2 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-white/80">
+                            {formatDuration(item.last_position)}
+                          </span>
+
+                          {/* Dismiss / Remove Button */}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRemoveContinueWatching(
+                                item.media_id,
+                                item.type,
+                                item.season,
+                                item.episode
+                              )
+                            }
+                            title="Remove from watching"
+                            className="absolute top-2 left-2 size-7 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md cursor-pointer"
+                          >
+                            <FaXmark className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Progress Bar */}
+                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+                            <div
+                              className="h-full bg-primary"
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Metadata Details */}
+                        <div className="p-3.5 flex flex-col justify-between flex-1">
+                          <div>
+                            <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
+                              {item.title}
+                            </h4>
+                            <p className="text-xs text-white/40 mt-1">
+                              {timeAgo(item.updated_at)} • {Math.round(progressPct)}% completed
+                            </p>
+                          </div>
+                          <Link
+                            href={redirectLink}
+                            className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                          >
+                            <FaPlay className="w-2.5 h-2.5" />
+                            Resume Playing
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                /* Ultra-clean Empty Watching State */
+                <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-2xl border border-dashed border-white/10 bg-white/[0.02]">
+                  <div className="size-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-4">
+                    🎬
+                  </div>
+                  <h3 className="text-xl font-bold text-white mb-2">
+                    No in-progress movies or shows
+                  </h3>
+                  <p className="text-sm text-white/50 max-w-md mb-8 leading-relaxed">
+                    Pick up right where you left off. Start streaming any movie or series and it will automatically appear here with your playback progress saved.
+                  </p>
+                  <div className="flex items-center gap-3">
+                    <Link href="/movies">
+                      <Button color="primary" variant="shadow" size="sm" startContent={<FaPlay />}>
+                        Explore Movies
+                      </Button>
+                    </Link>
+                    <Link href="/tv">
+                      <Button variant="flat" size="sm" startContent={<FaTv />}>
+                        Browse TV Series
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 2: WATCHLIST CONTENT */}
           {activeTab === "watchlist" && (
             <div>
               {filteredWatchlist.length > 0 ? (
