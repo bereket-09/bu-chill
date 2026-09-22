@@ -4,7 +4,7 @@ import React from "react";
 import { Channel } from "@/services/iptv";
 import { cn } from "@/utils/helpers";
 import SafeImage from "@/components/ui/other/SafeImage";
-import { IoStar, IoStarOutline } from "react-icons/io5";
+import { IoStar, IoStarOutline, IoPlay } from "react-icons/io5";
 
 interface LiveChannelCardProps {
   channel: Channel;
@@ -12,6 +12,8 @@ interface LiveChannelCardProps {
   isFavorite: boolean;
   onSelect: () => void;
   onToggleFavorite: (e: React.MouseEvent) => void;
+  variant?: "grid" | "list";
+  index?: number;
 }
 
 const CATEGORY_STYLES: Record<string, { badge: string; icon: string }> = {
@@ -30,6 +32,8 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
   isFavorite,
   onSelect,
   onToggleFavorite,
+  variant = "grid",
+  index,
 }) => {
   const categoryName = channel.group || channel.category || "General";
   const catStyle = CATEGORY_STYLES[categoryName] || {
@@ -37,6 +41,131 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
     icon: "📺",
   };
 
+  // =========================================================================
+  // GRID VARIANT (Visual TV Channel Tile)
+  // =========================================================================
+  if (variant === "grid") {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onSelect}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelect();
+          }
+        }}
+        className={cn(
+          "group relative flex flex-col rounded-2xl border transition-all duration-200 cursor-pointer select-none text-left overflow-hidden",
+          isActive
+            ? "border-primary/80 bg-primary/10 shadow-xl shadow-primary/20 ring-1 ring-primary/40 scale-[1.02]"
+            : "border-white/10 bg-[#121319] hover:border-white/25 hover:bg-[#181a24] hover:-translate-y-1 hover:shadow-xl hover:shadow-black/60"
+        )}
+      >
+        {/* Top Banner / Logo Area */}
+        <div className="relative w-full aspect-[16/10] bg-black/50 flex items-center justify-center p-3.5 sm:p-4 border-b border-white/5 overflow-hidden">
+          {/* Ambient subtle glow when active */}
+          {isActive && (
+            <div className="absolute inset-0 bg-primary/15 blur-xl pointer-events-none" />
+          )}
+
+          {/* Channel Logo */}
+          <div className="relative w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 shrink-0 transition-transform duration-300 group-hover:scale-110">
+            {channel.logo ? (
+              <SafeImage
+                src={channel.logo}
+                alt={channel.name}
+                fallbackTitle={channel.name}
+                fill
+                sizes="(max-width: 640px) 56px, 80px"
+                className="object-contain drop-shadow-md"
+                unoptimized
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center rounded-xl bg-white/5 border border-white/10 font-extrabold text-white/60 text-base sm:text-lg">
+                {channel.name.slice(0, 2).toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          {/* Top-Left Live or HD Badge */}
+          {isActive ? (
+            <span className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 rounded-full bg-primary px-2 py-0.5 text-[9px] font-black uppercase text-black tracking-wider shadow-lg shadow-primary/40">
+              <span className="flex gap-0.5 items-center">
+                <span className="h-2 w-0.5 rounded-full bg-black animate-pulse" />
+                <span className="h-3 w-0.5 rounded-full bg-black animate-pulse delay-75" />
+                <span className="h-1.5 w-0.5 rounded-full bg-black animate-pulse delay-150" />
+              </span>
+              ON AIR
+            </span>
+          ) : (
+            <span className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 rounded-md bg-black/70 backdrop-blur-md border border-white/10 px-1.5 py-0.5 text-[9px] font-bold text-white/70">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              LIVE
+            </span>
+          )}
+
+          {/* Top-Right Favorite Star */}
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            className={cn(
+              "absolute top-2 right-2 z-10 p-1.5 rounded-full backdrop-blur-md transition-all hover:scale-110",
+              isFavorite
+                ? "bg-black/60 text-yellow-400 opacity-100"
+                : "bg-black/40 text-white/40 hover:text-white hover:bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity"
+            )}
+            aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
+          >
+            {isFavorite ? <IoStar className="text-sm" /> : <IoStarOutline className="text-sm" />}
+          </button>
+
+          {/* Hover Play Overlay */}
+          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <div className="w-10 h-10 rounded-full bg-primary text-black flex items-center justify-center shadow-lg shadow-primary/40 transform scale-75 group-hover:scale-100 transition-transform">
+              <IoPlay className="w-5 h-5 ml-0.5 text-black" />
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Metadata */}
+        <div className="p-3 sm:p-3.5 flex flex-col gap-2">
+          <h4
+            className={cn(
+              "text-xs sm:text-sm font-bold truncate leading-snug",
+              isActive ? "text-primary" : "text-white group-hover:text-primary transition-colors"
+            )}
+            title={channel.name}
+          >
+            {channel.name}
+          </h4>
+
+          <div className="flex items-center justify-between gap-1 text-[10px]">
+            <span
+              className={cn(
+                "flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold border truncate max-w-[120px]",
+                catStyle.badge
+              )}
+            >
+              <span>{catStyle.icon}</span>
+              <span className="truncate">{categoryName}</span>
+            </span>
+
+            {channel.country && (
+              <span className="rounded-md bg-white/5 border border-white/10 px-1.5 py-0.5 font-semibold text-white/50 shrink-0">
+                {channel.country}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // LIST VARIANT (Compact Channel Guide Row)
+  // =========================================================================
   return (
     <div
       role="button"
@@ -49,86 +178,132 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
         }
       }}
       className={cn(
-        "group relative flex items-center gap-2.5 sm:gap-3.5 rounded-xl sm:rounded-2xl border p-2.5 sm:p-3.5 transition-all cursor-pointer select-none text-left",
+        "group relative flex items-center justify-between gap-3 sm:gap-4 rounded-xl border px-3 sm:px-4 py-2.5 transition-all cursor-pointer select-none text-left",
         isActive
-          ? "border-primary/80 bg-primary/10 shadow-xl shadow-primary/20 scale-[1.02]"
-          : "border-white/10 bg-[#121319] hover:border-white/25 hover:bg-[#181a24] hover:scale-[1.01]"
+          ? "border-primary/80 bg-primary/10 shadow-md shadow-primary/20 ring-1 ring-primary/40"
+          : "border-white/5 bg-[#121319]/80 hover:border-white/20 hover:bg-[#181a24]"
       )}
     >
-      {/* Channel Logo / Fallback */}
-      <div className="relative h-10 w-10 sm:h-12 sm:w-12 shrink-0 overflow-hidden rounded-lg sm:rounded-xl border border-white/15 bg-black/60 p-1 shadow-inner">
-        {channel.logo ? (
-          <SafeImage
-            src={channel.logo}
-            alt={channel.name}
-            fallbackTitle={channel.name}
-            fill
-            sizes="(max-width: 640px) 40px, 48px"
-            className="object-contain p-0.5 sm:p-1 transition-transform group-hover:scale-105"
-            unoptimized
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center font-bold text-white/60 text-[10px] sm:text-xs">
-            {channel.name.slice(0, 2).toUpperCase()}
-          </div>
-        )}
-      </div>
-
-      {/* Channel Metadata */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <h4
-            className={cn(
-              "text-xs sm:text-sm font-bold truncate leading-snug",
-              isActive ? "text-primary" : "text-white group-hover:text-white"
-            )}
-          >
-            {channel.name}
-          </h4>
-          {isActive && (
-            <span className="flex items-center gap-1 rounded bg-primary/20 px-1 sm:px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase text-primary tracking-wider shrink-0">
-              <span className="inline-flex gap-0.5">
-                <span className="h-1.5 sm:h-2 w-0.5 rounded-full bg-primary animate-pulse" />
-                <span className="h-2.5 sm:h-3 w-0.5 rounded-full bg-primary animate-pulse delay-75" />
-                <span className="h-1 sm:h-1.5 w-0.5 rounded-full bg-primary animate-pulse delay-150" />
-              </span>
-              ON AIR
-            </span>
-          )}
-        </div>
-
-        {/* Category & Country Pills */}
-        <div className="flex items-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5 flex-wrap">
-          <span
-            className={cn(
-              "flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] sm:text-[10px] font-bold border",
-              catStyle.badge
-            )}
-          >
-            <span className="text-[9px] sm:text-[10px]">{catStyle.icon}</span>
-            <span>{categoryName}</span>
+      {/* Left: Index + Logo + Info */}
+      <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
+        {typeof index === "number" && (
+          <span className="text-[11px] font-mono font-bold text-white/30 w-6 sm:w-7 shrink-0 text-center">
+            {String(index + 1).padStart(2, "0")}
           </span>
+        )}
 
-          {channel.country && (
-            <span className="rounded-md bg-white/5 border border-white/5 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold text-white/50">
-              {channel.country}
-            </span>
+        {/* Logo */}
+        <div className="relative h-9 w-9 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/60 p-1 shadow-inner">
+          {channel.logo ? (
+            <SafeImage
+              src={channel.logo}
+              alt={channel.name}
+              fallbackTitle={channel.name}
+              fill
+              sizes="(max-width: 640px) 36px, 40px"
+              className="object-contain p-0.5 transition-transform group-hover:scale-105"
+              unoptimized
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center font-bold text-white/60 text-[10px]">
+              {channel.name.slice(0, 2).toUpperCase()}
+            </div>
           )}
+        </div>
+
+        {/* Channel Name & Quick Info */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h4
+              className={cn(
+                "text-xs sm:text-sm font-bold truncate leading-tight",
+                isActive ? "text-primary" : "text-white group-hover:text-primary transition-colors"
+              )}
+            >
+              {channel.name}
+            </h4>
+            {isActive && (
+              <span className="flex items-center gap-1 rounded bg-primary/20 px-1.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase text-primary tracking-wider shrink-0">
+                <span className="inline-flex gap-0.5">
+                  <span className="h-1.5 sm:h-2 w-0.5 rounded-full bg-primary animate-pulse" />
+                  <span className="h-2.5 sm:h-3 w-0.5 rounded-full bg-primary animate-pulse delay-75" />
+                  <span className="h-1 sm:h-1.5 w-0.5 rounded-full bg-primary animate-pulse delay-150" />
+                </span>
+                ON AIR
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 mt-1 sm:hidden">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded px-1.5 py-0.2 text-[9px] font-bold border",
+                catStyle.badge
+              )}
+            >
+              <span>{catStyle.icon}</span>
+              <span>{categoryName}</span>
+            </span>
+            {channel.country && (
+              <span className="rounded bg-white/5 border border-white/5 px-1 py-0.2 text-[9px] font-semibold text-white/50">
+                {channel.country}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Favorite Star Button */}
-      <button
-        type="button"
-        onClick={onToggleFavorite}
-        className={cn(
-          "shrink-0 p-1 sm:p-1.5 rounded-full transition-all hover:scale-110",
-          isFavorite ? "text-yellow-400" : "text-white/30 hover:text-white/80"
+      {/* Right: Badges + Action Buttons */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Category Pill (Desktop) */}
+        <span
+          className={cn(
+            "hidden sm:flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold border",
+            catStyle.badge
+          )}
+        >
+          <span>{catStyle.icon}</span>
+          <span>{categoryName}</span>
+        </span>
+
+        {/* Country Pill (Desktop) */}
+        {channel.country && (
+          <span className="hidden md:inline-flex rounded-md bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/50">
+            {channel.country}
+          </span>
         )}
-        aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
-      >
-        {isFavorite ? <IoStar className="text-base sm:text-lg" /> : <IoStarOutline className="text-base sm:text-lg" />}
-      </button>
+
+        {/* Live Indicator */}
+        <span className="hidden sm:flex items-center gap-1 rounded-md bg-white/5 border border-white/5 px-2 py-0.5 text-[10px] font-bold text-white/60">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          LIVE
+        </span>
+
+        {/* Quick Play Trigger */}
+        <div
+          className={cn(
+            "p-1.5 rounded-lg transition-all",
+            isActive
+              ? "bg-primary text-black"
+              : "text-white/40 group-hover:text-white group-hover:bg-white/10"
+          )}
+        >
+          <IoPlay className="w-3.5 h-3.5" />
+        </div>
+
+        {/* Favorite Star Button */}
+        <button
+          type="button"
+          onClick={onToggleFavorite}
+          className={cn(
+            "p-1 sm:p-1.5 rounded-full transition-all hover:scale-110",
+            isFavorite ? "text-yellow-400" : "text-white/30 hover:text-white/80"
+          )}
+          aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
+        >
+          {isFavorite ? <IoStar className="text-base" /> : <IoStarOutline className="text-base" />}
+        </button>
+      </div>
     </div>
   );
 };

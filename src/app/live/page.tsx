@@ -29,6 +29,7 @@ import {
   IoTrashOutline,
   IoRadioOutline,
   IoGridOutline,
+  IoListOutline,
   IoLayersOutline,
   IoFilter,
   IoGlobeOutline,
@@ -60,7 +61,8 @@ export default function LiveTvPage() {
   const [selectedCategory, setSelectedCategory] = useState<ChannelCategory>("All");
   const [selectedCountry, setSelectedCountry] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grouped" | "grid">("grouped");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [isGrouped, setIsGrouped] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Load favorites & custom channels on mount
@@ -353,38 +355,59 @@ export default function LiveTvPage() {
               </div>
             )}
 
-            {/* View Mode Toggle: Grouped Sections vs Grid */}
+            {/* View Mode Toggle: Grid vs List */}
             <div className="flex items-center bg-[#121319] p-0.5 rounded-xl border border-white/10 shrink-0">
-              <button
-                type="button"
-                onClick={() => setViewMode("grouped")}
-                className={cn(
-                  "flex items-center justify-center p-2 rounded-lg text-xs font-bold transition-all",
-                  viewMode === "grouped" && !isFiltering
-                    ? "bg-white text-black shadow"
-                    : "text-white/50 hover:text-white"
-                )}
-                title="Group by Category"
-                aria-label="Group by Category"
-              >
-                <IoLayersOutline className="w-4 h-4" />
-              </button>
-
               <button
                 type="button"
                 onClick={() => setViewMode("grid")}
                 className={cn(
-                  "flex items-center justify-center p-2 rounded-lg text-xs font-bold transition-all",
-                  viewMode === "grid" || isFiltering
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  viewMode === "grid"
                     ? "bg-white text-black shadow"
                     : "text-white/50 hover:text-white"
                 )}
-                title="Unified Grid"
+                title="Grid View (Channel Tiles)"
                 aria-label="Grid View"
               >
                 <IoGridOutline className="w-4 h-4" />
+                <span className="hidden sm:inline">Grid</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  viewMode === "list"
+                    ? "bg-white text-black shadow"
+                    : "text-white/50 hover:text-white"
+                )}
+                title="List View (Channel Guide)"
+                aria-label="List View"
+              >
+                <IoListOutline className="w-4 h-4" />
+                <span className="hidden sm:inline">List</span>
               </button>
             </div>
+
+            {/* Optional Grouping Toggle (active when on 'All' channels and not searching) */}
+            {!isFiltering && (
+              <button
+                type="button"
+                onClick={() => setIsGrouped((prev) => !prev)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition-all shrink-0",
+                  isGrouped
+                    ? "bg-white/10 text-white border-white/20"
+                    : "bg-[#121319] text-white/40 border-white/10 hover:text-white"
+                )}
+                title={isGrouped ? "Show flat layout" : "Group by Category"}
+                aria-label="Toggle Category Grouping"
+              >
+                <IoLayersOutline className="w-4 h-4" />
+                <span className="hidden md:inline">{isGrouped ? "Grouped" : "Flat"}</span>
+              </button>
+            )}
           </div>
 
           {/* Category Selector Pills Carousel */}
@@ -458,7 +481,7 @@ export default function LiveTvPage() {
               Reset Filters
             </button>
           </div>
-        ) : viewMode === "grouped" && !isFiltering ? (
+        ) : isGrouped && !isFiltering ? (
           /* ================= GROUPED BY CATEGORY VIEW ================= */
           <div className="space-y-8 pb-36 md:pb-12">
             {Array.from(groupedChannels.entries()).map(([catName, channels]) => {
@@ -486,47 +509,91 @@ export default function LiveTvPage() {
                     </button>
                   </div>
 
-                  {/* Channel Cards Grid for this category */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5">
-                    {channels.map((ch) => (
-                      <LiveChannelCard
-                        key={ch.id}
-                        channel={ch}
-                        isActive={ch.id === activeChannel.id}
-                        isFavorite={favorites.includes(ch.id)}
-                        onSelect={() => handleSelectChannel(ch)}
-                        onToggleFavorite={(e) => {
-                          e.stopPropagation();
-                          handleToggleFavorite(ch.id);
-                        }}
-                      />
-                    ))}
-                  </div>
+                  {/* Channel Cards (Grid vs List) */}
+                  {viewMode === "grid" ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
+                      {channels.map((ch, idx) => (
+                        <LiveChannelCard
+                          key={ch.id}
+                          channel={ch}
+                          variant="grid"
+                          index={idx}
+                          isActive={ch.id === activeChannel.id}
+                          isFavorite={favorites.includes(ch.id)}
+                          onSelect={() => handleSelectChannel(ch)}
+                          onToggleFavorite={(e) => {
+                            e.stopPropagation();
+                            handleToggleFavorite(ch.id);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {channels.map((ch, idx) => (
+                        <LiveChannelCard
+                          key={ch.id}
+                          channel={ch}
+                          variant="list"
+                          index={idx}
+                          isActive={ch.id === activeChannel.id}
+                          isFavorite={favorites.includes(ch.id)}
+                          onSelect={() => handleSelectChannel(ch)}
+                          onToggleFavorite={(e) => {
+                            e.stopPropagation();
+                            handleToggleFavorite(ch.id);
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </section>
               );
             })}
           </div>
         ) : (
-          /* ================= UNIFIED GRID VIEW ================= */
+          /* ================= UNIFIED (FLAT) VIEW ================= */
           <div className="space-y-3 pb-36 md:pb-12">
             <div className="text-xs font-semibold text-white/40 px-1">
               Showing {filteredChannels.length} {filteredChannels.length === 1 ? "channel" : "channels"}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5">
-              {filteredChannels.map((ch) => (
-                <LiveChannelCard
-                  key={ch.id}
-                  channel={ch}
-                  isActive={ch.id === activeChannel.id}
-                  isFavorite={favorites.includes(ch.id)}
-                  onSelect={() => handleSelectChannel(ch)}
-                  onToggleFavorite={(e) => {
-                    e.stopPropagation();
-                    handleToggleFavorite(ch.id);
-                  }}
-                />
-              ))}
-            </div>
+            {viewMode === "grid" ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
+                {filteredChannels.map((ch, idx) => (
+                  <LiveChannelCard
+                    key={ch.id}
+                    channel={ch}
+                    variant="grid"
+                    index={idx}
+                    isActive={ch.id === activeChannel.id}
+                    isFavorite={favorites.includes(ch.id)}
+                    onSelect={() => handleSelectChannel(ch)}
+                    onToggleFavorite={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(ch.id);
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {filteredChannels.map((ch, idx) => (
+                  <LiveChannelCard
+                    key={ch.id}
+                    channel={ch}
+                    variant="list"
+                    index={idx}
+                    isActive={ch.id === activeChannel.id}
+                    isFavorite={favorites.includes(ch.id)}
+                    onSelect={() => handleSelectChannel(ch)}
+                    onToggleFavorite={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(ch.id);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
 
