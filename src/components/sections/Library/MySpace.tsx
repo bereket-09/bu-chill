@@ -152,19 +152,22 @@ export const MySpace: React.FC = () => {
           avatar: storedMainAvatar,
           isMain: true,
         },
-        {
-          id: "kids",
-          name: "Kids & Anime",
-          avatar: "08",
-        },
-        {
-          id: "chill",
-          name: "Guest Chill",
-          avatar: "03",
-        },
       ];
       localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(loadedProfiles));
     } else {
+      // Clean up legacy auto-generated dummy profiles for logged-in accounts
+      if (user?.id) {
+        const cleaned = loadedProfiles.filter((p) => {
+          if (p.id === "kids" && p.name === "Kids & Anime") return false;
+          if (p.id === "chill" && p.name === "Guest Chill") return false;
+          return true;
+        });
+        if (cleaned.length !== loadedProfiles.length) {
+          loadedProfiles = cleaned;
+          localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(loadedProfiles));
+        }
+      }
+
       const mainIdx = loadedProfiles.findIndex((p) => p.isMain || p.id === "main");
       if (mainIdx >= 0) {
         loadedProfiles[mainIdx].name = user.username || loadedProfiles[mainIdx].name;
