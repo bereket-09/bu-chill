@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import { NextPage } from "next";
 import { siteConfig } from "@/config/site";
 import { getTvShowLastPosition } from "@/actions/histories";
+import { getActiveProfileId } from "@/services/profileStorage";
 const TvShowPlayer = dynamic(() => import("@/components/sections/TV/Player/Player"));
 
 const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: number }>> = ({
@@ -18,6 +19,7 @@ const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: n
   const { id, season, episode } = use(params);
   const searchParams = useSearchParams();
   const urlStartAt = searchParams?.get("startAt") ? Number(searchParams.get("startAt")) : undefined;
+  const activePid = typeof window !== "undefined" ? getActiveProfileId() : "main";
 
   const {
     data: tv,
@@ -38,8 +40,8 @@ const TvShowPlayerPage: NextPage<Params<{ id: number; season: number; episode: n
   });
 
   const { data: startAt, isPending: isPendingStartAt } = useQuery({
-    queryFn: () => getTvShowLastPosition(id, season, episode),
-    queryKey: ["tv-show-player-start-at", id, season, episode],
+    queryFn: () => (activePid === "main" ? getTvShowLastPosition(id, season, episode) : 0),
+    queryKey: ["tv-show-player-start-at", id, season, episode, activePid],
   });
 
   if (isPendingTv || isPendingSeason || isPendingStartAt) {

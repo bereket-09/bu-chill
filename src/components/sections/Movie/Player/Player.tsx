@@ -62,10 +62,14 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
     }));
   }, [omssData]);
 
+  const { data: user } = useSupabaseUser();
+  const effectiveUserId = user?.id || "guest";
+  const activeProfileId = getActiveProfileId(effectiveUserId);
+
   // Local storage watch progress check for instant resume on refresh
   const storedProgress = useMemo(
-    () => getStoredProgress("movie", movie.id),
-    [movie.id]
+    () => getStoredProgress("movie", movie.id, undefined, undefined, activeProfileId),
+    [movie.id, activeProfileId]
   );
   const initialPosition = useMemo(
     () => Math.max(storedProgress?.currentTime || 0, startAt || 0),
@@ -85,18 +89,17 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
   }, [showResumeBanner]);
 
   const handleStartOver = useCallback(() => {
-    clearStoredProgress("movie", movie.id);
+    clearStoredProgress("movie", movie.id, undefined, undefined, activeProfileId);
     currentTimeRef.current = 0;
     setActivePlaybackTime(0);
     setShowResumeBanner(false);
-  }, [movie.id]);
+  }, [movie.id, activeProfileId]);
 
   const players = useMemo(
     () => getMoviePlayers(movie.id, activePlaybackTime, nativeSources),
     [movie.id, activePlaybackTime, nativeSources]
   );
 
-  const { data: user } = useSupabaseUser();
   const title = mutateMovieTitle(movie);
   const idle = useIdle(3000);
   const { mobile } = useBreakpoints();
@@ -115,6 +118,7 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
     const pos = initialPosition > 0 ? initialPosition : 1;
 
     saveStoredProgress({
+      profileId: pid,
       mediaType: "movie",
       mediaId: movie.id,
       title,
@@ -352,6 +356,7 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
                 onTimeUpdate={(time, dur) => {
                   currentTimeRef.current = time;
                   saveStoredProgress({
+                    profileId: activeProfileId,
                     mediaType: "movie",
                     mediaId: movie.id,
                     title,

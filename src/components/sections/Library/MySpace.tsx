@@ -21,6 +21,8 @@ import {
   FaFilm,
   FaTv,
   FaStar,
+  FaClock,
+  FaCheck,
 } from "react-icons/fa6";
 import { LuPopcorn, LuUsers } from "react-icons/lu";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
@@ -90,6 +92,7 @@ export const MySpace: React.FC = () => {
 
   // Library & Watchlist filters
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "watchlist" | "planned" | "completed">("all");
   const [sortOption, setSortOption] = useState<SortOption>("created_at");
 
   // Profile data
@@ -187,9 +190,9 @@ export const MySpace: React.FC = () => {
     const hList = getProfileHistory(uid, currentPid);
     setHistoryItems(hList);
 
-    if (!user) return;
+    // Sync with Supabase ONLY for the primary main profile
+    if (!user || currentPid !== "main") return;
 
-    // Sync with Supabase for connected accounts
     getUserHistories(50)
       .then((res) => {
         if (res.success && res.data && res.data.length > 0) {
@@ -302,11 +305,34 @@ export const MySpace: React.FC = () => {
     return historyItems.filter((item) => item.completed || item.last_position >= item.duration * 0.9);
   }, [historyItems]);
 
+  // Status counts for badges
+  const statusCounts = useMemo(() => {
+    let all = 0;
+    let wl = 0;
+    let planned = 0;
+    let completed = 0;
+    watchlistItems.forEach((item) => {
+      if (contentFilter !== "all" && item.type !== contentFilter) return;
+      all++;
+      const s = item.status || "watchlist";
+      if (s === "planned") planned++;
+      else if (s === "completed") completed++;
+      else wl++;
+    });
+    return { all, wl, planned, completed };
+  }, [watchlistItems, contentFilter]);
+
   // Filtered and sorted watchlist
   const filteredWatchlist = useMemo(() => {
     let list = [...watchlistItems];
     if (contentFilter !== "all") {
       list = list.filter((item) => item.type === contentFilter);
+    }
+    if (statusFilter !== "all") {
+      list = list.filter((item) => {
+        const s = item.status || "watchlist";
+        return s === statusFilter;
+      });
     }
 
     return list.sort((a, b) => {
@@ -470,24 +496,24 @@ export const MySpace: React.FC = () => {
         </header>
 
         {/* ================================================================= */}
-        {/* ROW 1: WATCHING (IN-PROGRESS MEDIA)                               */}
+        {/* ROW 1: WATCHING (IN-PROGRESS MEDIA - only if items exist)        */}
         {/* ================================================================= */}
-        <section className="relative group/shelf mb-12 select-none">
-          <div className="flex items-center justify-between mb-4 px-1">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-primary/20 text-primary border border-primary/30">
-                <FaPlay className="w-3 h-3 ml-0.5" />
+        {continueWatchingItems.length > 0 && (
+          <section className="relative group/shelf mb-12 select-none">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-7 items-center justify-center rounded-lg bg-primary/20 text-primary border border-primary/30">
+                  <FaPlay className="w-3 h-3 ml-0.5" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
+                  Watching
+                </h3>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                  {continueWatchingItems.length}
+                </span>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
-                Watching
-              </h3>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                {continueWatchingItems.length}
-              </span>
-            </div>
 
-            {/* Navigation Arrows */}
-            {continueWatchingItems.length > 0 && (
+              {/* Navigation Arrows */}
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
@@ -506,10 +532,8 @@ export const MySpace: React.FC = () => {
                   <IoChevronForward className="w-4 h-4" />
                 </button>
               </div>
-            )}
-          </div>
+            </div>
 
-          {continueWatchingItems.length > 0 ? (
             <div
               ref={watchingScrollRef}
               className="flex items-stretch gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
@@ -618,253 +642,289 @@ export const MySpace: React.FC = () => {
                 );
               })}
             </div>
-          ) : (
-            <div className="flex items-center justify-between p-6 rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
-              <div className="flex items-center gap-4">
-                <div className="size-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
-                  🎬
+          </section>
+        )}
+
+        {/* ================================================================= */}
+        {/* ROW 2: WATCHLIST & STATUS SECTIONS                                */}
+        {/* ================================================================= */}
+        {watchlistItems.length > 0 && (
+          <section className="relative group/shelf mb-12 select-none">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 px-1">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  <LuPopcorn className="w-3.5 h-3.5" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-white">No in-progress movies or shows</h4>
-                  <p className="text-xs text-white/45 mt-0.5">
-                    Start watching any title and it will appear here with your playback progress saved.
-                  </p>
-                </div>
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
+                  My Watchlist
+                </h3>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                  {statusFilter === "all" ? watchlistItems.length : filteredWatchlist.length}
+                </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Link href="/movies">
-                  <Button color="primary" variant="flat" size="sm" startContent={<FaPlay className="w-2.5 h-2.5" />}>
-                    Explore Movies
+
+              {/* Status Tabs, Type Filters, Sort & Navigation */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Status Filter Tabs (Watchlist, Planned, Completed) */}
+                <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("all")}
+                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors ${
+                      statusFilter === "all"
+                        ? "bg-white/20 text-white shadow-sm"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    All ({statusCounts.all})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("watchlist")}
+                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
+                      statusFilter === "watchlist"
+                        ? "bg-primary/25 text-primary border border-primary/40 shadow-sm"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <FaPlay className="w-2 h-2 text-primary" />
+                    Watchlist ({statusCounts.wl})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("planned")}
+                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
+                      statusFilter === "planned"
+                        ? "bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-sm"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <FaClock className="w-2.5 h-2.5 text-amber-400" />
+                    Planned ({statusCounts.planned})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter("completed")}
+                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
+                      statusFilter === "completed"
+                        ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 shadow-sm"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <FaCheck className="w-2.5 h-2.5 text-emerald-400" />
+                    Completed ({statusCounts.completed})
+                  </button>
+                </div>
+
+                {/* Type Filters */}
+                <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 border border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setContentFilter("all")}
+                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors ${
+                      contentFilter === "all"
+                        ? "bg-white/20 text-white"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContentFilter("movie")}
+                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
+                      contentFilter === "movie"
+                        ? "bg-white/20 text-white"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <FaFilm className="w-2.5 h-2.5" />
+                    Movies
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContentFilter("tv")}
+                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
+                      contentFilter === "tv"
+                        ? "bg-white/20 text-white"
+                        : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    <FaTv className="w-2.5 h-2.5" />
+                    TV
+                  </button>
+                </div>
+
+                {/* Sort Dropdown */}
+                <div className="w-32">
+                  <Select
+                    size="sm"
+                    selectedKeys={[sortOption]}
+                    onChange={(e) => setSortOption((e.target.value as SortOption) || "created_at")}
+                    variant="bordered"
+                    className="max-w-xs"
+                    aria-label="Sort watchlist"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                    ))}
+                  </Select>
+                </div>
+
+                {/* Clear Watchlist */}
+                {filteredWatchlist.length > 0 && (
+                  <Button
+                    size="sm"
+                    color="danger"
+                    variant="flat"
+                    startContent={<FaTrash className="w-3 h-3" />}
+                    onClick={openClearWatchlist}
+                    className="text-xs h-8 px-2.5"
+                  >
+                    Clear
                   </Button>
-                </Link>
+                )}
+
+                {/* Navigation Arrows */}
+                {filteredWatchlist.length > 0 && (
+                  <div className="flex items-center gap-1.5 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => scrollShelf(watchlistScrollRef, "left")}
+                      aria-label="Scroll left"
+                      className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                    >
+                      <IoChevronBack className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollShelf(watchlistScrollRef, "right")}
+                      aria-label="Scroll right"
+                      className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                    >
+                      <IoChevronForward className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </section>
 
-        {/* ================================================================= */}
-        {/* ROW 2: WATCHLIST                                                  */}
-        {/* ================================================================= */}
-        <section className="relative group/shelf mb-12 select-none">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 px-1">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                <LuPopcorn className="w-3.5 h-3.5" />
-              </div>
-              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
-                Watchlist
-              </h3>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                {watchlistItems.length}
-              </span>
-            </div>
+            {filteredWatchlist.length > 0 ? (
+              <div
+                ref={watchlistScrollRef}
+                className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              >
+                {filteredWatchlist.map((item) => {
+                  const poster = getImageUrl(item.poster_path || item.backdrop_path || "");
+                  const link = item.type === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`;
+                  const year = item.release_date ? new Date(item.release_date).getFullYear() : null;
 
-            {/* Filter Pills, Sort & Navigation */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              {/* Type Filters */}
-              <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 border border-white/10">
-                <button
-                  type="button"
-                  onClick={() => setContentFilter("all")}
-                  className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors ${
-                    contentFilter === "all"
-                      ? "bg-white/20 text-white"
-                      : "text-white/60 hover:text-white"
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setContentFilter("movie")}
-                  className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
-                    contentFilter === "movie"
-                      ? "bg-white/20 text-white"
-                      : "text-white/60 hover:text-white"
-                  }`}
-                >
-                  <FaFilm className="w-2.5 h-2.5" />
-                  Movies
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setContentFilter("tv")}
-                  className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
-                    contentFilter === "tv"
-                      ? "bg-white/20 text-white"
-                      : "text-white/60 hover:text-white"
-                  }`}
-                >
-                  <FaTv className="w-2.5 h-2.5" />
-                  TV Series
-                </button>
-              </div>
+                  return (
+                    <div
+                      key={`${item.type}-${item.id}`}
+                      className="group relative w-[140px] sm:w-[170px] md:w-[185px] shrink-0 rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+                    >
+                      <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
+                        <img
+                          src={poster}
+                          alt={item.title}
+                          className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
 
-              {/* Sort Dropdown */}
-              <div className="w-32">
-                <Select
-                  size="sm"
-                  selectedKeys={[sortOption]}
-                  onChange={(e) => setSortOption((e.target.value as SortOption) || "created_at")}
-                  variant="bordered"
-                  className="max-w-xs"
-                  aria-label="Sort watchlist"
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.key}>{opt.label}</SelectItem>
-                  ))}
-                </Select>
-              </div>
+                        <Link
+                          href={link}
+                          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <div className="flex size-11 items-center justify-center rounded-full bg-amber-500 text-black shadow-xl">
+                            <FaPlay className="w-4 h-4 ml-0.5" />
+                          </div>
+                        </Link>
 
-              {/* Clear Watchlist */}
-              {filteredWatchlist.length > 0 && (
-                <Button
-                  size="sm"
-                  color="danger"
-                  variant="flat"
-                  startContent={<FaTrash className="w-3 h-3" />}
-                  onClick={openClearWatchlist}
-                  className="text-xs h-8 px-2.5"
-                >
-                  Clear
-                </Button>
-              )}
+                        {/* Media Type Badge */}
+                        <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-xs text-white border border-white/10">
+                          {item.type === "tv" ? "TV" : "Movie"}
+                        </span>
 
-              {/* Navigation Arrows */}
-              {filteredWatchlist.length > 0 && (
-                <div className="flex items-center gap-1.5 ml-1">
-                  <button
-                    type="button"
-                    onClick={() => scrollShelf(watchlistScrollRef, "left")}
-                    aria-label="Scroll left"
-                    className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
-                  >
-                    <IoChevronBack className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollShelf(watchlistScrollRef, "right")}
-                    aria-label="Scroll right"
-                    className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
-                  >
-                    <IoChevronForward className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+                        {/* Status Tag Badge */}
+                        {item.status && item.status !== "watchlist" && (
+                          <span
+                            className={`absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                              item.status === "completed"
+                                ? "bg-emerald-500/90 text-white shadow-md"
+                                : "bg-amber-500/90 text-black shadow-md"
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        )}
 
-          {filteredWatchlist.length > 0 ? (
-            <div
-              ref={watchlistScrollRef}
-              className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {filteredWatchlist.map((item) => {
-                const poster = getImageUrl(item.poster_path || item.backdrop_path || "");
-                const link = item.type === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`;
-                const year = item.release_date ? new Date(item.release_date).getFullYear() : null;
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveWatchlistItem(item.id, item.type, item.title)}
+                          title="Remove from watchlist"
+                          className="absolute bottom-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                        >
+                          <FaTrash className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
 
-                return (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    className="group relative w-[140px] sm:w-[170px] md:w-[185px] shrink-0 rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
-                  >
-                    <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
-                      <img
-                        src={poster}
-                        alt={item.title}
-                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-
-                      <Link
-                        href={link}
-                        className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <div className="flex size-11 items-center justify-center rounded-full bg-white text-black shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
-                          <FaPlay className="w-4 h-4 ml-0.5" />
+                      <div className="p-3 flex flex-col justify-between flex-1">
+                        <Link href={link}>
+                          <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
+                            {item.title}
+                          </h4>
+                        </Link>
+                        <div className="flex items-center justify-between text-xs text-white/40 mt-1">
+                          {year && <span>{year}</span>}
+                          {item.vote_average > 0 && (
+                            <span className="flex items-center gap-1 text-amber-400 font-semibold">
+                              ★ {item.vote_average.toFixed(1)}
+                            </span>
+                          )}
                         </div>
-                      </Link>
-
-                      <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-white/90 border border-white/10">
-                        {item.type}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveWatchlistItem(item.id, item.type, item.title)}
-                        title="Remove from watchlist"
-                        className="absolute top-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
-                      >
-                        <FaTrash className="w-2.5 h-2.5" />
-                      </button>
-
-                      {item.vote_average ? (
-                        <div className="absolute bottom-2 right-2 flex items-center gap-1 text-[11px] font-bold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-amber-400">
-                          <FaStar className="w-2.5 h-2.5" />
-                          <span>{item.vote_average.toFixed(1)}</span>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="p-3 flex flex-col justify-between flex-1">
-                      <Link href={link}>
-                        <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
-                          {item.title}
-                        </h4>
-                      </Link>
-                      <div className="flex items-center justify-between text-xs text-white/40 mt-1">
-                        <span>{year || "—"}</span>
-                        <span className="capitalize">{item.type}</span>
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between p-6 rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
+                <div className="flex items-center gap-4">
+                  <div className="size-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
+                    🍿
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex items-center justify-between p-6 rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
-              <div className="flex items-center gap-4">
-                <div className="size-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
-                  🍿
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-white">Your Watchlist is empty</h4>
-                  <p className="text-xs text-white/45 mt-0.5">
-                    Explore trending movies and series to save them to your personal streaming queue.
-                  </p>
+                  <div>
+                    <h4 className="font-semibold text-sm text-white">No titles in this section</h4>
+                    <p className="text-xs text-white/45 mt-0.5">
+                      No titles matched the selected filters.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Link href="/movies">
-                  <Button color="primary" variant="flat" size="sm" startContent={<FaFilm className="w-2.5 h-2.5" />}>
-                    Browse Movies
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        )}
 
         {/* ================================================================= */}
-        {/* ROW 3: MY HISTORY (ALREADY WATCHED)                               */}
+        {/* ROW 3: MY HISTORY (ALREADY WATCHED - only if items exist)         */}
         {/* ================================================================= */}
-        <section className="relative group/shelf mb-14 select-none">
-          <div className="flex items-center justify-between mb-4 px-1">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                <FaClockRotateLeft className="w-3.5 h-3.5" />
+        {alreadyWatchedItems.length > 0 && (
+          <section className="relative group/shelf mb-14 select-none">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <FaClockRotateLeft className="w-3.5 h-3.5" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
+                  My History
+                </h3>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
+                  {alreadyWatchedItems.length}
+                </span>
               </div>
-              <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
-                My History
-              </h3>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                {alreadyWatchedItems.length}
-              </span>
-            </div>
 
-            <div className="flex items-center gap-2.5">
-              {alreadyWatchedItems.length > 0 && (
+              <div className="flex items-center gap-2.5">
                 <Button
                   size="sm"
                   color="danger"
@@ -875,9 +935,7 @@ export const MySpace: React.FC = () => {
                 >
                   Clear History
                 </Button>
-              )}
 
-              {alreadyWatchedItems.length > 0 && (
                 <div className="flex items-center gap-1.5 ml-1">
                   <button
                     type="button"
@@ -896,11 +954,9 @@ export const MySpace: React.FC = () => {
                     <IoChevronForward className="w-4 h-4" />
                   </button>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
 
-          {alreadyWatchedItems.length > 0 ? (
             <div
               ref={historyScrollRef}
               className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
@@ -967,29 +1023,33 @@ export const MySpace: React.FC = () => {
                 );
               })}
             </div>
-          ) : (
-            <div className="flex items-center justify-between p-6 rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
-              <div className="flex items-center gap-4">
-                <div className="size-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
-                  🎬
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-white">Your Watch History is empty</h4>
-                  <p className="text-xs text-white/45 mt-0.5">
-                    Movies and episodes you watch to completion will appear here so you can revisit them anytime.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Link href="/movies">
-                  <Button color="primary" variant="flat" size="sm" startContent={<FaPlay className="w-2.5 h-2.5" />}>
-                    Start Streaming
-                  </Button>
-                </Link>
-              </div>
+          </section>
+        )}
+
+        {/* Global Empty State if ALL shelves are empty */}
+        {continueWatchingItems.length === 0 && watchlistItems.length === 0 && alreadyWatchedItems.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 px-6 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-center my-8">
+            <div className="size-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-4">
+              🍿
             </div>
-          )}
-        </section>
+            <h3 className="text-xl font-bold text-white mb-2">Your Library is Empty</h3>
+            <p className="text-sm text-white/50 max-w-md mb-6 leading-relaxed">
+              Titles you start watching or add to your Watchlist, Planned, or Completed lists will appear here.
+            </p>
+            <div className="flex items-center gap-3">
+              <Link href="/movies">
+                <Button color="primary" variant="solid" startContent={<FaFilm className="w-3.5 h-3.5" />}>
+                  Explore Movies
+                </Button>
+              </Link>
+              <Link href="/tv">
+                <Button color="warning" variant="flat" startContent={<FaTv className="w-3.5 h-3.5" />}>
+                  Explore TV Shows
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Confirmation Modal: Clear Watchlist */}

@@ -1,5 +1,7 @@
 import { ContentType } from "@/types";
 
+export type WatchlistStatus = "watchlist" | "planned" | "completed";
+
 export interface ProfileWatchlistItem {
   id: number;
   type: ContentType;
@@ -10,6 +12,7 @@ export interface ProfileWatchlistItem {
   title: string;
   vote_average: number;
   created_at: string;
+  status?: WatchlistStatus;
 }
 
 export interface ProfileHistoryItem {
@@ -33,10 +36,15 @@ export interface ProfileHistoryItem {
 /**
  * Gets the current active profile ID for a user. Defaults to "main".
  */
-export function getActiveProfileId(userId: string): string {
-  if (typeof window === "undefined" || !userId) return "main";
+export function getActiveProfileId(userId?: string): string {
+  if (typeof window === "undefined") return "main";
   try {
-    return localStorage.getItem(`buchill_active_profile_${userId}`) || "main";
+    const uid = userId || "guest";
+    return (
+      localStorage.getItem(`buchill_active_profile_${uid}`) ||
+      localStorage.getItem("buchill_current_active_profile") ||
+      "main"
+    );
   } catch {
     return "main";
   }
@@ -45,12 +53,14 @@ export function getActiveProfileId(userId: string): string {
 /**
  * Sets the active profile ID and emits a change event for instant cross-component updates.
  */
-export function setActiveProfileId(userId: string, profileId: string): void {
-  if (typeof window === "undefined" || !userId) return;
+export function setActiveProfileId(userId: string | undefined, profileId: string): void {
+  if (typeof window === "undefined") return;
+  const uid = userId || "guest";
   try {
-    localStorage.setItem(`buchill_active_profile_${userId}`, profileId);
+    localStorage.setItem(`buchill_active_profile_${uid}`, profileId);
+    localStorage.setItem("buchill_current_active_profile", profileId);
     window.dispatchEvent(
-      new CustomEvent("buchill_profile_changed", { detail: { userId, profileId } })
+      new CustomEvent("buchill_profile_changed", { detail: { userId: uid, profileId } })
     );
   } catch (e) {
     console.error("Failed to set active profile:", e);
@@ -75,7 +85,8 @@ export function getProfileWatchlist(userId?: string, profileId?: string): Profil
     if (raw) {
       return JSON.parse(raw);
     }
-    if (uid !== "guest") {
+    // Only primary main profile falls back to guest session
+    if (uid !== "guest" && pid === "main") {
       const guestRaw = localStorage.getItem(getWatchlistKey("guest", "main"));
       if (guestRaw) return JSON.parse(guestRaw);
     }
@@ -103,19 +114,39 @@ export function saveProfileWatchlist(
   }
 }
 
+export function getProfileWatchlistItem(
+  userId: string | undefined,
+  profileId: string | undefined,
+  itemId: number,
+  type: ContentType
+): ProfileWatchlistItem | undefined {
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  const current = getProfileWatchlist(uid, pid);
+  return current.find((x) => x.id === itemId && x.type === type);
+}
+
 export function addToProfileWatchlist(
   userId: string | undefined,
   profileId: string | undefined,
-  item: Omit<ProfileWatchlistItem, "created_at"> & { created_at?: string }
+  item: Omit<ProfileWatchlistItem, "created_at"> & { created_at?: string; status?: WatchlistStatus }
 ): void {
   const uid = userId || "guest";
   const pid = profileId || "main";
   const current = getProfileWatchlist(uid, pid);
-  const exists = current.some((x) => x.id === item.id && x.type === item.type);
-  if (exists) return;
+  const existingIdx = current.findIndex((x) => x.id === item.id && x.type === item.type);
+  const status = item.status || "watchlist";
+
+  if (existingIdx >= 0) {
+    const updated = [...current];
+    updated[existingIdx] = { ...updated[existingIdx], ...item, status };
+    saveProfileWatchlist(uid, pid, updated);
+    return;
+  }
 
   const newItem: ProfileWatchlistItem = {
     ...item,
+    status,
     created_at: item.created_at || new Date().toISOString(),
   };
   saveProfileWatchlist(uid, pid, [newItem, ...current]);
@@ -183,8 +214,8 @@ export function getProfileHistory(userId?: string, profileId?: string): ProfileH
     if (raw) {
       return JSON.parse(raw);
     }
-    // Fallback: if authenticated user has no history yet, load guest history
-    if (uid !== "guest") {
+    // Fallback: ONLY for primary main profile when migrating from guest session
+    if (uid !== "guest" && pid === "main") {
       const guestRaw = localStorage.getItem(getHistoryKey("guest", "main"));
       if (guestRaw) {
         return JSON.parse(guestRaw);

@@ -11,11 +11,13 @@ import { useQuery } from "@tanstack/react-query";
 import { NextPage } from "next";
 import { notFound, useSearchParams } from "next/navigation";
 import { use } from "react";
+import { getActiveProfileId } from "@/services/profileStorage";
 
 const MoviePlayerPage: NextPage<Params<{ id: number }>> = ({ params }) => {
   const { id } = use(params);
   const searchParams = useSearchParams();
   const urlStartAt = searchParams?.get("startAt") ? Number(searchParams.get("startAt")) : undefined;
+  const activePid = typeof window !== "undefined" ? getActiveProfileId() : "main";
 
   const {
     data: movie,
@@ -27,8 +29,8 @@ const MoviePlayerPage: NextPage<Params<{ id: number }>> = ({ params }) => {
   });
 
   const { data: startAt, isPending: isPendingStartAt } = useQuery({
-    queryFn: () => getMovieLastPosition(id),
-    queryKey: ["movie-player-start-at", id],
+    queryFn: () => (activePid === "main" ? getMovieLastPosition(id) : 0),
+    queryKey: ["movie-player-start-at", id, activePid],
   });
 
   if (isPending || isPendingStartAt) {

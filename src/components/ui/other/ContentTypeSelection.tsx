@@ -3,54 +3,54 @@
 import useDiscoverFilters from "@/hooks/useDiscoverFilters";
 import { ContentType } from "@/types";
 import { Movie, TV } from "@/utils/icons";
-import { Tabs, Tab, TabsProps } from "@heroui/react";
 
-interface ContentTypeSelectionProps extends TabsProps {
+interface ContentTypeSelectionProps {
+  className?: string;
   onTypeChange?: (type: ContentType) => void;
 }
 
-const ContentTypeSelection: React.FC<ContentTypeSelectionProps> = ({ onTypeChange, ...props }) => {
+const ContentTypeSelection: React.FC<ContentTypeSelectionProps> = ({
+  className = "",
+  onTypeChange,
+}) => {
   const { content, setContent, resetFilters } = useDiscoverFilters();
 
   const handleTabChange = (key: ContentType) => {
+    if (content === key) return;
     resetFilters();
     setContent(key);
     onTypeChange?.(key);
   };
 
   return (
-    <Tabs
-      size="lg"
-      variant="underlined"
-      selectedKey={content}
-      aria-label="Content Type Selection"
-      color={content === "movie" ? "primary" : "warning"}
-      onSelectionChange={(value) => handleTabChange(value as ContentType)}
-      classNames={{
-        tabContent: "pb-2",
-        cursor: "h-1 rounded-full",
-      }}
-      {...props}
-    >
-      <Tab
-        key="movie"
-        title={
-          <div className="flex items-center space-x-2">
-            <Movie />
-            <span>Movies</span>
-          </div>
-        }
-      />
-      <Tab
-        key="tv"
-        title={
-          <div className="flex items-center space-x-2">
-            <TV />
-            <span>TV Series</span>
-          </div>
-        }
-      />
-    </Tabs>
+    <div className={`flex items-center ${className}`}>
+      <div className="inline-flex items-center p-1 rounded-full bg-neutral-900/80 border border-white/10 backdrop-blur-xl shadow-xl">
+        <button
+          type="button"
+          onClick={() => handleTabChange("movie")}
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 ${
+            content === "movie"
+              ? "bg-amber-500 text-black shadow-lg shadow-amber-500/25 scale-[1.02]"
+              : "text-neutral-400 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <Movie className="text-base" />
+          <span>Movies</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => handleTabChange("tv")}
+          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 ${
+            content === "tv"
+              ? "bg-amber-500 text-black shadow-lg shadow-amber-500/25 scale-[1.02]"
+              : "text-neutral-400 hover:text-white hover:bg-white/5"
+          }`}
+        >
+          <TV className="text-base" />
+          <span>TV Shows</span>
+        </button>
+      </div>
+    </div>
   );
 };
 

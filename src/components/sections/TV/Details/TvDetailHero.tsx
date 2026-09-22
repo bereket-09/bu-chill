@@ -16,6 +16,7 @@ import Trailer from "@/components/ui/overlay/Trailer";
 import { ArrowLeft } from "@/utils/icons";
 import { WatchProgressItem, formatTimeDisplay } from "@/utils/watchProgress";
 import { siteConfig } from "@/config/site";
+import { getActiveProfileId, getProfileHistory } from "@/services/profileStorage";
 
 interface TvDetailHeroProps {
   tv: AppendToResponse<TvShowDetails, ("images" | "videos")[], "tvShow">;
@@ -36,27 +37,69 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      let latestProgress: WatchProgressItem | null = null;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(`cinextma_watch_tv_${tv.id}_`)) {
-          try {
-            const item = JSON.parse(localStorage.getItem(key) || "") as WatchProgressItem;
-            if (item && item.currentTime > 10) {
-              if (!latestProgress || (item.updatedAt || 0) > (latestProgress.updatedAt || 0)) {
-                latestProgress = item;
+    const calculateProgress = () => {
+      try {
+        const pid = getActiveProfileId();
+        // Check profile history for this active profile first
+        const historyItem = getProfileHistory(undefined, pid).find(
+          (x) => x.media_id === tv.id && x.type === "tv"
+        );
+        if (historyItem && historyItem.season && historyItem.episode && historyItem.last_position > 10) {
+          setSavedProgress({
+            mediaId: tv.id,
+            mediaType: "tv",
+            season: historyItem.season,
+            episode: historyItem.episode,
+            currentTime: historyItem.last_position,
+            duration: historyItem.duration,
+            percentage: 0,
+            updatedAt: Date.now(),
+          });
+          return;
+        }
+
+        let latestProgress: WatchProgressItem | null = null;
+        const prefix = `cinextma_watch_${pid}_tv_${tv.id}_`;
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(prefix)) {
+            try {
+              const item = JSON.parse(localStorage.getItem(key) || "") as WatchProgressItem;
+              if (item && item.currentTime > 10) {
+                if (!latestProgress || (item.updatedAt || 0) > (latestProgress.updatedAt || 0)) {
+                  latestProgress = item;
+                }
               }
-            }
-          } catch {
-            // ignore
+            } catch {}
           }
         }
+
+        // Only for main profile, check legacy un-prefixed keys if none found
+        if (!latestProgress && pid === "main") {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith(`cinextma_watch_tv_${tv.id}_`)) {
+              try {
+                const item = JSON.parse(localStorage.getItem(key) || "") as WatchProgressItem;
+                if (item && item.currentTime > 10) {
+                  if (!latestProgress || (item.updatedAt || 0) > (latestProgress.updatedAt || 0)) {
+                    latestProgress = item;
+                  }
+                }
+              } catch {}
+            }
+          }
+        }
+
+        setSavedProgress(latestProgress);
+      } catch {
+        setSavedProgress(null);
       }
-      setSavedProgress(latestProgress);
-    } catch {
-      // ignore
-    }
+    };
+
+    calculateProgress();
+    window.addEventListener("buchill_profile_changed", calculateProgress);
+    return () => window.removeEventListener("buchill_profile_changed", calculateProgress);
   }, [tv.id]);
 
   const currentPlaySeason = savedProgress?.season ?? firstSeasonNumber;
@@ -322,6 +365,9 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
               </div>
             </Link>
 
+            {/* Watchlist / Status Dropdown (+ Button) */}
+            <BookmarkButton data={bookmarkData} />
+
             {/* View Episodes Scroll Button */}
             {onViewEpisodesClick && (
               <button
@@ -336,9 +382,6 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
 
             {/* Watch Trailer Modal Trigger */}
             <Trailer videos={tv.videos?.results || []} />
-
-            {/* Bookmark / Watchlist */}
-            <BookmarkButton data={bookmarkData} />
 
             {/* Share */}
             <ShareButton id={tv.id} title={title} type="tv" />

@@ -40,6 +40,8 @@ import {
   getProfileHistory,
   removeFromProfileHistory,
   ProfileHistoryItem,
+  getProfileWatchlist,
+  ProfileWatchlistItem,
 } from "@/services/profileStorage";
 import { getUserHistories } from "@/actions/histories";
 
@@ -72,8 +74,9 @@ const ProfileManager: React.FC = () => {
   const [profiles, setProfiles] = useState<UserProfileItem[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string>("main");
 
-  // In-progress continue watching items
+  // In-progress continue watching items & watchlist items
   const [continueWatchingItems, setContinueWatchingItems] = useState<ProfileHistoryItem[]>([]);
+  const [watchlistItems, setWatchlistItems] = useState<ProfileWatchlistItem[]>([]);
 
   // Editing state
   const [editingProfile, setEditingProfile] = useState<UserProfileItem | null>(null);
@@ -95,6 +98,10 @@ const ProfileManager: React.FC = () => {
       (item) => !item.completed && (!item.duration || item.last_position < item.duration * 0.95)
     );
     setContinueWatchingItems(inProgress);
+
+    // Also load isolated profile watchlist
+    const wl = getProfileWatchlist(uid, pid);
+    setWatchlistItems(wl);
 
     if (user?.id) {
       getUserHistories(50)
@@ -139,9 +146,11 @@ const ProfileManager: React.FC = () => {
       loadWatchingItems(effectiveUserId, activeProfileId);
     };
     window.addEventListener("buchill_history_changed", handler);
+    window.addEventListener("buchill_watchlist_changed", handler);
     window.addEventListener("buchill_profile_changed", handler);
     return () => {
       window.removeEventListener("buchill_history_changed", handler);
+      window.removeEventListener("buchill_watchlist_changed", handler);
       window.removeEventListener("buchill_profile_changed", handler);
     };
   }, [effectiveUserId, activeProfileId, loadWatchingItems]);
@@ -691,8 +700,8 @@ const ProfileManager: React.FC = () => {
           </div>
         )}
 
-        {/* Continue Watching Section */}
-        {!isManageMode && (
+        {/* Continue Watching Section (Only shown if titles in progress exist) */}
+        {!isManageMode && continueWatchingItems.length > 0 && (
           <section className="w-full max-w-6xl mt-14 sm:mt-18 px-2 sm:px-4">
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5 sm:gap-3">
@@ -704,147 +713,185 @@ const ProfileManager: React.FC = () => {
                   {profiles.find((p) => p.id === activeProfileId)?.name || "Main Profile"}
                 </span>
               </div>
-              {continueWatchingItems.length > 0 && (
-                <span className="text-xs text-white/45 font-medium">
-                  {continueWatchingItems.length} {continueWatchingItems.length === 1 ? "title" : "titles"} in progress
-                </span>
-              )}
+              <span className="text-xs text-white/45 font-medium">
+                {continueWatchingItems.length}{" "}
+                {continueWatchingItems.length === 1 ? "title" : "titles"} in progress
+              </span>
             </div>
 
-            {continueWatchingItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 px-4 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-center">
-                <div className="size-12 rounded-full bg-white/5 flex items-center justify-center text-white/40 mb-3 border border-white/10">
-                  <FaPlay className="w-4 h-4 ml-0.5 text-white/40" />
-                </div>
-                <p className="text-base font-semibold text-white/80">No titles in progress yet</p>
-                <p className="text-xs text-white/50 max-w-md mt-1.5 leading-relaxed">
-                  Start watching any movie or TV series and your exact season, episode, and stopped time will appear here so you can resume anytime.
-                </p>
-                <Link
-                  href="/movies"
-                  className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-bold text-black transition hover:bg-white/90 active:scale-95 shadow-md"
-                >
-                  <FaFilm className="text-xs" />
-                  <span>Explore Movies & TV Series</span>
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-                {continueWatchingItems.map((item) => {
-                  const resumeUrl =
-                    item.type === "tv"
-                      ? `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player?startAt=${item.last_position || 0}`
-                      : `/movie/${item.media_id}/player?startAt=${item.last_position || 0}`;
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+              {continueWatchingItems.map((item) => {
+                const resumeUrl =
+                  item.type === "tv"
+                    ? `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player?startAt=${item.last_position || 0}`
+                    : `/movie/${item.media_id}/player?startAt=${item.last_position || 0}`;
 
-                  const progressPercent =
-                    item.duration > 0
-                      ? Math.min(100, Math.max(4, Math.round((item.last_position / item.duration) * 100)))
-                      : 0;
+                const progressPercent =
+                  item.duration > 0
+                    ? Math.min(100, Math.round((item.last_position / item.duration) * 100))
+                    : 0;
 
-                  const stoppedText =
-                    item.last_position > 5
-                      ? `Stopped at ${formatDuration(item.last_position)}`
-                      : "Just started";
+                const stoppedText =
+                  item.last_position > 5
+                    ? `Stopped at ${formatDuration(item.last_position)}`
+                    : "Just started";
 
-                  const backdropImg = getImageUrl(item.backdrop_path || item.poster_path || "");
+                return (
+                  <div
+                    key={`${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`}
+                    className="group relative flex flex-col rounded-2xl overflow-hidden bg-neutral-900/80 border border-white/10 hover:border-white/25 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                  >
+                    {/* Thumbnail Image */}
+                    <div className="relative aspect-video w-full overflow-hidden bg-neutral-800">
+                      <img
+                        src={getImageUrl(item.backdrop_path || item.poster_path || "")}
+                        alt={item.title}
+                        className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
 
-                  return (
-                    <div
-                      key={`${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`}
-                      className="group relative rounded-2xl overflow-hidden border border-white/10 bg-neutral-900/60 hover:border-white/25 transition-all duration-300 hover:shadow-[0_12px_32px_rgba(0,0,0,0.8)] flex flex-col"
-                    >
-                      {/* Thumbnail area with overlays */}
-                      <div className="relative aspect-video w-full overflow-hidden bg-white/5">
-                        <img
-                          src={backdropImg}
-                          alt={item.title}
-                          className="size-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                      {/* Dark Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                        {/* Media Type / Season & Episode Badge */}
+                      {/* Episode Badge if TV */}
+                      {item.type === "tv" && (
                         <div className="absolute top-3 left-3 z-10">
-                          {item.type === "tv" ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-500 text-black shadow-md backdrop-blur-xs">
-                              <FaTv className="text-[10px]" />
-                              <span>S{item.season} • E{item.episode}</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold bg-primary text-black shadow-md backdrop-blur-xs">
-                              <FaFilm className="text-[10px]" />
-                              <span>Movie</span>
+                          <span className="rounded-md bg-black/75 px-2.5 py-1 text-[11px] font-bold text-amber-400 backdrop-blur-xs border border-white/10 shadow-sm">
+                            S{item.season || 1} • E{item.episode || 1}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Dismiss Button */}
+                      <button
+                        type="button"
+                        title="Remove from Continue Watching"
+                        onClick={(e) => handleDeleteWatchingItem(e, item)}
+                        className="absolute top-3 right-3 z-10 size-7 rounded-full bg-black/60 hover:bg-red-600 text-white/70 hover:text-white flex items-center justify-center transition backdrop-blur-xs border border-white/10 cursor-pointer"
+                      >
+                        <FaXmark className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Center Play Icon Hover */}
+                      <Link
+                        href={resumeUrl}
+                        className="absolute inset-0 flex items-center justify-center"
+                      >
+                        <div className="size-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-xl border border-white/30 group-hover:scale-110">
+                          <FaPlay className="w-4 h-4 ml-0.5 text-white" />
+                        </div>
+                      </Link>
+
+                      {/* Progress Bar at bottom of thumbnail */}
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-10">
+                        <div
+                          className={`h-full ${
+                            item.type === "tv"
+                              ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+                              : "bg-primary shadow-[0_0_8px_rgba(0,255,200,0.8)]"
+                          }`}
+                          style={{ width: `${item.duration > 0 ? progressPercent : 15}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Card Details */}
+                    <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+                      <div>
+                        <h3 className="font-bold text-sm sm:text-base text-white/90 group-hover:text-white transition line-clamp-1">
+                          {item.title}
+                        </h3>
+                        <div className="flex items-center justify-between text-xs text-white/50 mt-1">
+                          <span className="flex items-center gap-1.5 text-white/70 font-medium">
+                            <FaClock className="text-[10px] text-primary" />
+                            {stoppedText}
+                          </span>
+                          {item.duration > 0 && (
+                            <span className="text-[11px] font-medium text-white/50">
+                              {progressPercent}% watched
                             </span>
                           )}
                         </div>
-
-                        {/* Dismiss Button */}
-                        <button
-                          type="button"
-                          title="Remove from Continue Watching"
-                          onClick={(e) => handleDeleteWatchingItem(e, item)}
-                          className="absolute top-3 right-3 z-10 size-7 rounded-full bg-black/60 hover:bg-red-600 text-white/70 hover:text-white flex items-center justify-center transition backdrop-blur-xs border border-white/10 cursor-pointer"
-                        >
-                          <FaXmark className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* Center Play Icon Hover */}
-                        <Link
-                          href={resumeUrl}
-                          className="absolute inset-0 flex items-center justify-center"
-                        >
-                          <div className="size-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-xl border border-white/30 group-hover:scale-110">
-                            <FaPlay className="w-4 h-4 ml-0.5 text-white" />
-                          </div>
-                        </Link>
-
-                        {/* Progress Bar at bottom of thumbnail */}
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 z-10">
-                          <div
-                            className={`h-full ${
-                              item.type === "tv"
-                                ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]"
-                                : "bg-primary shadow-[0_0_8px_rgba(0,255,200,0.8)]"
-                            }`}
-                            style={{ width: `${item.duration > 0 ? progressPercent : 15}%` }}
-                          />
-                        </div>
                       </div>
 
-                      {/* Card Details */}
-                      <div className="p-4 flex flex-col flex-1 justify-between gap-3">
-                        <div>
-                          <h3 className="font-bold text-sm sm:text-base text-white/90 group-hover:text-white transition line-clamp-1">
-                            {item.title}
-                          </h3>
-                          <div className="flex items-center justify-between text-xs text-white/50 mt-1">
-                            <span className="flex items-center gap-1.5 text-white/70 font-medium">
-                              <FaClock className="text-[10px] text-primary" />
-                              {stoppedText}
-                            </span>
-                            {item.duration > 0 && (
-                              <span className="text-[11px] font-medium text-white/50">
-                                {progressPercent}% watched
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Direct Resume Action Button */}
-                        <Link
-                          href={resumeUrl}
-                          className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-white text-black font-bold text-xs sm:text-sm hover:bg-white/90 active:scale-[0.98] transition shadow-md group-hover:shadow-[0_0_16px_rgba(255,255,255,0.2)]"
-                        >
-                          <FaPlay className="text-[11px] text-black" />
-                          <span>
-                            Resume {item.type === "tv" ? `S${item.season} E${item.episode}` : "Movie"}
-                          </span>
-                        </Link>
-                      </div>
+                      {/* Direct Resume Action Button */}
+                      <Link
+                        href={resumeUrl}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl bg-white text-black font-bold text-xs sm:text-sm hover:bg-white/90 active:scale-[0.98] transition shadow-md group-hover:shadow-[0_0_16px_rgba(255,255,255,0.2)]"
+                      >
+                        <FaPlay className="text-[11px] text-black" />
+                        <span>
+                          Resume {item.type === "tv" ? `S${item.season} E${item.episode}` : "Movie"}
+                        </span>
+                      </Link>
                     </div>
-                  );
-                })}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Watchlist Section (Only shown if watchlist has items) */}
+        {!isManageMode && watchlistItems.length > 0 && (
+          <section className="w-full max-w-6xl mt-12 sm:mt-16 px-2 sm:px-4">
+            <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="size-2 rounded-full bg-amber-400" />
+                <h2 className="text-lg sm:text-xl font-bold text-white tracking-wide">
+                  Watchlist
+                </h2>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-white/10 text-white/70 font-medium">
+                  {watchlistItems.length} {watchlistItems.length === 1 ? "title" : "titles"}
+                </span>
               </div>
-            )}
+              <Link
+                href="/library"
+                className="flex items-center gap-1.5 text-xs font-semibold text-white/70 hover:text-white transition group"
+              >
+                <span>View All</span>
+                <FaChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+
+            <div className="flex items-stretch gap-3.5 sm:gap-4 overflow-x-auto pb-4 pt-1" style={{ scrollbarWidth: "none" }}>
+              {watchlistItems.map((item) => (
+                <Link
+                  key={`${item.type}-${item.id}`}
+                  href={item.type === "tv" ? `/tv/${item.id}` : `/movie/${item.id}`}
+                  className="group relative flex flex-col shrink-0 w-32 sm:w-40 rounded-xl overflow-hidden bg-neutral-900/80 border border-white/10 hover:border-white/30 transition-all duration-200 hover:scale-105"
+                >
+                  <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
+                    <img
+                      src={
+                        item.poster_path
+                          ? `https://image.tmdb.org/t/p/w300${item.poster_path}`
+                          : "/placeholder.png"
+                      }
+                      alt={item.title}
+                      className="size-full object-cover group-hover:scale-105 transition duration-300"
+                    />
+                    <span className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/75 backdrop-blur-xs text-white border border-white/10">
+                      {item.type === "tv" ? "TV" : "Movie"}
+                    </span>
+                    {item.status && item.status !== "watchlist" && (
+                      <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-500/90 text-black">
+                        {item.status}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5">
+                    <p className="text-xs font-semibold text-white/90 line-clamp-1 group-hover:text-white">
+                      {item.title}
+                    </p>
+                    {item.release_date && (
+                      <p className="text-[10px] text-white/50 mt-0.5">
+                        {item.release_date.slice(0, 4)}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
           </section>
         )}
 

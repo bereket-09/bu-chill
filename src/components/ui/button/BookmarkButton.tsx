@@ -1,140 +1,229 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { BsBookmarkCheckFill, BsBookmarkFill } from "react-icons/bs";
-import { addToast } from "@heroui/react";
-import IconButton from "./IconButton";
-import { Trash } from "@/utils/icons";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Button,
+  addToast,
+} from "@heroui/react";
+import { FaPlus, FaCheck, FaClock, FaTrash, FaPlay } from "react-icons/fa6";
+import { BsBookmarkFill } from "react-icons/bs";
 import useDeviceVibration from "@/hooks/useDeviceVibration";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import { SavedMovieDetails } from "@/types/movie";
 import {
-  checkInWatchlistClient,
+  getWatchlistStatusClient,
   addToWatchlistClient,
   removeFromWatchlistClient,
 } from "@/services/libraryClient";
+import { WatchlistStatus } from "@/services/profileStorage";
 import { queryClient } from "@/app/providers";
 import { usePathname } from "next/navigation";
 
 interface BookmarkButtonProps {
   data: SavedMovieDetails;
   isTooltipDisabled?: boolean;
+  className?: string;
+  size?: "sm" | "md" | "lg";
 }
 
-const BookmarkButton: React.FC<BookmarkButtonProps> = ({ data, isTooltipDisabled }) => {
+const BookmarkButton: React.FC<BookmarkButtonProps> = ({
+  data,
+  className = "",
+  size = "md",
+}) => {
   const pathname = usePathname();
   const { startVibration } = useDeviceVibration();
-  const { data: user, isLoading: isUserLoading } = useSupabaseUser();
+  const { data: user } = useSupabaseUser();
   const [isPending, startTransition] = useTransition();
-  const [isSaved, setIsSaved] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<WatchlistStatus | null>(null);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    const checkWatchlistStatus = async () => {
-      if (!user) {
-        setIsChecking(false);
-        setIsSaved(false);
-        return;
-      }
-
-      setIsChecking(true);
+    let isMounted = true;
+    const checkStatus = async () => {
       try {
-        const isIn = await checkInWatchlistClient(data.id, data.type);
-        setIsSaved(isIn);
-      } catch (error) {
-        console.error("Error checking watchlist status:", error);
+        setIsChecking(true);
+        const status = await getWatchlistStatusClient(data.id, data.type);
+        if (isMounted) setCurrentStatus(status);
+      } catch (err) {
+        console.error("Error checking watchlist status:", err);
       } finally {
-        setIsChecking(false);
+        if (isMounted) setIsChecking(false);
       }
     };
 
-    checkWatchlistStatus();
+    checkStatus();
 
-    const handleUpdate = () => checkWatchlistStatus();
+    const handleUpdate = () => checkStatus();
     window.addEventListener("buchill_profile_changed", handleUpdate);
     window.addEventListener("buchill_watchlist_changed", handleUpdate);
     return () => {
+      isMounted = false;
       window.removeEventListener("buchill_profile_changed", handleUpdate);
       window.removeEventListener("buchill_watchlist_changed", handleUpdate);
     };
   }, [user, data.id, data.type]);
 
-  const handleBookmark = () => {
-    if (!user) {
-      addToast({
-        title: "You must be logged in to use this feature",
-        color: "warning",
-      });
-      return;
-    }
-
+  const handleSelectStatus = (newStatus: WatchlistStatus) => {
     startTransition(async () => {
       try {
-        if (isSaved) {
-          const result = await removeFromWatchlistClient(data.id, data.type);
-
-          if (result.success) {
-            setIsSaved(false);
-
+        // If clicking the current status, toggle remove
+        if (currentStatus === newStatus) {
+          const res = await removeFromWatchlistClient(data.id, data.type);
+          if (res.success) {
+            setCurrentStatus(null);
             addToast({
-              title: `${data.title} removed from your watchlist!`,
+              title: `${data.title} removed from ${newStatus}!`,
               color: "danger",
-              icon: <Trash />,
+              icon: <FaTrash />,
             });
-
             if (pathname.startsWith("/library")) {
               queryClient.invalidateQueries({ queryKey: ["watchlist"] });
             }
-          } else {
-            addToast({
-              title: "Error",
-              description: result.error || "Failed to remove from watchlist",
-              color: "danger",
-            });
           }
-        } else {
-          const result = await addToWatchlistClient(data);
+          return;
+        }
 
-          if (result.success) {
-            setIsSaved(true);
-            startVibration([100]);
-            addToast({
-              title: `${data.title} added to your watchlist!`,
-              color: "success",
-            });
-            if (pathname.startsWith("/library")) {
-              queryClient.invalidateQueries({ queryKey: ["watchlist"] });
-            }
-          } else {
-            addToast({
-              title: "Error",
-              description: result.error || "Failed to add to watchlist",
-              color: "danger",
-            });
+        // Otherwise set to newStatus
+        const res = await addToWatchlistClient(data, newStatus);
+        if (res.success) {
+          setCurrentStatus(newStatus);
+          startVibration([100]);
+          const label =
+            newStatus === "completed"
+              ? "Completed"
+              : newStatus === "planned"
+              ? "Planned"
+              : "Watchlist";
+          addToast({
+            title: `${data.title} saved to ${label}!`,
+            color: "success",
+            icon: <FaCheck />,
+          });
+          if (pathname.startsWith("/library")) {
+            queryClient.invalidateQueries({ queryKey: ["watchlist"] });
           }
         }
-      } catch (error) {
-        console.error("Error updating watchlist:", error);
-        addToast({
-          title: "Error",
-          description: "An unexpected error occurred",
-          color: "danger",
-        });
+      } catch (e) {
+        console.error("Error updating watchlist status:", e);
       }
     });
   };
 
-  return (
-    <IconButton
-      onPress={handleBookmark}
-      icon={isSaved ? <BsBookmarkCheckFill size={20} /> : <BsBookmarkFill size={20} />}
-      variant={isSaved ? "shadow" : "faded"}
-      color="warning"
-      isLoading={isUserLoading || isChecking || isPending}
-      tooltip={
-        isTooltipDisabled ? undefined : isSaved ? "Remove from Watchlist" : "Add to Watchlist"
+  const handleRemove = () => {
+    startTransition(async () => {
+      const res = await removeFromWatchlistClient(data.id, data.type);
+      if (res.success) {
+        setCurrentStatus(null);
+        addToast({
+          title: `${data.title} removed from your lists!`,
+          color: "danger",
+          icon: <FaTrash />,
+        });
+        if (pathname.startsWith("/library")) {
+          queryClient.invalidateQueries({ queryKey: ["watchlist"] });
+        }
       }
-    />
+    });
+  };
+
+  const getTriggerIcon = () => {
+    if (currentStatus === "completed") {
+      return <FaCheck className="text-emerald-400 text-sm" />;
+    }
+    if (currentStatus === "planned") {
+      return <FaClock className="text-amber-400 text-sm" />;
+    }
+    if (currentStatus === "watchlist") {
+      return <BsBookmarkFill className="text-primary text-sm" />;
+    }
+    return <FaPlus className="text-white text-sm" />;
+  };
+
+  return (
+    <Dropdown placement="bottom-start" backdrop="opaque">
+      <DropdownTrigger>
+        <Button
+          isIconOnly
+          size={size === "sm" ? "sm" : "md"}
+          radius="full"
+          variant={currentStatus ? "solid" : "bordered"}
+          isLoading={isChecking || isPending}
+          className={`shrink-0 transition-all duration-200 border-white/20 hover:scale-105 ${
+            currentStatus === "completed"
+              ? "bg-emerald-600/30 border-emerald-500/50 text-emerald-300"
+              : currentStatus === "planned"
+              ? "bg-amber-600/30 border-amber-500/50 text-amber-300"
+              : currentStatus === "watchlist"
+              ? "bg-primary/25 border-primary/50 text-primary"
+              : "bg-white/10 hover:bg-white/20 text-white"
+          } ${className}`}
+          aria-label="Add to list"
+        >
+          {getTriggerIcon()}
+        </Button>
+      </DropdownTrigger>
+      <DropdownMenu
+        aria-label="Watchlist status options"
+        variant="flat"
+        className="min-w-[180px] p-2 bg-neutral-900/95 border border-white/10 backdrop-blur-xl shadow-2xl rounded-2xl"
+      >
+        <DropdownItem
+          key="watchlist"
+          onPress={() => handleSelectStatus("watchlist")}
+          startContent={<FaPlay className="text-xs text-primary mr-1" />}
+          endContent={
+            currentStatus === "watchlist" ? <FaCheck className="text-xs text-primary" /> : null
+          }
+          className={`rounded-xl py-2.5 ${
+            currentStatus === "watchlist" ? "bg-primary/15 text-primary font-semibold" : "text-white/90"
+          }`}
+        >
+          Watchlist
+        </DropdownItem>
+        <DropdownItem
+          key="planned"
+          onPress={() => handleSelectStatus("planned")}
+          startContent={<FaClock className="text-xs text-amber-400 mr-1" />}
+          endContent={
+            currentStatus === "planned" ? <FaCheck className="text-xs text-amber-400" /> : null
+          }
+          className={`rounded-xl py-2.5 ${
+            currentStatus === "planned" ? "bg-amber-500/15 text-amber-400 font-semibold" : "text-white/90"
+          }`}
+        >
+          Planned
+        </DropdownItem>
+        <DropdownItem
+          key="completed"
+          onPress={() => handleSelectStatus("completed")}
+          startContent={<FaCheck className="text-xs text-emerald-400 mr-1" />}
+          endContent={
+            currentStatus === "completed" ? <FaCheck className="text-xs text-emerald-400" /> : null
+          }
+          className={`rounded-xl py-2.5 ${
+            currentStatus === "completed" ? "bg-emerald-500/15 text-emerald-400 font-semibold" : "text-white/90"
+          }`}
+        >
+          Completed
+        </DropdownItem>
+        {currentStatus ? (
+          <DropdownItem
+            key="remove"
+            color="danger"
+            onPress={handleRemove}
+            startContent={<FaTrash className="text-xs text-red-400 mr-1" />}
+            className="rounded-xl py-2 text-red-400 hover:bg-red-500/10 mt-1 border-t border-white/10"
+          >
+            Remove
+          </DropdownItem>
+        ) : null}
+      </DropdownMenu>
+    </Dropdown>
   );
 };
 

@@ -20,7 +20,7 @@ const TopNavbar = () => {
   const hrefs = siteConfig.navItems.map((item) => item.href);
   const show = hrefs.includes(pathName);
   const tv = pathName.includes("/tv/");
-  const player = pathName.includes("/player");
+  const player = pathName.includes("/player") || pathName.startsWith("/watch-party/");
   const auth = pathName.includes("/auth");
 
   if (auth || player) return null;
@@ -79,6 +79,17 @@ const TopNavbar = () => {
             >
               <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
               <span>Live TV</span>
+            </Link>
+            <Link
+              href="/watch-party"
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition-all",
+                pathName === "/watch-party"
+                  ? "bg-purple-600 text-white shadow-md shadow-purple-600/40"
+                  : "bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 hover:text-white"
+              )}
+            >
+              <span>Watch Party</span>
             </Link>
           </div>
         )}

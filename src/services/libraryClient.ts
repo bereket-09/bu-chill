@@ -4,28 +4,32 @@ import { SavedMovieDetails } from "@/types/movie";
 import {
   getActiveProfileId,
   checkInProfileWatchlist,
+  getProfileWatchlistItem,
   addToProfileWatchlist,
   removeFromProfileWatchlist,
+  WatchlistStatus,
 } from "./profileStorage";
 
 /**
- * Checks if media item is in the active profile's watchlist
+ * Gets the current watchlist status ("watchlist" | "planned" | "completed" | null)
  */
-export async function checkInWatchlistClient(id: number, type: ContentType): Promise<boolean> {
+export async function getWatchlistStatusClient(
+  id: number,
+  type: ContentType
+): Promise<WatchlistStatus | null> {
   try {
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return false;
-
-    const activeProfileId = getActiveProfileId(user.id);
-    const inLocal = checkInProfileWatchlist(user.id, activeProfileId, id, type);
-    if (inLocal) return true;
+    const uid = user?.id || "guest";
+    const activeProfileId = getActiveProfileId(uid);
+    const item = getProfileWatchlistItem(user?.id, activeProfileId, id, type);
+    if (item) return item.status || "watchlist";
 
     // If main profile, fallback to checking Supabase
-    if (activeProfileId === "main") {
-      const { data, error } = await supabase
+    if (user && activeProfileId === "main") {
+      const { data } = await supabase
         .from("watchlist")
         .select("id")
         .eq("user_id", user.id)
@@ -33,34 +37,43 @@ export async function checkInWatchlistClient(id: number, type: ContentType): Pro
         .eq("type", type)
         .maybeSingle();
 
-      if (!error && data) {
-        return true;
+      if (data) {
+        return "watchlist";
       }
     }
 
-    return false;
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
 /**
- * Adds an item to the active profile's watchlist
+ * Checks if media item is in the active profile's watchlist
+ */
+export async function checkInWatchlistClient(id: number, type: ContentType): Promise<boolean> {
+  const status = await getWatchlistStatusClient(id, type);
+  return status !== null;
+}
+
+/**
+ * Adds or updates an item to the active profile's watchlist with status
  */
 export async function addToWatchlistClient(
-  item: SavedMovieDetails
+  item: SavedMovieDetails,
+  status: WatchlistStatus = "watchlist"
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: "You must be logged in to add to your watchlist" };
 
-    const activeProfileId = getActiveProfileId(user.id);
+    const uid = user?.id || "guest";
+    const activeProfileId = getActiveProfileId(uid);
 
     // Save to active profile's isolated storage
-    addToProfileWatchlist(user.id, activeProfileId, {
+    addToProfileWatchlist(user?.id, activeProfileId, {
       id: item.id,
       type: item.type,
       adult: item.adult,
@@ -69,10 +82,11 @@ export async function addToWatchlistClient(
       release_date: item.release_date,
       title: item.title,
       vote_average: item.vote_average,
+      status,
     });
 
-    // If main profile, also sync to Supabase
-    if (activeProfileId === "main") {
+    // If main profile and user is logged in, also sync to Supabase
+    if (user && activeProfileId === "main") {
       await supabase.from("watchlist").upsert({
         user_id: user.id,
         id: item.id,
@@ -88,7 +102,7 @@ export async function addToWatchlistClient(
 
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || "Failed to add to watchlist" };
+    return { success: false, error: err?.message || "Failed to update watchlist" };
   }
 }
 
@@ -104,15 +118,15 @@ export async function removeFromWatchlistClient(
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: "You must be logged in" };
 
-    const activeProfileId = getActiveProfileId(user.id);
+    const uid = user?.id || "guest";
+    const activeProfileId = getActiveProfileId(uid);
 
-    // Remove from active profile's isolated storage
-    removeFromProfileWatchlist(user.id, activeProfileId, id, type);
+    // Remove from profile storage
+    removeFromProfileWatchlist(user?.id, activeProfileId, id, type);
 
-    // If main profile, also remove from Supabase
-    if (activeProfileId === "main") {
+    // If main profile and user is logged in, also remove from Supabase
+    if (user && activeProfileId === "main") {
       await supabase
         .from("watchlist")
         .delete()

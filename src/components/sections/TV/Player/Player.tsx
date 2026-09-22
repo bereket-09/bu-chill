@@ -81,10 +81,14 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     }));
   }, [omssData]);
 
+  const { data: user } = useSupabaseUser();
+  const effectiveUserId = user?.id || "guest";
+  const activeProfileId = getActiveProfileId(effectiveUserId);
+
   // Local storage watch progress check for instant resume on refresh
   const storedProgress = useMemo(
-    () => getStoredProgress("tv", id, episode.season_number, episode.episode_number),
-    [id, episode.season_number, episode.episode_number]
+    () => getStoredProgress("tv", id, episode.season_number, episode.episode_number, activeProfileId),
+    [id, episode.season_number, episode.episode_number, activeProfileId]
   );
   const initialPosition = useMemo(
     () => Math.max(storedProgress?.currentTime || 0, startAt || 0),
@@ -111,11 +115,11 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
   }, [showResumeBanner]);
 
   const handleStartOver = useCallback(() => {
-    clearStoredProgress("tv", id, episode.season_number, episode.episode_number);
+    clearStoredProgress("tv", id, episode.season_number, episode.episode_number, activeProfileId);
     currentTimeRef.current = 0;
     setActivePlaybackTime(0);
     setShowResumeBanner(false);
-  }, [id, episode.season_number, episode.episode_number]);
+  }, [id, episode.season_number, episode.episode_number, activeProfileId]);
 
   const players = useMemo(
     () =>
@@ -129,7 +133,6 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     [id, episode.season_number, episode.episode_number, activePlaybackTime, nativeSources]
   );
 
-  const { data: user } = useSupabaseUser();
   const idle = useIdle(3000);
   const [sourceOpened, sourceHandlers] = useDisclosure(false);
   const [episodeOpened, episodeHandlers] = useDisclosure(false);
@@ -147,6 +150,7 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     const pos = initialPosition > 0 ? initialPosition : 1;
 
     saveStoredProgress({
+      profileId: pid,
       mediaType: "tv",
       mediaId: id,
       title: props.seriesName || tv.name,
@@ -392,6 +396,7 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
                 onTimeUpdate={(time, dur) => {
                   currentTimeRef.current = time;
                   saveStoredProgress({
+                    profileId: activeProfileId,
                     mediaType: "tv",
                     mediaId: id,
                     season: episode.season_number,

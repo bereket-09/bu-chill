@@ -29,11 +29,8 @@ export const getMoviePlayers = (
 ): PlayersProps[] => {
   const fallbackEmbeds: PlayersProps[] = [
     {
-      title: "VidLink (English HD - Recommended)",
-      source: withEnglishDefaults(
-        `https://vidlink.pro/movie/${id}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
-        startAt
-      ),
+      title: "CineSrc (English - Recommended)",
+      source: withEnglishDefaults(`https://cinesrc.st/embed/movie/${id}`, startAt),
       type: "embed",
       recommended: true,
       fast: true,
@@ -41,8 +38,11 @@ export const getMoviePlayers = (
       resumable: true,
     },
     {
-      title: "Bingr Stream (Ultra Fast / No Ads)",
-      source: `https://bingr.one/watch/movie/${id}`,
+      title: "VidLink (English HD)",
+      source: withEnglishDefaults(
+        `https://vidlink.pro/movie/${id}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
+        startAt
+      ),
       type: "embed",
       recommended: true,
       fast: true,
@@ -76,16 +76,16 @@ export const getMoviePlayers = (
       resumable: true,
     },
     {
-      title: "CineSrc (English)",
-      source: withEnglishDefaults(`https://cinesrc.st/embed/movie/${id}`, startAt),
+      title: "Vidbolt (English)",
+      source: withEnglishDefaults(`https://vidbolt.xyz/movie/${id}`, startAt),
       type: "embed",
       fast: true,
       ads: false,
       resumable: true,
     },
     {
-      title: "Vidbolt (English)",
-      source: withEnglishDefaults(`https://vidbolt.xyz/movie/${id}`, startAt),
+      title: "Bingr Stream (Fast Backup)",
+      source: `https://bingr.one/watch/movie/${id}`,
       type: "embed",
       fast: true,
       ads: false,
@@ -148,9 +148,9 @@ export const getTvShowPlayers = (
 ): PlayersProps[] => {
   const fallbackEmbeds: PlayersProps[] = [
     {
-      title: "VidLink (English HD - Recommended)",
+      title: "CineSrc (English - Recommended)",
       source: withEnglishDefaults(
-        `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
+        `https://cinesrc.st/embed/tv/${id}?s=${season}&e=${episode}&color=f5a524&autoplay=true&autonext=true`,
         startAt
       ),
       type: "embed",
@@ -160,8 +160,11 @@ export const getTvShowPlayers = (
       resumable: true,
     },
     {
-      title: "Bingr Stream (Ultra Fast / No Ads)",
-      source: `https://bingr.one/watch/tv/${id}/${season}/${episode}`,
+      title: "VidLink (English HD)",
+      source: withEnglishDefaults(
+        `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
+        startAt
+      ),
       type: "embed",
       recommended: true,
       fast: true,
@@ -198,19 +201,16 @@ export const getTvShowPlayers = (
       resumable: true,
     },
     {
-      title: "CineSrc (English)",
-      source: withEnglishDefaults(
-        `https://cinesrc.st/embed/tv/${id}?s=${season}&e=${episode}&color=f5a524&autoplay=true&autonext=true`,
-        startAt
-      ),
+      title: "Vidbolt (English)",
+      source: withEnglishDefaults(`https://vidbolt.xyz/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       fast: true,
       ads: false,
       resumable: true,
     },
     {
-      title: "Vidbolt (English)",
-      source: withEnglishDefaults(`https://vidbolt.xyz/tv/${id}/${season}/${episode}`, startAt),
+      title: "Bingr Stream (Fast Backup)",
+      source: `https://bingr.one/watch/tv/${id}/${season}/${episode}`,
       type: "embed",
       fast: true,
       ads: false,

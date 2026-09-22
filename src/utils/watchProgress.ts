@@ -1,3 +1,5 @@
+import { getActiveProfileId } from "@/services/profileStorage";
+
 export interface WatchProgressItem {
   mediaId: string | number;
   mediaType: "movie" | "tv";
@@ -16,27 +18,31 @@ export const getWatchProgressKey = (
   mediaType: "movie" | "tv",
   mediaId: string | number,
   season?: number,
-  episode?: number
+  episode?: number,
+  profileId?: string
 ): string => {
+  const pid = profileId || getActiveProfileId();
   if (mediaType === "tv" && season !== undefined && episode !== undefined) {
-    return `${PREFIX}tv_${mediaId}_s${season}_e${episode}`;
+    return `${PREFIX}${pid}_tv_${mediaId}_s${season}_e${episode}`;
   }
-  return `${PREFIX}${mediaType}_${mediaId}`;
+  return `${PREFIX}${pid}_${mediaType}_${mediaId}`;
 };
 
 /**
- * Retrieves the stored watch progress from localStorage
+ * Retrieves the stored watch progress from localStorage scoped by profile
  */
 export const getStoredProgress = (
   mediaType: "movie" | "tv",
   mediaId: string | number,
   season?: number,
-  episode?: number
+  episode?: number,
+  profileId?: string
 ): WatchProgressItem | null => {
   if (typeof window === "undefined") return null;
 
   try {
-    const key = getWatchProgressKey(mediaType, mediaId, season, episode);
+    const pid = profileId || getActiveProfileId();
+    const key = getWatchProgressKey(mediaType, mediaId, season, episode, pid);
     const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw) as WatchProgressItem;
@@ -45,30 +51,17 @@ export const getStoredProgress = (
       }
     }
 
-    // Fallback check for Filmu / Bingr progress key
-    const filmuKey =
-      mediaType === "tv"
-        ? season !== undefined && episode !== undefined
-          ? `filmu_progress_${mediaId}_s${season}_e${episode}`
-          : null
-        : `filmu_progress_${mediaId}`;
-
-    if (filmuKey) {
-      const filmuRaw = localStorage.getItem(filmuKey);
-      if (filmuRaw) {
-        const parsed = JSON.parse(filmuRaw);
-        const time = parsed.currentTime || parsed.time;
-        if (typeof time === "number" && time > 0) {
-          return {
-            mediaId,
-            mediaType,
-            season,
-            episode,
-            currentTime: time,
-            duration: parsed.duration || 0,
-            percentage: 0,
-            updatedAt: Date.now(),
-          };
+    // Only "main" profile checks the legacy un-prefixed key to preserve existing watch progress
+    if (pid === "main") {
+      const legacyKey =
+        mediaType === "tv" && season !== undefined && episode !== undefined
+          ? `${PREFIX}tv_${mediaId}_s${season}_e${episode}`
+          : `${PREFIX}${mediaType}_${mediaId}`;
+      const legacyRaw = localStorage.getItem(legacyKey);
+      if (legacyRaw) {
+        const parsed = JSON.parse(legacyRaw) as WatchProgressItem;
+        if (typeof parsed?.currentTime === "number" && !isNaN(parsed.currentTime) && parsed.currentTime > 0) {
+          return parsed;
         }
       }
     }
@@ -83,7 +76,7 @@ export const getStoredProgress = (
 let lastSaveTime = 0;
 
 /**
- * Saves current watch progress to localStorage
+ * Saves current watch progress to localStorage scoped by profile
  */
 export const saveStoredProgress = (item: {
   mediaType: "movie" | "tv";
@@ -93,6 +86,7 @@ export const saveStoredProgress = (item: {
   episode?: number;
   currentTime: number;
   duration?: number;
+  profileId?: string;
 }): void => {
   if (typeof window === "undefined") return;
   if (!item.currentTime || isNaN(item.currentTime) || item.currentTime < 2) return;
@@ -103,6 +97,7 @@ export const saveStoredProgress = (item: {
   lastSaveTime = now;
 
   try {
+    const pid = item.profileId || getActiveProfileId();
     const duration = item.duration && !isNaN(item.duration) ? item.duration : 0;
     const percentage = duration > 0 ? Math.min(100, Math.round((item.currentTime / duration) * 100)) : 0;
 
@@ -118,13 +113,13 @@ export const saveStoredProgress = (item: {
       updatedAt: now,
     };
 
-    const key = getWatchProgressKey(item.mediaType, item.mediaId, item.season, item.episode);
+    const key = getWatchProgressKey(item.mediaType, item.mediaId, item.season, item.episode, pid);
     localStorage.setItem(key, JSON.stringify(data));
 
-    // Save TV last watched episode pointer
+    // Save TV last watched episode pointer scoped to this profile
     if (item.mediaType === "tv" && item.season !== undefined && item.episode !== undefined) {
       localStorage.setItem(
-        `cinextma_last_episode_${item.mediaId}`,
+        `cinextma_last_episode_${pid}_${item.mediaId}`,
         JSON.stringify({
           season: item.season,
           episode: item.episode,
@@ -133,43 +128,35 @@ export const saveStoredProgress = (item: {
         })
       );
     }
-
-    // Save Filmu / Bingr format compatibility
-    const filmuKey =
-      item.mediaType === "tv" && item.season !== undefined && item.episode !== undefined
-        ? `filmu_progress_${item.mediaId}_s${item.season}_e${item.episode}`
-        : `filmu_progress_${item.mediaId}`;
-
-    localStorage.setItem(
-      filmuKey,
-      JSON.stringify({
-        currentTime: data.currentTime,
-        duration: data.duration,
-        time: data.currentTime,
-      })
-    );
   } catch (err) {
     console.warn("Failed to save watch progress to localStorage:", err);
   }
 };
 
 /**
- * Clears saved watch progress (e.g. when completed or restarted)
+ * Clears saved watch progress (e.g. when completed or restarted) scoped by profile
  */
 export const clearStoredProgress = (
   mediaType: "movie" | "tv",
   mediaId: string | number,
   season?: number,
-  episode?: number
+  episode?: number,
+  profileId?: string
 ): void => {
   if (typeof window === "undefined") return;
   try {
-    const key = getWatchProgressKey(mediaType, mediaId, season, episode);
+    const pid = profileId || getActiveProfileId();
+    const key = getWatchProgressKey(mediaType, mediaId, season, episode, pid);
     localStorage.removeItem(key);
     if (mediaType === "tv" && season !== undefined && episode !== undefined) {
-      localStorage.removeItem(`filmu_progress_${mediaId}_s${season}_e${episode}`);
-    } else {
-      localStorage.removeItem(`filmu_progress_${mediaId}`);
+      localStorage.removeItem(`cinextma_last_episode_${pid}_${mediaId}`);
+    }
+    if (pid === "main") {
+      const legacyKey =
+        mediaType === "tv" && season !== undefined && episode !== undefined
+          ? `${PREFIX}tv_${mediaId}_s${season}_e${episode}`
+          : `${PREFIX}${mediaType}_${mediaId}`;
+      localStorage.removeItem(legacyKey);
     }
   } catch {}
 };

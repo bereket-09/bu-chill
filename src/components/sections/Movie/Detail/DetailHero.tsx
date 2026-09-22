@@ -20,6 +20,8 @@ import { ArrowLeft } from "@/utils/icons";
 import { getStoredProgress, formatTimeDisplay, WatchProgressItem } from "@/utils/watchProgress";
 import { siteConfig } from "@/config/site";
 
+import { getActiveProfileId } from "@/services/profileStorage";
+
 interface DetailHeroProps {
   movie: AppendToResponse<MovieDetails, ("images" | "videos")[], "movie">;
 }
@@ -33,7 +35,13 @@ export const DetailHero: React.FC<DetailHeroProps> = ({ movie }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    setSavedProgress(getStoredProgress("movie", movie.id));
+    const updateProgress = () => {
+      const pid = getActiveProfileId();
+      setSavedProgress(getStoredProgress("movie", movie.id, undefined, undefined, pid));
+    };
+    updateProgress();
+    window.addEventListener("buchill_profile_changed", updateProgress);
+    return () => window.removeEventListener("buchill_profile_changed", updateProgress);
   }, [movie.id]);
 
   const players = getMoviePlayers(movie.id);
@@ -282,6 +290,9 @@ export const DetailHero: React.FC<DetailHeroProps> = ({ movie }) => {
               </div>
             </Link>
 
+            {/* Watchlist / Status Dropdown (+ Button) */}
+            <BookmarkButton data={bookmarkData} />
+
             {/* Select Server Button (Desktop only - mobile switches inside player) */}
             <button
               type="button"
@@ -294,9 +305,6 @@ export const DetailHero: React.FC<DetailHeroProps> = ({ movie }) => {
 
             {/* Watch Trailer Modal Trigger */}
             <Trailer videos={movie.videos.results} />
-
-            {/* Bookmark / Watchlist */}
-            <BookmarkButton data={bookmarkData} />
 
             {/* Share */}
             <ShareButton id={movie.id} title={title} />

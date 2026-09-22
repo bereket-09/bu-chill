@@ -192,7 +192,11 @@ export function usePlayerEvents(options: UsePlayerEventsOptions = {}) {
 
   const persistToLocalStorage = (data: UnifiedPlayerEventData) => {
     if (!data || data.currentTime <= 0) return;
+    const effectiveUserId = user?.id || "guest";
+    const activeProfileId = getActiveProfileId(effectiveUserId);
+
     saveStoredProgress({
+      profileId: activeProfileId,
       mediaType: data.mediaType || mediaType,
       mediaId: data.mediaId || mediaId || 0,
       title,
@@ -202,8 +206,6 @@ export function usePlayerEvents(options: UsePlayerEventsOptions = {}) {
       duration: data.duration,
     });
 
-    const effectiveUserId = user?.id || "guest";
-    const activeProfileId = getActiveProfileId(effectiveUserId);
     saveProfileHistoryItem(effectiveUserId, activeProfileId, {
       media_id: Number(data.mediaId || mediaId || 0),
       type: data.mediaType || mediaType,
@@ -220,6 +222,11 @@ export function usePlayerEvents(options: UsePlayerEventsOptions = {}) {
     persistToLocalStorage(data);
 
     if (!saveHistory || !user) return;
+    const effectiveUserId = user?.id || "guest";
+    const activeProfileId = getActiveProfileId(effectiveUserId);
+    // Only primary main profile syncs to Supabase shared account history
+    if (activeProfileId !== "main") return;
+
     if (diff(data.currentTime, lastCurrentTime) <= 5) return; // prevent spam
 
     const payload: UnifiedPlayerEventData = {
