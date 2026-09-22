@@ -182,16 +182,16 @@ function AuthContent() {
   return (
     <div className="relative min-h-screen w-full bg-black text-white font-sans flex flex-col justify-between overflow-x-hidden select-none">
       {/* 3D Animated Moving Movie Tiles Marquee Background */}
-      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-30 dark:opacity-40">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden opacity-75 sm:opacity-85">
         {!isEmpty(IMAGES) && (
           <ThreeDMarquee className="absolute inset-0 scale-105" images={IMAGES} aspect="poster" />
         )}
       </div>
 
-      {/* Dark Vignette & Gradient Overlays for Ultimate Readability */}
-      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-black/85 via-black/60 to-black/95" />
-      <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.85)_100%)] backdrop-blur-[1.5px]" />
-      <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 w-[550px] h-[380px] bg-primary/15 rounded-full blur-[140px] -z-10" />
+      {/* Subtle Cinematic Vignette & Ambient Glow */}
+      <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-b from-black/50 via-black/20 to-black/70" />
+      <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,transparent_35%,rgba(0,0,0,0.6)_100%)]" />
+      <div className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 w-[550px] h-[380px] bg-primary/20 rounded-full blur-[140px] -z-10" />
 
       {/* Top Header */}
       <header className="relative z-10 flex items-center justify-end px-6 py-5 md:px-12">

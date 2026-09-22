@@ -74,9 +74,9 @@ const AuthForms: React.FC = () => {
     <div
       className={cn(
         "relative z-50 flex h-screen w-screen flex-col items-center justify-center overflow-hidden",
-        "before:pointer-events-none before:absolute before:inset-0 before:z-20 before:opacity-40 dark:before:opacity-70",
-        "dark:before:bg-[radial-gradient(circle_at_center,transparent_0%,black_100%)]",
-        "before:bg-[radial-gradient(circle_at_center,transparent_0%,white_100%)]",
+        "before:pointer-events-none before:absolute before:inset-0 before:z-20 before:opacity-30 dark:before:opacity-40",
+        "dark:before:bg-[radial-gradient(circle_at_center,transparent_20%,black_100%)]",
+        "before:bg-[radial-gradient(circle_at_center,transparent_20%,white_100%)]",
         SpacingClasses.reset,
       )}
     >
