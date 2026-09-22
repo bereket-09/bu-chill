@@ -73,6 +73,8 @@ const ProfileManager: React.FC = () => {
   // Profiles list
   const [profiles, setProfiles] = useState<UserProfileItem[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string>("main");
+  const [isMoviesLoading, setIsMoviesLoading] = useState(false);
+  const [switchingProfileId, setSwitchingProfileId] = useState<string | null>(null);
 
   // In-progress continue watching items & watchlist items
   const [continueWatchingItems, setContinueWatchingItems] = useState<ProfileHistoryItem[]>([]);
@@ -92,7 +94,9 @@ const ProfileManager: React.FC = () => {
 
   const effectiveUserId = user?.id || "guest";
 
-  const loadWatchingItems = useCallback((uid: string, pid: string) => {
+  const loadWatchingItems = useCallback(async (uid: string, pid: string) => {
+    setIsMoviesLoading(true);
+
     const history = getProfileHistory(uid, pid);
     const inProgress = history.filter(
       (item) => !item.completed && (!item.duration || item.last_position < item.duration * 0.95)
@@ -104,48 +108,53 @@ const ProfileManager: React.FC = () => {
     setWatchlistItems(wl);
 
     if (user?.id) {
-      getUserHistories(50)
-        .then((res) => {
-          if (res.success && res.data && res.data.length > 0) {
-            setContinueWatchingItems((prev) => {
-              const map = new Map<string, ProfileHistoryItem>();
-              prev.forEach((item) => {
-                const key = `${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`;
-                map.set(key, item);
-              });
-              res.data!.forEach((s) => {
-                const key = `${s.type}-${s.media_id}-${s.season || 0}-${s.episode || 0}`;
-                if (!map.has(key) && !s.completed) {
-                  map.set(key, {
-                    id: s.id || s.media_id,
-                    media_id: s.media_id,
-                    type: (s.type === "tv" ? "tv" : "movie") as "movie" | "tv",
-                    title: s.title,
-                    poster_path: s.poster_path || undefined,
-                    backdrop_path: s.backdrop_path || undefined,
-                    duration: s.duration,
-                    last_position: s.last_position,
-                    completed: s.completed,
-                    season: s.season,
-                    episode: s.episode,
-                    updated_at: s.updated_at,
-                  });
-                } else if (map.has(key)) {
-                  const existing = map.get(key)!;
-                  if (!existing.backdrop_path && s.backdrop_path) {
-                    existing.backdrop_path = s.backdrop_path;
-                  }
-                  if (!existing.poster_path && s.poster_path) {
-                    existing.poster_path = s.poster_path;
-                  }
-                }
-              });
-              return Array.from(map.values());
+      try {
+        const res = await getUserHistories(50);
+        if (res.success && res.data && res.data.length > 0) {
+          setContinueWatchingItems((prev) => {
+            const map = new Map<string, ProfileHistoryItem>();
+            prev.forEach((item) => {
+              const key = `${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`;
+              map.set(key, item);
             });
-          }
-        })
-        .catch(() => {});
+            res.data!.forEach((s) => {
+              const key = `${s.type}-${s.media_id}-${s.season || 0}-${s.episode || 0}`;
+              if (!map.has(key) && !s.completed) {
+                map.set(key, {
+                  id: s.id || s.media_id,
+                  media_id: s.media_id,
+                  type: (s.type === "tv" ? "tv" : "movie") as "movie" | "tv",
+                  title: s.title,
+                  poster_path: s.poster_path || undefined,
+                  backdrop_path: s.backdrop_path || undefined,
+                  duration: s.duration,
+                  last_position: s.last_position,
+                  completed: s.completed,
+                  season: s.season,
+                  episode: s.episode,
+                  updated_at: s.updated_at,
+                });
+              } else if (map.has(key)) {
+                const existing = map.get(key)!;
+                if (!existing.backdrop_path && s.backdrop_path) {
+                  existing.backdrop_path = s.backdrop_path;
+                }
+                if (!existing.poster_path && s.poster_path) {
+                  existing.poster_path = s.poster_path;
+                }
+              }
+            });
+            return Array.from(map.values());
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch user histories:", err);
+      }
     }
+
+    // Brief smooth transition for natural feedback
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    setIsMoviesLoading(false);
   }, [user?.id]);
 
   // Auto-repair missing art in ProfileManager
@@ -338,7 +347,7 @@ const ProfileManager: React.FC = () => {
   };
 
   // Select profile and switch
-  const handleSelectProfile = (profile: UserProfileItem) => {
+  const handleSelectProfile = async (profile: UserProfileItem) => {
     if (isManageMode) {
       handleOpenEdit(profile);
       return;
@@ -347,9 +356,15 @@ const ProfileManager: React.FC = () => {
     const uid = user?.id || "guest";
     const wasAlreadyActive = activeProfileId === profile.id;
 
+    setSwitchingProfileId(profile.id);
+    setIsMoviesLoading(true);
+
     switchActiveProfile(uid, profile.id);
     setActiveProfileId(profile.id);
-    loadWatchingItems(uid, profile.id);
+    await loadWatchingItems(uid, profile.id);
+
+    setSwitchingProfileId(null);
+    setIsMoviesLoading(false);
 
     if (wasAlreadyActive) {
       addToast({
@@ -360,7 +375,7 @@ const ProfileManager: React.FC = () => {
     } else {
       addToast({
         title: `Switched to ${profile.name}`,
-        description: "Watch history and preferences updated",
+        description: `Loaded watch history and movies for ${profile.name}`,
         color: "primary",
       });
     }
@@ -403,7 +418,7 @@ const ProfileManager: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex h-[75dvh] items-center justify-center">
-        <Spinner size="lg" color="primary" label="Loading profiles..." />
+        <Spinner size="lg" color="primary" label="Loading profiles and movie catalog..." />
       </div>
     );
   }
@@ -625,6 +640,14 @@ const ProfileManager: React.FC = () => {
                     className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
 
+                  {/* Loading Spinner Overlay when switching to this profile */}
+                  {switchingProfileId === profile.id && (
+                    <div className="absolute inset-0 bg-black/75 rounded-full flex flex-col items-center justify-center backdrop-blur-xs z-10 animate-in fade-in duration-200">
+                      <Spinner size="sm" color="primary" />
+                      <span className="text-[9px] font-bold text-primary mt-1">Loading...</span>
+                    </div>
+                  )}
+
                   {/* Edit Pencil Overlay when in Manage Mode */}
                   {isManageMode && (
                     <div className="absolute inset-0 bg-black/65 rounded-full flex items-center justify-center border-2 border-white/80 backdrop-blur-[1px] transition-opacity duration-200">
@@ -671,9 +694,15 @@ const ProfileManager: React.FC = () => {
               href="/movies"
               className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-black font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(255,255,255,0.25)] transition hover:bg-white/90 hover:scale-105 active:scale-95"
             >
-              <FaPlay className="text-[11px]" />
+              {isMoviesLoading ? (
+                <Spinner size="sm" color="current" />
+              ) : (
+                <FaPlay className="text-[11px]" />
+              )}
               <span>
-                Browse as {profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}
+                {isMoviesLoading
+                  ? `Loading movies for ${profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}...`
+                  : `Browse as ${profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}`}
               </span>
             </Link>
 
@@ -688,8 +717,46 @@ const ProfileManager: React.FC = () => {
           </div>
         )}
 
+        {/* Movie Loading Skeletons when changing profile */}
+        {!isManageMode && isMoviesLoading && (
+          <section className="w-full max-w-6xl mt-14 sm:mt-18 px-2 sm:px-4 animate-in fade-in duration-300">
+            <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <Spinner size="sm" color="primary" />
+                <h2 className="text-lg sm:text-xl font-bold text-white tracking-wide">
+                  Loading Movies & Continue Watching...
+                </h2>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium border border-primary/30">
+                  {profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}
+                </span>
+              </div>
+              <span className="text-xs text-white/45 font-medium animate-pulse">
+                Fetching profile library
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="flex flex-col rounded-2xl overflow-hidden bg-neutral-900/60 border border-white/10 animate-pulse shadow-lg"
+                >
+                  <div className="relative aspect-video w-full bg-neutral-800 flex items-center justify-center">
+                    <FaFilm className="w-8 h-8 text-white/20" />
+                  </div>
+                  <div className="p-4 flex flex-col gap-3">
+                    <div className="h-4 bg-white/15 rounded-md w-3/4" />
+                    <div className="h-3 bg-white/10 rounded-md w-1/2" />
+                    <div className="h-9 bg-white/10 rounded-xl w-full mt-1" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Continue Watching Section (Only shown if titles in progress exist) */}
-        {!isManageMode && continueWatchingItems.length > 0 && (
+        {!isManageMode && !isMoviesLoading && continueWatchingItems.length > 0 && (
           <section className="w-full max-w-6xl mt-14 sm:mt-18 px-2 sm:px-4">
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5 sm:gap-3">
@@ -833,8 +900,8 @@ const ProfileManager: React.FC = () => {
           </section>
         )}
 
-        {/* Watchlist Section (Only shown if watchlist has items) */}
-        {!isManageMode && watchlistItems.length > 0 && (
+        {/* Watchlist Section (Only shown if watchlist has items and not loading) */}
+        {!isManageMode && !isMoviesLoading && watchlistItems.length > 0 && (
           <section className="w-full max-w-6xl mt-12 sm:mt-16 px-2 sm:px-4">
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5 sm:gap-3">
@@ -893,6 +960,45 @@ const ProfileManager: React.FC = () => {
                   </div>
                 </Link>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Ready Library State (Shown if profile has no items and not loading) */}
+        {!isManageMode && !isMoviesLoading && continueWatchingItems.length === 0 && watchlistItems.length === 0 && (
+          <section className="w-full max-w-6xl mt-14 sm:mt-18 px-2 sm:px-4 animate-in fade-in duration-300">
+            <div className="flex flex-col items-center justify-center p-8 sm:p-12 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-center">
+              <div className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-3">
+                🍿
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-white mb-1.5">
+                {profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}&apos;s Library is Ready
+              </h3>
+              <p className="text-xs sm:text-sm text-white/50 max-w-md mx-auto mb-6 leading-relaxed">
+                No movies or TV shows in progress yet for this profile. Start watching titles to build your personalized watch queue and history.
+              </p>
+              <div className="flex items-center gap-3">
+                <Link href="/movies">
+                  <Button
+                    color="primary"
+                    variant="solid"
+                    size="sm"
+                    startContent={<FaFilm className="w-3 h-3" />}
+                  >
+                    Explore Movies
+                  </Button>
+                </Link>
+                <Link href="/tv">
+                  <Button
+                    color="warning"
+                    variant="flat"
+                    size="sm"
+                    startContent={<FaTv className="w-3 h-3" />}
+                  >
+                    Explore TV Shows
+                  </Button>
+                </Link>
+              </div>
             </div>
           </section>
         )}
