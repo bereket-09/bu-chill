@@ -9,23 +9,18 @@ import {
   SelectItem,
   addToast,
   Spinner,
-  Progress,
-  Chip,
 } from "@heroui/react";
 import {
   FaPlay,
   FaTrash,
-  FaXmark,
   FaGear,
-  FaClockRotateLeft,
   FaFilm,
   FaTv,
-  FaStar,
   FaClock,
   FaCheck,
 } from "react-icons/fa6";
 import { LuPopcorn, LuUsers } from "react-icons/lu";
-import { IoChevronBack, IoChevronForward } from "react-icons/io5";
+import { IoChevronBack, IoChevronForward, IoGrid, IoMenuOutline } from "react-icons/io5";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import {
   DEFAULT_AVATAR_ID,
@@ -51,7 +46,7 @@ import {
 } from "@/services/profileStorage";
 import { getUserHistories, getMediaArt } from "@/actions/histories";
 import { getWatchlist } from "@/actions/library";
-import { formatDuration, getImageUrl, timeAgo } from "@/utils/movies";
+import { formatDuration, getImageUrl } from "@/utils/movies";
 import ConfirmationModal from "@/components/ui/overlay/ConfirmationModal";
 import { useDisclosure } from "@mantine/hooks";
 
@@ -67,7 +62,9 @@ const WITTY_TAGLINES = [
 ];
 
 type ContentFilter = "all" | "movie" | "tv";
+type LibraryStatusFilter = "all" | "watching" | "watchlist" | "planned" | "watched";
 type SortOption = "created_at" | "vote_average" | "release_date" | "title";
+type ViewLayout = "grid" | "shelf";
 
 const SORT_OPTIONS: { key: SortOption; label: string }[] = [
   { key: "created_at", label: "Date Added" },
@@ -75,6 +72,29 @@ const SORT_OPTIONS: { key: SortOption; label: string }[] = [
   { key: "release_date", label: "Release Date" },
   { key: "title", label: "Title" },
 ];
+
+interface UnifiedLibraryItem {
+  key: string;
+  media_id: number;
+  type: "movie" | "tv";
+  title: string;
+  poster_path?: string | null;
+  backdrop_path?: string | null;
+  release_date?: string;
+  vote_average?: number;
+  created_at?: string;
+  updated_at?: string;
+  duration: number;
+  last_position: number;
+  season?: number;
+  episode?: number;
+  completed: boolean;
+  isWatching: boolean;
+  isWatchlist: boolean;
+  isPlanned: boolean;
+  isWatched: boolean;
+  primaryStatus: "watching" | "watchlist" | "planned" | "watched";
+}
 
 export const MySpace: React.FC = () => {
   const router = useRouter();
@@ -94,33 +114,30 @@ export const MySpace: React.FC = () => {
   // Rotating tagline index
   const [taglineIdx, setTaglineIdx] = useState(0);
 
-  // Library & Watchlist filters
+  // Filters & Layout
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "watchlist" | "planned" | "completed">("all");
+  const [statusFilter, setStatusFilter] = useState<LibraryStatusFilter>("all");
   const [sortOption, setSortOption] = useState<SortOption>("created_at");
+  const [viewLayout, setViewLayout] = useState<ViewLayout>("grid");
 
   // Profile data
   const [watchlistItems, setWatchlistItems] = useState<ProfileWatchlistItem[]>([]);
   const [historyItems, setHistoryItems] = useState<ProfileHistoryItem[]>([]);
 
-  // Horizontal scroll shelf refs
-  const watchingScrollRef = useRef<HTMLDivElement>(null);
-  const watchlistScrollRef = useRef<HTMLDivElement>(null);
-  const historyScrollRef = useRef<HTMLDivElement>(null);
+  // Shelf ref for horizontal scrolling
+  const shelfScrollRef = useRef<HTMLDivElement>(null);
 
-  const scrollShelf = (ref: React.RefObject<HTMLDivElement | null>, direction: "left" | "right") => {
-    if (!ref.current) return;
-    const distance = ref.current.clientWidth * 0.75;
-    ref.current.scrollBy({
+  const scrollShelf = (direction: "left" | "right") => {
+    if (!shelfScrollRef.current) return;
+    const distance = shelfScrollRef.current.clientWidth * 0.75;
+    shelfScrollRef.current.scrollBy({
       left: direction === "left" ? -distance : distance,
       behavior: "smooth",
     });
   };
 
-  // Confirmation Modals
-  const [clearWatchlistOpened, { open: openClearWatchlist, close: closeClearWatchlist }] =
-    useDisclosure(false);
-  const [clearHistoryOpened, { open: openClearHistory, close: closeClearHistory }] =
+  // Confirmation Modal
+  const [clearModalOpened, { open: openClearModal, close: closeClearModal }] =
     useDisclosure(false);
 
   // Rotate tagline
@@ -266,7 +283,7 @@ export const MySpace: React.FC = () => {
     };
   }, [user, activeProfileId]);
 
-  // Auto-repair missing artwork for continue watching / history items
+  // Auto-repair missing artwork for items
   useEffect(() => {
     const missing = historyItems.filter((h) => !h.backdrop_path && !h.poster_path);
     if (missing.length === 0) return;
@@ -321,113 +338,208 @@ export const MySpace: React.FC = () => {
     );
   }, [profiles, activeProfileId]);
 
-  // Continue watching items (in-progress, not completed)
-  const continueWatchingItems = useMemo(() => {
-    return historyItems.filter((item) => {
-      if (item.completed) return false;
-      if (item.duration > 0 && item.last_position >= item.duration * 0.92) return false;
-      return true;
+  // Unified Media Collection (combines history and watchlist items into one cohesive list)
+  const unifiedMediaList = useMemo(() => {
+    const map = new Map<string, UnifiedLibraryItem>();
+
+    // 1. Process history items
+    historyItems.forEach((h) => {
+      const mediaId = Number(h.media_id);
+      const key = `${h.type}-${mediaId}`;
+      const isCompleted = Boolean(h.completed || (h.duration > 0 && h.last_position >= h.duration * 0.9));
+      const isWatching = !isCompleted && (h.last_position > 5 || (h.duration > 0 && h.last_position < h.duration * 0.92));
+      const isWatched = isCompleted;
+
+      map.set(key, {
+        key,
+        media_id: mediaId,
+        type: h.type,
+        title: h.title,
+        poster_path: h.poster_path,
+        backdrop_path: h.backdrop_path,
+        duration: h.duration || 0,
+        last_position: h.last_position || 0,
+        season: h.season,
+        episode: h.episode,
+        completed: isCompleted,
+        updated_at: h.updated_at,
+        created_at: h.updated_at,
+        isWatching,
+        isWatchlist: false,
+        isPlanned: false,
+        isWatched,
+        primaryStatus: isWatching ? "watching" : isWatched ? "watched" : "watching",
+      });
     });
-  }, [historyItems]);
 
-  // Already watched items
-  const alreadyWatchedItems = useMemo(() => {
-    return historyItems.filter((item) => item.completed || item.last_position >= item.duration * 0.9);
-  }, [historyItems]);
+    // 2. Process watchlist items
+    watchlistItems.forEach((w) => {
+      const mediaId = Number(w.id);
+      const key = `${w.type}-${mediaId}`;
+      const status = w.status || "watchlist";
+      const isPlanned = status === "planned";
+      const isWatched = status === "completed";
+      const isWatchlist = status === "watchlist" || (!isPlanned && !isWatched);
 
-  // Status counts for badges
+      if (map.has(key)) {
+        const existing = map.get(key)!;
+        existing.isWatchlist = existing.isWatchlist || isWatchlist;
+        existing.isPlanned = existing.isPlanned || isPlanned;
+        existing.isWatched = existing.isWatched || isWatched;
+        if (!existing.poster_path && w.poster_path) existing.poster_path = w.poster_path;
+        if (!existing.backdrop_path && w.backdrop_path) existing.backdrop_path = w.backdrop_path;
+        if (!existing.title && w.title) existing.title = w.title;
+        if (w.release_date) existing.release_date = w.release_date;
+        if (w.vote_average) existing.vote_average = w.vote_average;
+        if (w.created_at) existing.created_at = w.created_at;
+
+        if (!existing.isWatching) {
+          existing.primaryStatus = isWatched ? "watched" : isPlanned ? "planned" : "watchlist";
+        }
+      } else {
+        map.set(key, {
+          key,
+          media_id: mediaId,
+          type: w.type,
+          title: w.title,
+          poster_path: w.poster_path,
+          backdrop_path: w.backdrop_path,
+          release_date: w.release_date,
+          vote_average: w.vote_average,
+          created_at: w.created_at,
+          duration: 0,
+          last_position: 0,
+          completed: isWatched,
+          isWatching: false,
+          isWatchlist,
+          isPlanned,
+          isWatched,
+          primaryStatus: isWatched ? "watched" : isPlanned ? "planned" : "watchlist",
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [historyItems, watchlistItems]);
+
+  // Status counts for filter pills (respecting current content type filter)
   const statusCounts = useMemo(() => {
     let all = 0;
-    let wl = 0;
+    let watching = 0;
+    let watchlist = 0;
     let planned = 0;
-    let completed = 0;
-    watchlistItems.forEach((item) => {
+    let watched = 0;
+
+    unifiedMediaList.forEach((item) => {
       if (contentFilter !== "all" && item.type !== contentFilter) return;
       all++;
-      const s = item.status || "watchlist";
-      if (s === "planned") planned++;
-      else if (s === "completed") completed++;
-      else wl++;
+      if (item.isWatching) watching++;
+      if (item.isWatchlist) watchlist++;
+      if (item.isPlanned) planned++;
+      if (item.isWatched) watched++;
     });
-    return { all, wl, planned, completed };
-  }, [watchlistItems, contentFilter]);
 
-  // Filtered and sorted watchlist
-  const filteredWatchlist = useMemo(() => {
-    let list = [...watchlistItems];
+    return { all, watching, watchlist, planned, watched };
+  }, [unifiedMediaList, contentFilter]);
+
+  // Filtered and sorted items
+  const filteredItems = useMemo(() => {
+    let list = [...unifiedMediaList];
+
+    // Filter by content type
     if (contentFilter !== "all") {
       list = list.filter((item) => item.type === contentFilter);
     }
+
+    // Filter by library status
     if (statusFilter !== "all") {
       list = list.filter((item) => {
-        const s = item.status || "watchlist";
-        return s === statusFilter;
+        switch (statusFilter) {
+          case "watching":
+            return item.isWatching;
+          case "watchlist":
+            return item.isWatchlist;
+          case "planned":
+            return item.isPlanned;
+          case "watched":
+            return item.isWatched;
+          default:
+            return true;
+        }
       });
     }
 
+    // Sorting
     return list.sort((a, b) => {
       switch (sortOption) {
         case "vote_average":
           return (b.vote_average || 0) - (a.vote_average || 0);
         case "release_date":
           return new Date(b.release_date || 0).getTime() - new Date(a.release_date || 0).getTime();
-        case "created_at":
-          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        case "created_at": {
+          const timeA = new Date(a.updated_at || a.created_at || 0).getTime();
+          const timeB = new Date(b.updated_at || b.created_at || 0).getTime();
+          return timeB - timeA;
+        }
         case "title":
         default:
           return (a.title || "").localeCompare(b.title || "");
       }
     });
-  }, [watchlistItems, contentFilter, sortOption]);
+  }, [unifiedMediaList, contentFilter, statusFilter, sortOption]);
 
-  // Remove single item from watchlist
-  const handleRemoveWatchlistItem = (id: number, type: "movie" | "tv", title: string) => {
+  // Remove single item from profile library
+  const handleRemoveItem = (item: UnifiedLibraryItem) => {
     if (!user) return;
-    removeFromProfileWatchlist(user.id, activeProfileId, id, type);
+    const uid = user.id;
+    const pid = activeProfileId;
+
+    // Remove from watchlist
+    removeFromProfileWatchlist(uid, pid, item.media_id, item.type);
+    // Remove from history
+    removeFromProfileHistory(uid, pid, item.media_id, item.type, item.season, item.episode);
+
     addToast({
-      title: `Removed ${title} from watchlist`,
+      title: `Removed ${item.title} from library`,
       color: "warning",
     });
     reloadData();
   };
 
-  // Clear entire watchlist for active profile
-  const handleConfirmClearWatchlist = () => {
+  // Clear items based on current status filter
+  const handleConfirmClear = () => {
     if (!user) return;
-    clearProfileWatchlist(user.id, activeProfileId, contentFilter);
-    addToast({
-      title: `Cleared ${contentFilter === "all" ? "all items" : contentFilter === "movie" ? "movies" : "TV shows"} from watchlist`,
-      color: "success",
-    });
-    closeClearWatchlist();
-    reloadData();
-  };
+    const uid = user.id;
+    const pid = activeProfileId;
 
-  // Remove single item from continue watching
-  const handleRemoveContinueWatching = (
-    mediaId: number,
-    type: "movie" | "tv",
-    season?: number,
-    episode?: number
-  ) => {
-    if (!user) return;
-    removeFromProfileHistory(user.id, activeProfileId, mediaId, type, season, episode);
-    addToast({
-      title: "Removed from continue watching",
-      color: "primary",
-    });
-    reloadData();
-  };
+    if (statusFilter === "all") {
+      clearProfileWatchlist(uid, pid, contentFilter);
+      clearProfileHistory(uid, pid);
+      addToast({
+        title: "Cleared all items from library",
+        color: "success",
+      });
+    } else if (statusFilter === "watching") {
+      clearProfileHistory(uid, pid);
+      addToast({
+        title: "Cleared watching history",
+        color: "success",
+      });
+    } else if (statusFilter === "watched") {
+      clearProfileHistory(uid, pid);
+      addToast({
+        title: "Cleared watched history",
+        color: "success",
+      });
+    } else {
+      clearProfileWatchlist(uid, pid, contentFilter);
+      addToast({
+        title: `Cleared ${statusFilter} items`,
+        color: "success",
+      });
+    }
 
-  // Clear history
-  const handleConfirmClearHistory = () => {
-    if (!user) return;
-    clearProfileHistory(user.id, activeProfileId);
-    addToast({
-      title: "Cleared watch history",
-      color: "success",
-    });
-    closeClearHistory();
+    closeClearModal();
     reloadData();
   };
 
@@ -471,11 +583,10 @@ export const MySpace: React.FC = () => {
 
       <div className="relative z-10 w-full pt-8 md:pt-14 px-4 sm:px-8 md:pl-28 md:pr-12">
         {/* ================================================================= */}
-        {/* SECTION 1: HEADER (USER EMAIL + ROTATING WITTY TAGLINE + SETTINGS) */}
+        {/* HEADER: USER EMAIL + ROTATING TAGLINE + SWITCH PROFILE & SETTINGS  */}
         {/* ================================================================= */}
         <header className="mb-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-white/10 pb-8">
           <div className="flex flex-col gap-1.5 max-w-2xl">
-            {/* Animated Rotating Tagline */}
             <div className="h-7 overflow-hidden relative">
               <p
                 key={taglineIdx}
@@ -506,7 +617,7 @@ export const MySpace: React.FC = () => {
                 variant="flat"
                 size="sm"
                 startContent={<LuUsers className="w-3.5 h-3.5 text-white/70" />}
-                className="bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold"
+                className="bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold cursor-pointer"
               >
                 Switch Profile
               </Button>
@@ -517,7 +628,7 @@ export const MySpace: React.FC = () => {
                 variant="flat"
                 size="sm"
                 startContent={<FaGear className="w-3.5 h-3.5 text-white/70" />}
-                className="bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold"
+                className="bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold cursor-pointer"
               >
                 Settings
               </Button>
@@ -542,7 +653,7 @@ export const MySpace: React.FC = () => {
                     switchActiveProfile(user.id, p.id);
                     addToast({
                       title: `Switched to ${p.name}`,
-                      description: "Watch history and watchlist updated",
+                      description: "Watch history and library updated",
                       color: "primary",
                     });
                   }}
@@ -573,464 +684,191 @@ export const MySpace: React.FC = () => {
         )}
 
         {/* ================================================================= */}
-        {/* ROW 1: WATCHING (IN-PROGRESS MEDIA - only if items exist)        */}
+        {/* SINGLE UNIFIED LIBRARY SECTION                                    */}
         {/* ================================================================= */}
-        {continueWatchingItems.length > 0 && (
-          <section className="relative group/shelf mb-12 select-none">
-            <div className="flex items-center justify-between mb-4 px-1">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-primary/20 text-primary border border-primary/30">
-                  <FaPlay className="w-3 h-3 ml-0.5" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
-                  Watching
-                </h3>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  {continueWatchingItems.length}
-                </span>
+        <section className="relative group/shelf mb-16 select-none">
+          {/* Section Header & Right-Side Control Bar */}
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6 px-1">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <LuPopcorn className="w-4 h-4" />
               </div>
+              <h3 className="text-lg sm:text-2xl font-bold tracking-tight text-white/95">
+                My Library
+              </h3>
+              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-white/10 text-white/70">
+                {filteredItems.length}
+              </span>
+            </div>
 
-              {/* Navigation Arrows */}
-              <div className="flex items-center gap-1.5">
+            {/* Status Tabs, Type Filters, Sort, View Toggle & Clear */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Status Filter Tabs (All, Watching, Watchlist, Planned, Watched) */}
+              <div className="flex flex-wrap items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
                 <button
                   type="button"
-                  onClick={() => scrollShelf(watchingScrollRef, "left")}
-                  aria-label="Scroll left"
-                  className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                  onClick={() => setStatusFilter("all")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    statusFilter === "all"
+                      ? "bg-white/20 text-white shadow-sm"
+                      : "text-white/60 hover:text-white"
+                  }`}
                 >
-                  <IoChevronBack className="w-4 h-4" />
+                  All ({statusCounts.all})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("watching")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    statusFilter === "watching"
+                      ? "bg-primary/25 text-primary border border-primary/40 shadow-sm"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <FaPlay className="w-2 h-2 text-primary" />
+                  Watching ({statusCounts.watching})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("watchlist")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    statusFilter === "watchlist"
+                      ? "bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-sm"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <LuPopcorn className="w-2.5 h-2.5 text-amber-400" />
+                  Watchlist ({statusCounts.watchlist})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("planned")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    statusFilter === "planned"
+                      ? "bg-indigo-500/25 text-indigo-300 border border-indigo-500/40 shadow-sm"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <FaClock className="w-2.5 h-2.5 text-indigo-400" />
+                  Planned ({statusCounts.planned})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("watched")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    statusFilter === "watched"
+                      ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 shadow-sm"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <FaCheck className="w-2.5 h-2.5 text-emerald-400" />
+                  Watched ({statusCounts.watched})
+                </button>
+              </div>
+
+              {/* Type Filters */}
+              <div className="flex items-center gap-1 rounded-xl bg-white/5 p-1 border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setContentFilter("all")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    contentFilter === "all"
+                      ? "bg-white/20 text-white"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  All
                 </button>
                 <button
                   type="button"
-                  onClick={() => scrollShelf(watchingScrollRef, "right")}
-                  aria-label="Scroll right"
-                  className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
+                  onClick={() => setContentFilter("movie")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
+                    contentFilter === "movie"
+                      ? "bg-white/20 text-white"
+                      : "text-white/60 hover:text-white"
+                  }`}
                 >
-                  <IoChevronForward className="w-4 h-4" />
+                  <FaFilm className="w-2.5 h-2.5" />
+                  Movies
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContentFilter("tv")}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
+                    contentFilter === "tv"
+                      ? "bg-white/20 text-white"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  <FaTv className="w-2.5 h-2.5" />
+                  TV
                 </button>
               </div>
-            </div>
 
-            <div
-              ref={watchingScrollRef}
-              className="flex items-stretch gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {continueWatchingItems.map((item) => {
-                const redirectLink =
-                  item.type === "movie"
-                    ? `/movie/${item.media_id}/player${item.last_position > 5 ? `?startAt=${item.last_position}` : ""}`
-                    : `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player${item.last_position > 5 ? `?startAt=${item.last_position}` : ""}`;
-                const progressPct =
-                  item.duration > 0
-                    ? Math.min(100, Math.round((item.last_position / item.duration) * 100))
-                    : 0;
-                const backdrop = getImageUrl(item.backdrop_path || item.poster_path || "");
-
-                return (
-                  <div
-                    key={`${item.type}-${item.media_id}-${item.season}-${item.episode}`}
-                    className="group relative w-[260px] sm:w-[300px] md:w-[320px] shrink-0 rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:scale-[1.02] hover:shadow-2xl flex flex-col"
-                  >
-                    {/* Thumbnail Image */}
-                    <div className="relative aspect-video w-full overflow-hidden bg-neutral-800 flex items-center justify-center">
-                      <img
-                        src={backdrop}
-                        alt={item.title}
-                        onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg";
-                        }}
-                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-
-                      {/* Stylized fallback if artwork is missing/loading */}
-                      {!item.backdrop_path && !item.poster_path && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-800 via-neutral-900 to-black p-4 text-center z-0">
-                          <FaFilm className="w-8 h-8 text-white/30 mb-2" />
-                          <span className="text-xs sm:text-sm font-bold text-white/90 line-clamp-1">{item.title}</span>
-                          <span className="text-[10px] font-semibold text-primary uppercase tracking-widest mt-1">
-                            {item.type === "tv" ? `Season ${item.season} • Episode ${item.episode}` : "Movie"}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Play Button Overlay */}
-                      <Link
-                        href={redirectLink}
-                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <div className="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
-                          <FaPlay className="w-4 h-4 ml-0.5" />
-                        </div>
-                      </Link>
-
-                      {/* TV Tag (Season / Episode) */}
-                      {item.type === "tv" && (
-                        <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-amber-400 border border-white/10">
-                          S{item.season} E{item.episode}
-                        </span>
-                      )}
-
-                      {/* Time Left Badge */}
-                      <span className="absolute bottom-2 left-2 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-white/80">
-                        {formatDuration(item.last_position)}
-                      </span>
-
-                      {/* Dismiss / Remove Button */}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleRemoveContinueWatching(
-                            item.media_id,
-                            item.type,
-                            item.season,
-                            item.episode
-                          )
-                        }
-                        title="Remove from watching"
-                        className="absolute top-2 left-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                      >
-                        <FaXmark className="w-3 h-3" />
-                      </button>
-
-                      {/* Progress Bar */}
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-                        <div
-                          className="h-full bg-primary"
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Metadata Details */}
-                    <div className="p-3.5 flex flex-col justify-between flex-1">
-                      <div>
-                        <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
-                          {item.title}
-                        </h4>
-                        <p className="text-xs text-white/50 mt-1 flex items-center gap-1.5">
-                          <span className="text-primary font-medium">
-                            {item.last_position > 5
-                              ? `Stopped at ${formatDuration(item.last_position)}`
-                              : "Just started"}
-                          </span>
-                          {item.duration > 0 && (
-                            <span className="text-white/40">
-                              • {Math.round(progressPct)}% watched
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <Link
-                        href={redirectLink}
-                        className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-                      >
-                        <FaPlay className="w-2.5 h-2.5" />
-                        Resume Playing
-                      </Link>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* ================================================================= */}
-        {/* ROW 2: WATCHLIST & STATUS SECTIONS                                */}
-        {/* ================================================================= */}
-        {watchlistItems.length > 0 && (
-          <section className="relative group/shelf mb-12 select-none">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4 px-1">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                  <LuPopcorn className="w-3.5 h-3.5" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
-                  My Watchlist
-                </h3>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  {statusFilter === "all" ? watchlistItems.length : filteredWatchlist.length}
-                </span>
+              {/* Sort Dropdown */}
+              <div className="w-32">
+                <Select
+                  size="sm"
+                  selectedKeys={[sortOption]}
+                  onChange={(e) => setSortOption((e.target.value as SortOption) || "created_at")}
+                  variant="bordered"
+                  className="max-w-xs"
+                  aria-label="Sort library"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.key}>{opt.label}</SelectItem>
+                  ))}
+                </Select>
               </div>
 
-              {/* Status Tabs, Type Filters, Sort & Navigation */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                {/* Status Filter Tabs (Watchlist, Planned, Completed) */}
-                <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter("all")}
-                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors ${
-                      statusFilter === "all"
-                        ? "bg-white/20 text-white shadow-sm"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    All ({statusCounts.all})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter("watchlist")}
-                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
-                      statusFilter === "watchlist"
-                        ? "bg-primary/25 text-primary border border-primary/40 shadow-sm"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    <FaPlay className="w-2 h-2 text-primary" />
-                    Watchlist ({statusCounts.wl})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter("planned")}
-                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
-                      statusFilter === "planned"
-                        ? "bg-amber-500/25 text-amber-300 border border-amber-500/40 shadow-sm"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    <FaClock className="w-2.5 h-2.5 text-amber-400" />
-                    Planned ({statusCounts.planned})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter("completed")}
-                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
-                      statusFilter === "completed"
-                        ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 shadow-sm"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    <FaCheck className="w-2.5 h-2.5 text-emerald-400" />
-                    Completed ({statusCounts.completed})
-                  </button>
-                </div>
-
-                {/* Type Filters */}
-                <div className="flex items-center gap-1 rounded-lg bg-white/5 p-1 border border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setContentFilter("all")}
-                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors ${
-                      contentFilter === "all"
-                        ? "bg-white/20 text-white"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContentFilter("movie")}
-                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
-                      contentFilter === "movie"
-                        ? "bg-white/20 text-white"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    <FaFilm className="w-2.5 h-2.5" />
-                    Movies
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setContentFilter("tv")}
-                    className={`px-2.5 py-0.5 rounded text-xs font-semibold transition-colors flex items-center gap-1 ${
-                      contentFilter === "tv"
-                        ? "bg-white/20 text-white"
-                        : "text-white/60 hover:text-white"
-                    }`}
-                  >
-                    <FaTv className="w-2.5 h-2.5" />
-                    TV
-                  </button>
-                </div>
-
-                {/* Sort Dropdown */}
-                <div className="w-32">
-                  <Select
-                    size="sm"
-                    selectedKeys={[sortOption]}
-                    onChange={(e) => setSortOption((e.target.value as SortOption) || "created_at")}
-                    variant="bordered"
-                    className="max-w-xs"
-                    aria-label="Sort watchlist"
-                  >
-                    {SORT_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.key}>{opt.label}</SelectItem>
-                    ))}
-                  </Select>
-                </div>
-
-                {/* Clear Watchlist */}
-                {filteredWatchlist.length > 0 && (
-                  <Button
-                    size="sm"
-                    color="danger"
-                    variant="flat"
-                    startContent={<FaTrash className="w-3 h-3" />}
-                    onClick={openClearWatchlist}
-                    className="text-xs h-8 px-2.5"
-                  >
-                    Clear
-                  </Button>
-                )}
-
-                {/* Navigation Arrows */}
-                {filteredWatchlist.length > 0 && (
-                  <div className="flex items-center gap-1.5 ml-1">
-                    <button
-                      type="button"
-                      onClick={() => scrollShelf(watchlistScrollRef, "left")}
-                      aria-label="Scroll left"
-                      className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
-                    >
-                      <IoChevronBack className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => scrollShelf(watchlistScrollRef, "right")}
-                      aria-label="Scroll right"
-                      className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
-                    >
-                      <IoChevronForward className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {filteredWatchlist.length > 0 ? (
-              <div
-                ref={watchlistScrollRef}
-                className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-              >
-                {filteredWatchlist.map((item) => {
-                  const poster = getImageUrl(item.poster_path || item.backdrop_path || "");
-                  const link = item.type === "movie" ? `/movie/${item.id}` : `/tv/${item.id}`;
-                  const year = item.release_date ? new Date(item.release_date).getFullYear() : null;
-
-                  return (
-                    <div
-                      key={`${item.type}-${item.id}`}
-                      className="group relative w-[140px] sm:w-[170px] md:w-[185px] shrink-0 rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
-                    >
-                      <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
-                        <img
-                          src={poster}
-                          alt={item.title}
-                          className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-
-                        <Link
-                          href={link}
-                          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <div className="flex size-11 items-center justify-center rounded-full bg-amber-500 text-black shadow-xl">
-                            <FaPlay className="w-4 h-4 ml-0.5" />
-                          </div>
-                        </Link>
-
-                        {/* Media Type Badge */}
-                        <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-xs text-white border border-white/10">
-                          {item.type === "tv" ? "TV" : "Movie"}
-                        </span>
-
-                        {/* Status Tag Badge */}
-                        {item.status && item.status !== "watchlist" && (
-                          <span
-                            className={`absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                              item.status === "completed"
-                                ? "bg-emerald-500/90 text-white shadow-md"
-                                : "bg-amber-500/90 text-black shadow-md"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveWatchlistItem(item.id, item.type, item.title)}
-                          title="Remove from watchlist"
-                          className="absolute bottom-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
-                        >
-                          <FaTrash className="w-2.5 h-2.5" />
-                        </button>
-                      </div>
-
-                      <div className="p-3 flex flex-col justify-between flex-1">
-                        <Link href={link}>
-                          <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
-                            {item.title}
-                          </h4>
-                        </Link>
-                        <div className="flex items-center justify-between text-xs text-white/40 mt-1">
-                          {year && <span>{year}</span>}
-                          {item.vote_average > 0 && (
-                            <span className="flex items-center gap-1 text-amber-400 font-semibold">
-                              ★ {item.vote_average.toFixed(1)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex items-center justify-between p-6 rounded-xl border border-dashed border-white/10 bg-white/[0.02]">
-                <div className="flex items-center gap-4">
-                  <div className="size-11 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shrink-0">
-                    🍿
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-white">No titles in this section</h4>
-                    <p className="text-xs text-white/45 mt-0.5">
-                      No titles matched the selected filters.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* ================================================================= */}
-        {/* ROW 3: MY HISTORY (ALREADY WATCHED - only if items exist)         */}
-        {/* ================================================================= */}
-        {alreadyWatchedItems.length > 0 && (
-          <section className="relative group/shelf mb-14 select-none">
-            <div className="flex items-center justify-between mb-4 px-1">
-              <div className="flex items-center gap-2.5">
-                <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  <FaClockRotateLeft className="w-3.5 h-3.5" />
-                </div>
-                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-white/95">
-                  My History
-                </h3>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  {alreadyWatchedItems.length}
-                </span>
+              {/* View Layout Toggle (Grid / Shelf) */}
+              <div className="flex items-center rounded-xl bg-white/5 p-1 border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setViewLayout("grid")}
+                  title="Grid View"
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                    viewLayout === "grid" ? "bg-white/20 text-white" : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  <IoGrid className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewLayout("shelf")}
+                  title="Shelf View"
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                    viewLayout === "shelf" ? "bg-white/20 text-white" : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  <IoMenuOutline className="w-3.5 h-3.5" />
+                </button>
               </div>
 
-              <div className="flex items-center gap-2.5">
+              {/* Clear Button */}
+              {filteredItems.length > 0 && (
                 <Button
                   size="sm"
                   color="danger"
                   variant="flat"
                   startContent={<FaTrash className="w-3 h-3" />}
-                  onClick={openClearHistory}
-                  className="text-xs h-8 px-2.5"
+                  onClick={openClearModal}
+                  className="text-xs h-8 px-2.5 cursor-pointer"
                 >
-                  Clear History
+                  Clear
                 </Button>
+              )}
 
+              {/* Shelf Navigation Arrows (only in shelf view) */}
+              {viewLayout === "shelf" && filteredItems.length > 0 && (
                 <div className="flex items-center gap-1.5 ml-1">
                   <button
                     type="button"
-                    onClick={() => scrollShelf(historyScrollRef, "left")}
+                    onClick={() => scrollShelf("left")}
                     aria-label="Scroll left"
                     className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
                   >
@@ -1038,137 +876,209 @@ export const MySpace: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => scrollShelf(historyScrollRef, "right")}
+                    onClick={() => scrollShelf("right")}
                     aria-label="Scroll right"
                     className="flex items-center justify-center size-8 rounded-full bg-white/5 hover:bg-white/15 text-white/70 hover:text-white border border-white/10 transition-all cursor-pointer"
                   >
                     <IoChevronForward className="w-4 h-4" />
                   </button>
                 </div>
-              </div>
+              )}
             </div>
+          </div>
 
+          {/* Cards Container (Responsive Grid OR Horizontal Shelf) */}
+          {filteredItems.length > 0 ? (
             <div
-              ref={historyScrollRef}
-              className="flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth pb-3 pt-1"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              ref={shelfScrollRef}
+              className={
+                viewLayout === "grid"
+                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4"
+                  : "flex items-stretch gap-3 sm:gap-4 overflow-x-auto scroll-smooth pb-4 pt-1"
+              }
+              style={viewLayout === "shelf" ? { scrollbarWidth: "none", msOverflowStyle: "none" } : undefined}
             >
-              {alreadyWatchedItems.map((item) => {
+              {filteredItems.map((item) => {
                 const poster = getImageUrl(item.poster_path || item.backdrop_path || "");
-                const link = item.type === "movie" ? `/movie/${item.media_id}` : `/tv/${item.media_id}`;
+                const year = item.release_date ? new Date(item.release_date).getFullYear() : null;
+                const isResume = item.isWatching && item.last_position > 5;
+                const resumeLink =
+                  item.type === "movie"
+                    ? `/movie/${item.media_id}/player?startAt=${item.last_position}`
+                    : `/tv/${item.media_id}/${item.season || 1}/${item.episode || 1}/player?startAt=${item.last_position}`;
+                const detailLink = item.type === "movie" ? `/movie/${item.media_id}` : `/tv/${item.media_id}`;
+                const progressPct =
+                  item.duration > 0
+                    ? Math.min(100, Math.round((item.last_position / item.duration) * 100))
+                    : 0;
 
                 return (
                   <div
-                    key={`${item.type}-${item.media_id}-${item.season}-${item.episode}`}
-                    className="group relative w-[140px] sm:w-[170px] md:w-[185px] shrink-0 rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl flex flex-col"
+                    key={item.key}
+                    className={cn(
+                      "group relative rounded-xl overflow-hidden bg-neutral-900/60 border border-white/10 transition-all duration-300 hover:border-white/30 hover:-translate-y-1 hover:shadow-2xl flex flex-col",
+                      viewLayout === "shelf" && "w-[150px] sm:w-[175px] md:w-[190px] shrink-0"
+                    )}
                   >
-                    <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800">
+                    {/* Poster Media Box */}
+                    <div className="relative aspect-[2/3] w-full overflow-hidden bg-neutral-800 flex items-center justify-center">
                       <img
                         src={poster}
                         alt={item.title}
                         onError={(e) => {
                           e.currentTarget.src = "/placeholder.svg";
                         }}
-                        className="size-full object-cover"
+                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
 
+                      {/* Play / Resume Overlay */}
                       <Link
-                        href={link}
+                        href={isResume ? resumeLink : detailLink}
                         className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        <div className="flex size-11 items-center justify-center rounded-full bg-white text-black shadow-xl">
+                        <div className="flex size-11 items-center justify-center rounded-full bg-primary text-white shadow-xl transform scale-90 group-hover:scale-100 transition-transform">
                           <FaPlay className="w-4 h-4 ml-0.5" />
                         </div>
                       </Link>
 
-                      <span className="absolute top-2 left-2 text-[10px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-600/90 text-white shadow-md">
-                        Watched
+                      {/* Type Badge (TV / Movie) */}
+                      <span className="absolute top-2 left-2 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-xs text-white border border-white/10">
+                        {item.type === "tv" ? "TV" : "Movie"}
                       </span>
 
+                      {/* Status Badge */}
+                      <span
+                        className={cn(
+                          "absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded shadow-md",
+                          item.isWatching
+                            ? "bg-primary text-black font-extrabold"
+                            : item.isWatched
+                            ? "bg-emerald-500 text-white font-bold"
+                            : item.isPlanned
+                            ? "bg-indigo-500 text-white font-bold"
+                            : "bg-amber-500 text-black font-bold"
+                        )}
+                      >
+                        {item.isWatching
+                          ? "Watching"
+                          : item.isWatched
+                          ? "Watched"
+                          : item.isPlanned
+                          ? "Planned"
+                          : "Watchlist"}
+                      </span>
+
+                      {/* TV Season / Episode Info */}
+                      {item.type === "tv" && item.season && item.episode && (
+                        <span className="absolute bottom-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-xs text-amber-400 border border-white/10">
+                          S{item.season} E{item.episode}
+                        </span>
+                      )}
+
+                      {/* Remove Button */}
                       <button
                         type="button"
-                        onClick={() =>
-                          handleRemoveContinueWatching(
-                            item.media_id,
-                            item.type,
-                            item.season,
-                            item.episode
-                          )
-                        }
-                        title="Remove from history"
-                        className="absolute top-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md"
+                        onClick={() => handleRemoveItem(item)}
+                        title="Remove from library"
+                        className="absolute bottom-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md cursor-pointer"
                       >
                         <FaTrash className="w-2.5 h-2.5" />
                       </button>
+
+                      {/* Progress Bar for Watching */}
+                      {isResume && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-white/20">
+                          <div
+                            className="h-full bg-primary"
+                            style={{ width: `${progressPct}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
 
+                    {/* Metadata Details */}
                     <div className="p-3 flex flex-col justify-between flex-1">
-                      <Link href={link}>
-                        <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
-                          {item.title}
-                        </h4>
-                      </Link>
-                      <div className="flex items-center justify-between text-xs text-white/40 mt-1">
-                        <span>{timeAgo(item.updated_at)}</span>
-                        <span className="capitalize">{item.type}</span>
+                      <div>
+                        <Link href={detailLink}>
+                          <h4 className="font-semibold text-sm line-clamp-1 text-white/90 group-hover:text-white transition-colors">
+                            {item.title}
+                          </h4>
+                        </Link>
+
+                        {isResume ? (
+                          <p className="text-xs text-primary font-medium mt-1 flex items-center justify-between">
+                            <span>Stopped at {formatDuration(item.last_position)}</span>
+                            {item.duration > 0 && (
+                              <span className="text-white/40">{progressPct}%</span>
+                            )}
+                          </p>
+                        ) : (
+                          <div className="flex items-center justify-between text-xs text-white/40 mt-1">
+                            {year && <span>{year}</span>}
+                            {item.vote_average && item.vote_average > 0 ? (
+                              <span className="flex items-center gap-1 text-amber-400 font-semibold">
+                                ★ {item.vote_average.toFixed(1)}
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
+
+                      {isResume && (
+                        <Link
+                          href={resumeLink}
+                          className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                        >
+                          <FaPlay className="w-2 h-2" />
+                          Resume
+                        </Link>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          </section>
-        )}
-
-        {/* Global Empty State if ALL shelves are empty */}
-        {continueWatchingItems.length === 0 && watchlistItems.length === 0 && alreadyWatchedItems.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 px-6 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-center my-8">
-            <div className="size-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-4">
-              🍿
+          ) : (
+            /* Contextual Empty State */
+            <div className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-center my-6">
+              <div className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl mb-3">
+                🍿
+              </div>
+              <h4 className="font-bold text-base text-white">No titles found</h4>
+              <p className="text-xs text-white/50 max-w-sm mt-1 mb-5">
+                {statusFilter === "all"
+                  ? "Your library is empty. Discover movies and TV shows to start watching or saving titles."
+                  : `No titles found in "${statusFilter}". Try changing your status or content filter.`}
+              </p>
+              <div className="flex items-center gap-3">
+                <Link href="/movies">
+                  <Button color="primary" variant="solid" size="sm" startContent={<FaFilm className="w-3 h-3" />}>
+                    Explore Movies
+                  </Button>
+                </Link>
+                <Link href="/tv">
+                  <Button color="warning" variant="flat" size="sm" startContent={<FaTv className="w-3 h-3" />}>
+                    Explore TV Shows
+                  </Button>
+                </Link>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Your Library is Empty</h3>
-            <p className="text-sm text-white/50 max-w-md mb-6 leading-relaxed">
-              Titles you start watching or add to your Watchlist, Planned, or Completed lists will appear here.
-            </p>
-            <div className="flex items-center gap-3">
-              <Link href="/movies">
-                <Button color="primary" variant="solid" startContent={<FaFilm className="w-3.5 h-3.5" />}>
-                  Explore Movies
-                </Button>
-              </Link>
-              <Link href="/tv">
-                <Button color="warning" variant="flat" startContent={<FaTv className="w-3.5 h-3.5" />}>
-                  Explore TV Shows
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
+          )}
+        </section>
       </div>
 
-      {/* Confirmation Modal: Clear Watchlist */}
+      {/* Confirmation Modal: Clear Library */}
       <ConfirmationModal
-        title="Clear Your Watchlist?"
-        isOpen={clearWatchlistOpened}
-        onClose={closeClearWatchlist}
-        onConfirm={handleConfirmClearWatchlist}
+        title={`Clear ${statusFilter === "all" ? "Library" : statusFilter.toUpperCase()}?`}
+        isOpen={clearModalOpened}
+        onClose={closeClearModal}
+        onConfirm={handleConfirmClear}
         confirmLabel="Clear All"
       >
         <p className="text-white/80 text-sm">
-          Are you sure you want to remove all {contentFilter === "all" ? "items" : contentFilter === "movie" ? "movies" : "TV shows"} from your watchlist?
-        </p>
-      </ConfirmationModal>
-
-      {/* Confirmation Modal: Clear History */}
-      <ConfirmationModal
-        title="Clear Your Watch History?"
-        isOpen={clearHistoryOpened}
-        onClose={closeClearHistory}
-        onConfirm={handleConfirmClearHistory}
-        confirmLabel="Clear History"
-      >
-        <p className="text-white/80 text-sm">
-          Are you sure you want to clear your watch history?
+          {statusFilter === "all"
+            ? `Are you sure you want to clear all ${contentFilter === "all" ? "titles" : contentFilter === "movie" ? "movies" : "TV shows"} from your library for this profile?`
+            : `Are you sure you want to clear all ${statusFilter} items for this profile?`}
         </p>
       </ConfirmationModal>
     </div>
