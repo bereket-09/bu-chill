@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1d24" />
+      <stop offset="50%" stop-color="#121318" />
+      <stop offset="100%" stop-color="#0a0a0d" />
+    </linearGradient>
+    <linearGradient id="pop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f2fe" />
+      <stop offset="100%" stop-color="#4facfe" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="225" fill="url(#bg)" />
+  <circle cx="200" cy="100" r="32" fill="#ffffff" fill-opacity="0.05" />
+  <path d="M193 88 L213 100 L193 112 Z" fill="#ffffff" fill-opacity="0.4" />
+  <text x="200" y="150" fill="#ffffff" fill-opacity="0.3" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" text-anchor="middle" letter-spacing="1.5">BE•CHILL</text>
+</svg>

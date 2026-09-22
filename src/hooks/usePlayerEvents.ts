@@ -157,6 +157,8 @@ export interface UsePlayerEventsOptions {
   mediaType?: ContentType;
   title?: string;
   metadata?: { season?: number; episode?: number };
+  backdrop_path?: string;
+  poster_path?: string;
   saveHistory?: boolean;
   onPlay?: (data: UnifiedPlayerEventData) => void;
   onPause?: (data: UnifiedPlayerEventData) => void;
@@ -174,6 +176,8 @@ export function usePlayerEvents(options: UsePlayerEventsOptions = {}) {
     mediaType = "movie",
     title,
     metadata,
+    backdrop_path,
+    poster_path,
     saveHistory,
     onPlay,
     onPause,
@@ -212,6 +216,8 @@ export function usePlayerEvents(options: UsePlayerEventsOptions = {}) {
       season: data.season || metadata?.season,
       episode: data.episode || metadata?.episode,
       title: title || "Media",
+      backdrop_path: backdrop_path || undefined,
+      poster_path: poster_path || undefined,
       duration: data.duration,
       last_position: data.currentTime,
       completed: data.event === "ended",

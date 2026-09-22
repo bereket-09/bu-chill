@@ -224,3 +224,48 @@ export const getTvShowLastPosition = async (
     return 0;
   }
 };
+
+/**
+ * Fetches backdrop and poster art from TMDB for a media item.
+ * Used to enrich and auto-repair history cards with missing images.
+ */
+export const getMediaArt = async (
+  mediaId: number,
+  type: "movie" | "tv",
+  season?: number,
+  episode?: number
+): Promise<{ backdrop_path?: string; poster_path?: string; title?: string }> => {
+  try {
+    if (type === "movie") {
+      const details = await tmdb.movies.details(mediaId);
+      return {
+        backdrop_path: details.backdrop_path || undefined,
+        poster_path: details.poster_path || undefined,
+        title: details.title,
+      };
+    } else {
+      const tv = await tmdb.tvShows.details(mediaId);
+      let still: string | undefined = undefined;
+      if (season) {
+        try {
+          const seasonDetail = await tmdb.tvShows.season(mediaId, season);
+          if (episode && seasonDetail?.episodes) {
+            const ep = seasonDetail.episodes.find((e) => e.episode_number === episode);
+            if (ep?.still_path) still = ep.still_path;
+          }
+        } catch {
+          // Fallback to series backdrop if episode still not available
+        }
+      }
+      return {
+        backdrop_path: still || tv.backdrop_path || undefined,
+        poster_path: tv.poster_path || undefined,
+        title: tv.name,
+      };
+    }
+  } catch (error) {
+    console.info("Failed to fetch media art from TMDB:", error);
+    return {};
+  }
+};
+

@@ -180,8 +180,10 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
     saveHistory: true,
     mediaId: id,
     mediaType: "tv",
-    title: props.seriesName,
+    title: props.seriesName || tv?.name,
     metadata: { season: episode.season_number, episode: episode.episode_number },
+    backdrop_path: episode.still_path || tv?.backdrop_path || "",
+    poster_path: tv?.poster_path || "",
     onTimeUpdate: (data) => {
       if (data.currentTime > 0) {
         currentTimeRef.current = data.currentTime;

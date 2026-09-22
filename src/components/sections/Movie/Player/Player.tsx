@@ -145,6 +145,8 @@ const MoviePlayer: React.FC<MoviePlayerProps> = ({ movie, startAt }) => {
     mediaId: movie.id,
     mediaType: "movie",
     title,
+    backdrop_path: movie.backdrop_path || "",
+    poster_path: movie.poster_path || "",
     onTimeUpdate: (data) => {
       if (data.currentTime > 0) {
         currentTimeRef.current = data.currentTime;

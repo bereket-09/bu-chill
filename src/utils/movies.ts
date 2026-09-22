@@ -107,8 +107,9 @@ export const getImageUrl = (
   type: "poster" | "backdrop" | "title" | "avatar" = "poster",
   fullSize?: boolean,
 ): string => {
+  if (!path || typeof path !== "string" || path.trim() === "") return "/placeholder.png";
+  if (path.startsWith("http://") || path.startsWith("https://")) return path;
   const size = fullSize ? "original" : "w500";
-  if (!path) return "";
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   return `https://image.tmdb.org/t/p/${size}${cleanPath}`;
 };

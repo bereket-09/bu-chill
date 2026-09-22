@@ -38,6 +38,7 @@ import {
 import { formatDuration, getImageUrl } from "@/utils/movies";
 import {
   getProfileHistory,
+  saveProfileHistoryItem,
   removeFromProfileHistory,
   ProfileHistoryItem,
   getProfileWatchlist,
@@ -49,7 +50,7 @@ import {
   deleteUserProfile,
   UserProfileItem,
 } from "@/services/profileStorage";
-import { getUserHistories } from "@/actions/histories";
+import { getUserHistories, getMediaArt } from "@/actions/histories";
 
 export const AUDIO_LANGUAGES = [
   { key: "en", label: "English (Default)" },
@@ -129,6 +130,14 @@ const ProfileManager: React.FC = () => {
                     episode: s.episode,
                     updated_at: s.updated_at,
                   });
+                } else if (map.has(key)) {
+                  const existing = map.get(key)!;
+                  if (!existing.backdrop_path && s.backdrop_path) {
+                    existing.backdrop_path = s.backdrop_path;
+                  }
+                  if (!existing.poster_path && s.poster_path) {
+                    existing.poster_path = s.poster_path;
+                  }
                 }
               });
               return Array.from(map.values());
@@ -138,6 +147,53 @@ const ProfileManager: React.FC = () => {
         .catch(() => {});
     }
   }, [user?.id]);
+
+  // Auto-repair missing art in ProfileManager
+  useEffect(() => {
+    const missing = continueWatchingItems.filter((h) => !h.backdrop_path && !h.poster_path);
+    if (missing.length === 0) return;
+
+    missing.forEach(async (item) => {
+      try {
+        const art = await getMediaArt(Number(item.media_id), item.type, item.season, item.episode);
+        if (art.backdrop_path || art.poster_path) {
+          const uid = user?.id || "guest";
+          const pid = activeProfileId;
+          saveProfileHistoryItem(uid, pid, {
+            media_id: Number(item.media_id),
+            type: item.type,
+            season: item.season,
+            episode: item.episode,
+            title: art.title || item.title,
+            backdrop_path: art.backdrop_path,
+            poster_path: art.poster_path,
+            duration: item.duration,
+            last_position: item.last_position,
+            completed: item.completed,
+          });
+          setContinueWatchingItems((prev) =>
+            prev.map((h) => {
+              if (
+                h.media_id === item.media_id &&
+                h.type === item.type &&
+                (item.type !== "tv" || (h.season === item.season && h.episode === item.episode))
+              ) {
+                return {
+                  ...h,
+                  backdrop_path: art.backdrop_path || h.backdrop_path,
+                  poster_path: art.poster_path || h.poster_path,
+                  title: art.title || h.title,
+                };
+              }
+              return h;
+            })
+          );
+        }
+      } catch (err) {
+        console.warn("Failed to backfill media art:", err);
+      }
+    });
+  }, [continueWatchingItems, user?.id, activeProfileId]);
 
   // Sync with cross-tab and player updates
   useEffect(() => {
@@ -674,12 +730,26 @@ const ProfileManager: React.FC = () => {
                     className="group relative flex flex-col rounded-2xl overflow-hidden bg-neutral-900/80 border border-white/10 hover:border-white/25 transition-all duration-300 shadow-xl hover:shadow-2xl hover:-translate-y-1"
                   >
                     {/* Thumbnail Image */}
-                    <div className="relative aspect-video w-full overflow-hidden bg-neutral-800">
+                    <div className="relative aspect-video w-full overflow-hidden bg-neutral-800 flex items-center justify-center">
                       <img
                         src={getImageUrl(item.backdrop_path || item.poster_path || "")}
                         alt={item.title}
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg";
+                        }}
                         className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
+
+                      {/* Stylized fallback if artwork is missing */}
+                      {!item.backdrop_path && !item.poster_path && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-800 via-neutral-900 to-black p-4 text-center z-0">
+                          <FaFilm className="w-8 h-8 text-white/30 mb-2" />
+                          <span className="text-xs sm:text-sm font-bold text-white/90 line-clamp-1">{item.title}</span>
+                          <span className="text-[10px] font-semibold text-primary uppercase tracking-widest mt-1">
+                            {item.type === "tv" ? `Season ${item.season || 1} • Episode ${item.episode || 1}` : "Movie"}
+                          </span>
+                        </div>
+                      )}
 
                       {/* Dark Gradient Overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
