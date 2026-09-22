@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Channel,
   ChannelCategory,
@@ -34,6 +34,7 @@ import {
   IoLayersOutline,
   IoFilter,
   IoGlobeOutline,
+  IoArrowUp,
 } from "react-icons/io5";
 import { MdTv, MdOutlineFeaturedPlayList } from "react-icons/md";
 
@@ -65,6 +66,21 @@ export default function LiveTvPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isGrouped, setIsGrouped] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isScrolledPastPlayer, setIsScrolledPastPlayer] = useState(false);
+  const playerSectionRef = useRef<HTMLDivElement>(null);
+
+  // Track if user has scrolled past the main video player
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!playerSectionRef.current) return;
+      const rect = playerSectionRef.current.getBoundingClientRect();
+      setIsScrolledPastPlayer(rect.bottom < 80);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Load favorites & custom channels on mount
   useEffect(() => {
@@ -133,11 +149,13 @@ export default function LiveTvPage() {
 
   useDocumentTitle(`${activeChannel?.name || "Live TV"} | ${siteConfig.name}`);
 
-  // Channel switching handlers
+  // Channel switching handlers: Automatically scroll back to the player smoothly
   const handleSelectChannel = useCallback(
     (channel: Channel) => {
       setChannelIdParam(channel.id);
-      if (window.innerWidth < 768) {
+      if (playerSectionRef.current) {
+        playerSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     },
@@ -279,7 +297,7 @@ export default function LiveTvPage() {
 
         {/* ================= HERO STREAM PLAYER ================= */}
         {activeChannel && (
-          <div className="space-y-3">
+          <div ref={playerSectionRef} className="space-y-3 scroll-mt-6">
             <LivePlayer
               channel={activeChannel}
               channels={allChannels}
@@ -609,6 +627,34 @@ export default function LiveTvPage() {
           onClearCustomChannels={handleClearCustom}
           customChannelCount={customChannels.length}
         />
+
+        {/* Floating Quick Return to Player when scrolled down */}
+        {isScrolledPastPlayer && activeChannel && (
+          <button
+            type="button"
+            onClick={() => {
+              if (playerSectionRef.current) {
+                playerSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+              } else {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-[#121319]/95 backdrop-blur-md border border-primary/50 text-white shadow-2xl shadow-black/80 hover:border-primary hover:bg-[#181a24] hover:scale-105 active:scale-95 transition-all group cursor-pointer"
+            title="Scroll back to Live Player"
+            aria-label="Scroll back to Live Player"
+          >
+            <span className="flex items-center gap-1.5 text-primary text-xs font-black">
+              <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
+              LIVE
+            </span>
+            <span className="text-xs font-bold text-white/90 max-w-[140px] sm:max-w-[200px] truncate">
+              {activeChannel.name}
+            </span>
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-white/10 group-hover:bg-primary group-hover:text-black transition-colors text-xs ml-0.5">
+              <IoArrowUp className="w-3.5 h-3.5" />
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
