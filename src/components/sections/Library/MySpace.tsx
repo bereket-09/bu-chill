@@ -53,17 +53,6 @@ import { formatDuration, getImageUrl } from "@/utils/movies";
 import ConfirmationModal from "@/components/ui/overlay/ConfirmationModal";
 import { useDisclosure } from "@mantine/hooks";
 
-const WITTY_TAGLINES = [
-  "Pop the popcorn and dramatically lower your standards.",
-  "Cheaper than therapy, twice as addictive.",
-  "Start watching from where you left off, personalize for kids and more.",
-  "99% less buffering, 100% more late night movie binges.",
-  "Welcome to your streaming sanctuary. Pants optional.",
-  "Cancel your plans. You're not going anywhere anyway.",
-  "Go ahead, hit 'Next Episode'. We won't judge your lack of self-control.",
-  "Your personal cinema hub, synced across all your devices.",
-];
-
 type ContentFilter = "all" | "movie" | "tv";
 type LibraryStatusFilter = "all" | "watching" | "watchlist" | "planned" | "watched";
 type SortOption = "created_at" | "vote_average" | "release_date" | "title";
@@ -114,9 +103,6 @@ export const MySpace: React.FC = () => {
   const [profiles, setProfiles] = useState<UserProfileItem[]>([]);
   const [activeProfileId, setActiveId] = useState<string>("main");
 
-  // Rotating tagline index
-  const [taglineIdx, setTaglineIdx] = useState(0);
-
   // Filters & Layout
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
   const [statusFilter, setStatusFilter] = useState<LibraryStatusFilter>("all");
@@ -142,14 +128,6 @@ export const MySpace: React.FC = () => {
   // Confirmation Modal
   const [clearModalOpened, { open: openClearModal, close: closeClearModal }] =
     useDisclosure(false);
-
-  // Rotate tagline
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTaglineIdx((prev) => (prev + 1) % WITTY_TAGLINES.length);
-    }, 4800);
-    return () => clearInterval(timer);
-  }, []);
 
   // Load profiles on mount / user change
   useEffect(() => {
@@ -629,28 +607,32 @@ export const MySpace: React.FC = () => {
         {/* HEADER: USER EMAIL + ROTATING TAGLINE + SWITCH PROFILE & SETTINGS  */}
         {/* ================================================================= */}
         <header className="mb-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border-b border-white/10 pb-8">
-          <div className="flex flex-col gap-1.5 max-w-2xl">
-            <div className="h-7 overflow-hidden relative">
-              <p
-                key={taglineIdx}
-                className="text-lg sm:text-xl font-bold tracking-tight text-white/90 animate-in fade-in slide-in-from-bottom-2 duration-400"
-              >
-                {WITTY_TAGLINES[taglineIdx]}
-              </p>
+          <div className="flex items-center gap-4 sm:gap-5">
+            {/* Prominent Profile Avatar */}
+            <div className="relative group shrink-0">
+              <img
+                src={resolveAvatarUrl(activeProfile.avatar)}
+                alt={activeProfile.name}
+                className="size-16 sm:size-20 rounded-2xl object-cover ring-2 ring-primary/40 shadow-[0_0_24px_rgba(0,255,200,0.25)] transition-transform duration-300 group-hover:scale-105"
+              />
+              <span className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 ring-2 ring-black animate-pulse" />
             </div>
 
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-white/50">
-              <span className="inline-block size-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Signed in as <strong className="text-white/80">{user.email}</strong></span>
-              <span className="text-white/30">•</span>
-              <span className="inline-flex items-center gap-1.5 text-white/90 font-medium">
-                <img
-                  src={resolveAvatarUrl(activeProfile.avatar)}
-                  alt={activeProfile.name}
-                  className="size-4.5 rounded-full object-cover ring-1 ring-white/20"
-                />
-                <span className="text-primary font-semibold">{activeProfile.name}</span>
-              </span>
+            {/* Profile Name & Status */}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                  {activeProfile.name}
+                </h1>
+                {activeProfile.isMain && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                    Primary
+                  </span>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-white/50">
+                Personal Library & Watch Queue
+              </p>
             </div>
           </div>
 
