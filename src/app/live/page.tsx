@@ -12,6 +12,7 @@ import {
   saveStoredCustomChannels,
   clearStoredCustomChannels,
   toggleStoredFavorite,
+  normalizeCategory,
 } from "@/services/iptv";
 import LivePlayer from "@/components/sections/Live/LivePlayer";
 import LiveChannelCard from "@/components/sections/Live/LiveChannelCard";
@@ -118,7 +119,7 @@ export default function LiveTvPage() {
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     allChannels.forEach((c) => {
-      const cat = c.group || c.category || "General";
+      const cat = normalizeCategory(c.group || c.category);
       counts[cat] = (counts[cat] || 0) + 1;
     });
     return counts;
@@ -183,13 +184,16 @@ export default function LiveTvPage() {
   // Filtered Channels
   const filteredChannels = useMemo(() => {
     return allChannels.filter((ch) => {
-      const channelCategory = ch.group || ch.category || "";
+      const channelCategory = normalizeCategory(ch.group || ch.category);
 
       // Category filter
       if (selectedCategory === "Favorites") {
         if (!favorites.includes(ch.id)) return false;
-      } else if (selectedCategory !== "All" && channelCategory !== selectedCategory) {
-        return false;
+      } else if (selectedCategory !== "All") {
+        const matchesCat =
+          channelCategory === selectedCategory ||
+          (ch.group && ch.group.toLowerCase().includes(selectedCategory.toLowerCase()));
+        if (!matchesCat) return false;
       }
 
       // Country filter
@@ -214,7 +218,7 @@ export default function LiveTvPage() {
   const groupedChannels = useMemo(() => {
     const map = new Map<string, Channel[]>();
     filteredChannels.forEach((ch) => {
-      const cat = ch.group || ch.category || "General";
+      const cat = normalizeCategory(ch.group || ch.category);
       if (!map.has(cat)) map.set(cat, []);
       map.get(cat)!.push(ch);
     });

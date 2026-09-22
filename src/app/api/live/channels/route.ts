@@ -1,47 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CURATED_CHANNELS, POPULAR_M3U_PLAYLISTS, Channel } from "@/services/iptv";
+import {
+  CURATED_CHANNELS,
+  POPULAR_M3U_PLAYLISTS,
+  Channel,
+  normalizeCategory,
+} from "@/services/iptv";
 
 export const dynamic = "force-dynamic";
 
-function normalizeCategory(rawGroup?: string): string {
-  if (!rawGroup) return "Entertainment";
-  const g = rawGroup.toLowerCase();
-  if (g.includes("news") || g.includes("weather") || g.includes("business")) return "News";
-  if (
-    g.includes("sport") ||
-    g.includes("racing") ||
-    g.includes("motor") ||
-    g.includes("golf") ||
-    g.includes("fight") ||
-    g.includes("wrestling") ||
-    g.includes("combat")
-  ) {
-    return "Sports";
-  }
-  if (g.includes("movie") || g.includes("cinema") || g.includes("film")) return "Movies";
-  if (g.includes("music") || g.includes("song") || g.includes("radio")) return "Music";
-  if (
-    g.includes("documentary") ||
-    g.includes("history") ||
-    g.includes("science") ||
-    g.includes("nature") ||
-    g.includes("travel") ||
-    g.includes("wildlife")
-  ) {
-    return "Documentary";
-  }
-  if (
-    g.includes("kid") ||
-    g.includes("child") ||
-    g.includes("animation") ||
-    g.includes("cartoon") ||
-    g.includes("family") ||
-    g.includes("anime")
-  ) {
-    return "Kids";
-  }
-  return "Entertainment";
-}
 
 function parseM3UContent(text: string, defaultGroup?: string): Channel[] {
   const lines = text.split(/\r?\n/);

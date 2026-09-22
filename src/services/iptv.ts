@@ -23,6 +23,126 @@ export const CHANNEL_CATEGORIES = [
 
 export type ChannelCategory = (typeof CHANNEL_CATEGORIES)[number];
 
+/**
+ * Normalizes raw M3U group-title tags (which often contain multiple semicolon-delimited
+ * categories like "Kids;Sports" or "News;Weather") into one of the canonical ChannelCategory values.
+ */
+export function normalizeCategory(rawGroup?: string): ChannelCategory {
+  if (!rawGroup) return "Entertainment";
+  const str = String(rawGroup).trim();
+  if (!str) return "Entertainment";
+
+  // Check if string directly matches a known category
+  for (const cat of CHANNEL_CATEGORIES) {
+    if (cat.toLowerCase() === str.toLowerCase()) return cat;
+  }
+
+  // Split multiple groups separated by semicolon, comma, slash, or pipe
+  const parts = str.split(/[;,/|]/).map((p) => p.trim()).filter(Boolean);
+
+  for (const part of parts) {
+    const g = part.toLowerCase();
+    if (
+      g.includes("news") ||
+      g.includes("weather") ||
+      g.includes("business") ||
+      g.includes("politics") ||
+      g.includes("info") ||
+      g.includes("finance")
+    ) {
+      return "News";
+    }
+    if (
+      g.includes("sport") ||
+      g.includes("racing") ||
+      g.includes("motor") ||
+      g.includes("golf") ||
+      g.includes("fight") ||
+      g.includes("wrestling") ||
+      g.includes("combat") ||
+      g.includes("mma") ||
+      g.includes("football") ||
+      g.includes("soccer") ||
+      g.includes("basketball") ||
+      g.includes("baseball") ||
+      g.includes("tennis") ||
+      g.includes("athletics")
+    ) {
+      return "Sports";
+    }
+    if (
+      g.includes("movie") ||
+      g.includes("cinema") ||
+      g.includes("film") ||
+      g.includes("action") ||
+      g.includes("thriller") ||
+      g.includes("classic") ||
+      g.includes("western")
+    ) {
+      return "Movies";
+    }
+    if (
+      g.includes("kid") ||
+      g.includes("child") ||
+      g.includes("animation") ||
+      g.includes("cartoon") ||
+      g.includes("family") ||
+      g.includes("anime") ||
+      g.includes("disney") ||
+      g.includes("junior")
+    ) {
+      return "Kids";
+    }
+    if (
+      g.includes("music") ||
+      g.includes("song") ||
+      g.includes("radio") ||
+      g.includes("mtv") ||
+      g.includes("hits") ||
+      g.includes("pop") ||
+      g.includes("rock")
+    ) {
+      return "Music";
+    }
+    if (
+      g.includes("documentary") ||
+      g.includes("history") ||
+      g.includes("science") ||
+      g.includes("nature") ||
+      g.includes("travel") ||
+      g.includes("wildlife") ||
+      g.includes("discovery") ||
+      g.includes("culture") ||
+      g.includes("education")
+    ) {
+      return "Documentary";
+    }
+    if (
+      g.includes("entertainment") ||
+      g.includes("series") ||
+      g.includes("drama") ||
+      g.includes("comedy") ||
+      g.includes("variety") ||
+      g.includes("show") ||
+      g.includes("general") ||
+      g.includes("reality")
+    ) {
+      return "Entertainment";
+    }
+  }
+
+  // Fallback checks on entire string
+  const lower = str.toLowerCase();
+  if (lower.includes("news")) return "News";
+  if (lower.includes("sport")) return "Sports";
+  if (lower.includes("movie") || lower.includes("film")) return "Movies";
+  if (lower.includes("kid") || lower.includes("child") || lower.includes("animation") || lower.includes("cartoon")) return "Kids";
+  if (lower.includes("music")) return "Music";
+  if (lower.includes("documentary")) return "Documentary";
+
+  return "Entertainment";
+}
+
 // High-reliability curated public HLS streams
 export const CURATED_CHANNELS: Channel[] = [
   // --- NEWS ---
@@ -710,7 +830,7 @@ export function parseM3U(content: string, maxLimit = 1500): Channel[] {
       // Parse group-title
       const groupMatch = line.match(/group-title="([^"]*)"/i);
       if (groupMatch && groupMatch[1]) {
-        currentInfo.group = groupMatch[1].trim();
+        currentInfo.group = normalizeCategory(groupMatch[1].trim());
       }
 
       // Parse tvg-country
@@ -725,7 +845,7 @@ export function parseM3U(content: string, maxLimit = 1500): Channel[] {
         currentInfo.language = langMatch[1].trim();
       }
     } else if (line.startsWith("#EXTGRP:") && currentInfo) {
-      currentInfo.group = line.replace("#EXTGRP:", "").trim();
+      currentInfo.group = normalizeCategory(line.replace("#EXTGRP:", "").trim());
     } else if (line && !line.startsWith("#") && currentInfo) {
       // This is the stream URL line
       const streamUrl = line;
@@ -754,7 +874,8 @@ export function parseM3U(content: string, maxLimit = 1500): Channel[] {
           id: channelId,
           name: channelName,
           logo: currentInfo.logo,
-          group: currentInfo.group || "Other",
+          group: normalizeCategory(currentInfo.group || "Entertainment"),
+          category: normalizeCategory(currentInfo.group || "Entertainment"),
           country: currentInfo.country || "Global",
           language: currentInfo.language || "English",
           url: streamUrl,
@@ -805,7 +926,19 @@ export function getStoredCustomChannels(): Channel[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(CUSTOM_CHANNELS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((ch: Channel) => {
+        const cleanGroup = normalizeCategory(ch.group || ch.category);
+        return {
+          ...ch,
+          group: cleanGroup,
+          category: cleanGroup,
+        };
+      });
+    }
+    return [];
   } catch {
     return [];
   }

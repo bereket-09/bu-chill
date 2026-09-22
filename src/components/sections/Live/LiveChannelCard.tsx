@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Channel } from "@/services/iptv";
+import { Channel, normalizeCategory } from "@/services/iptv";
 import { cn } from "@/utils/helpers";
 import SafeImage from "@/components/ui/other/SafeImage";
 import { IoStar, IoStarOutline, IoPlay } from "react-icons/io5";
@@ -35,7 +35,7 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
   variant = "grid",
   index,
 }) => {
-  const categoryName = channel.group || channel.category || "General";
+  const categoryName = normalizeCategory(channel.group || channel.category);
   const catStyle = CATEGORY_STYLES[categoryName] || {
     badge: "bg-white/10 text-white/80 border-white/10",
     icon: "📺",

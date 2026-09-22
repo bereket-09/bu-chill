@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import Hls from "hls.js";
-import { Channel } from "@/services/iptv";
+import { Channel, normalizeCategory, CHANNEL_CATEGORIES } from "@/services/iptv";
 import { cn } from "@/utils/helpers";
 import {
   IoPlay,
@@ -238,23 +238,36 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
     setAspectRatio((prev) => (prev === "contain" ? "cover" : "contain"));
   };
 
-  // Drawer filtering
+  // Drawer filtering: Only show clean, canonical categories
   const drawerCategories = useMemo(() => {
-    const set = new Set<string>(["All"]);
+    const present = new Set<string>();
     channels.forEach((c) => {
-      const cat = c.group || c.category;
-      if (cat) set.add(cat);
+      const cat = normalizeCategory(c.group || c.category);
+      if (cat) present.add(cat);
     });
-    return Array.from(set);
+    // Order categories cleanly based on canonical CHANNEL_CATEGORIES
+    const ordered = CHANNEL_CATEGORIES.filter(
+      (cat) => cat !== "All" && cat !== "Favorites" && present.has(cat)
+    );
+    return ["All", ...ordered];
   }, [channels]);
 
   const filteredDrawerChannels = useMemo(() => {
     return channels.filter((ch) => {
-      const cat = ch.group || ch.category || "";
-      if (drawerCategory !== "All" && cat !== drawerCategory) return false;
+      const normalizedCat = normalizeCategory(ch.group || ch.category);
+      if (drawerCategory !== "All") {
+        const matchesCategory =
+          normalizedCat === drawerCategory ||
+          (ch.group && ch.group.toLowerCase().includes(drawerCategory.toLowerCase()));
+        if (!matchesCategory) return false;
+      }
       if (drawerSearch.trim()) {
         const q = drawerSearch.toLowerCase();
-        return ch.name.toLowerCase().includes(q) || cat.toLowerCase().includes(q);
+        return (
+          ch.name.toLowerCase().includes(q) ||
+          normalizedCat.toLowerCase().includes(q) ||
+          (ch.country?.toLowerCase().includes(q) ?? false)
+        );
       }
       return true;
     });
@@ -585,7 +598,10 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
                     </div>
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-xs font-bold text-white truncate">{ch.name}</span>
-                      <span className="text-[10px] text-white/40 uppercase">{ch.group || ch.category}</span>
+                      <span className="text-[10px] text-white/40 uppercase font-semibold">
+                        {normalizeCategory(ch.group || ch.category)}
+                        {ch.country ? ` • ${ch.country}` : ""}
+                      </span>
                     </div>
                     {isActive && (
                       <span className="w-2 h-2 rounded-full bg-primary animate-ping shrink-0" />
