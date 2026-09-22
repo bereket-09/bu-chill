@@ -1111,29 +1111,21 @@ export const MySpace: React.FC = () => {
               })}
             </div>
           ) : (
-            /* Contextual Empty State */
-            <div className="flex flex-col items-center justify-center py-16 px-6 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-center my-6">
-              <div className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl mb-3">
-                🍿
-              </div>
-              <h4 className="font-bold text-base text-white">No titles found</h4>
-              <p className="text-xs text-white/50 max-w-sm mt-1 mb-5">
+            /* Super Simple & Clean Empty State */
+            <div className="flex flex-col items-center justify-center py-20 px-4 text-center select-none">
+              <p className="text-sm text-white/40 font-medium">
                 {statusFilter === "all"
-                  ? "Your library is empty. Discover movies and TV shows to start watching or saving titles."
-                  : `No titles found in "${statusFilter}". Try changing your status or content filter.`}
+                  ? "No titles in your library"
+                  : `No ${statusFilter} titles`}
               </p>
-              <div className="flex items-center gap-3">
-                <Link href="/movies">
-                  <Button color="primary" variant="solid" size="sm" startContent={<FaFilm className="w-3 h-3" />}>
-                    Explore Movies
-                  </Button>
+              {unifiedMediaList.length === 0 && (
+                <Link
+                  href="/movies"
+                  className="mt-2.5 text-xs text-primary/80 hover:text-primary transition font-medium"
+                >
+                  Explore Movies & TV
                 </Link>
-                <Link href="/tv">
-                  <Button color="warning" variant="flat" size="sm" startContent={<FaTv className="w-3 h-3" />}>
-                    Explore TV Shows
-                  </Button>
-                </Link>
-              </div>
+              )}
             </div>
           )}
         </section>

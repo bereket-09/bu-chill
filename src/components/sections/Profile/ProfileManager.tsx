@@ -962,43 +962,19 @@ const ProfileManager: React.FC = () => {
           </section>
         )}
 
-        {/* Ready Library State (Shown if profile has no items and not loading) */}
+        {/* Clean Minimal Library State (Shown if profile has no items and not loading) */}
         {!isManageMode && !isMoviesLoading && continueWatchingItems.length === 0 && watchlistItems.length === 0 && (
-          <section className="w-full max-w-6xl mt-14 sm:mt-18 px-2 sm:px-4 animate-in fade-in duration-300">
-            <div className="flex flex-col items-center justify-center p-8 sm:p-12 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] text-center">
-              <div className="size-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-3xl mb-3">
-                🍿
-              </div>
-              <h3 className="text-base sm:text-lg font-bold text-white mb-1.5">
-                {profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}&apos;s Library is Ready
-              </h3>
-              <p className="text-xs sm:text-sm text-white/50 max-w-md mx-auto mb-6 leading-relaxed">
-                No movies or TV shows in progress yet for this profile. Start watching titles to build your personalized watch queue and history.
-              </p>
-              <div className="flex items-center gap-3">
-                <Link href="/movies">
-                  <Button
-                    color="primary"
-                    variant="solid"
-                    size="sm"
-                    startContent={<FaFilm className="w-3 h-3" />}
-                  >
-                    Explore Movies
-                  </Button>
-                </Link>
-                <Link href="/tv">
-                  <Button
-                    color="warning"
-                    variant="flat"
-                    size="sm"
-                    startContent={<FaTv className="w-3 h-3" />}
-                  >
-                    Explore TV Shows
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </section>
+          <div className="w-full max-w-6xl mt-14 sm:mt-18 px-4 flex flex-col items-center justify-center py-16 text-center select-none animate-in fade-in duration-300">
+            <p className="text-sm text-white/40 font-medium">
+              No movies or TV shows in progress for {profiles.find((p) => p.id === activeProfileId)?.name || "this profile"}
+            </p>
+            <Link
+              href="/movies"
+              className="mt-2.5 text-xs text-primary/80 hover:text-primary transition font-medium"
+            >
+              Explore Movies & TV
+            </Link>
+          </div>
         )}
 
         {/* Quick Settings Footer Link */}
