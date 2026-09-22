@@ -18,6 +18,7 @@ import {
   FaTv,
   FaClock,
   FaCheck,
+  FaClockRotateLeft,
 } from "react-icons/fa6";
 import { LuPopcorn, LuUsers } from "react-icons/lu";
 import { IoChevronBack, IoChevronForward, IoGrid, IoMenuOutline } from "react-icons/io5";
@@ -38,6 +39,8 @@ import {
   saveProfileHistoryItem,
   removeFromProfileHistory,
   clearProfileHistory,
+  setProfileHistoryItemCompleted,
+  updateProfileWatchlistStatus,
   getUserProfiles,
   switchActiveProfile,
   UserProfileItem,
@@ -346,8 +349,10 @@ export const MySpace: React.FC = () => {
     historyItems.forEach((h) => {
       const mediaId = Number(h.media_id);
       const key = `${h.type}-${mediaId}`;
-      const isCompleted = Boolean(h.completed || (h.duration > 0 && h.last_position >= h.duration * 0.9));
-      const isWatching = !isCompleted && (h.last_position > 5 || (h.duration > 0 && h.last_position < h.duration * 0.92));
+      // Only considered watched if explicitly marked completed by user
+      const isCompleted = Boolean(h.completed);
+      // As requested: keep it in watching only unless user explicitly moved to watched
+      const isWatching = !isCompleted;
       const isWatched = isCompleted;
 
       map.set(key, {
@@ -368,7 +373,7 @@ export const MySpace: React.FC = () => {
         isWatchlist: false,
         isPlanned: false,
         isWatched,
-        primaryStatus: isWatching ? "watching" : isWatched ? "watched" : "watching",
+        primaryStatus: isWatching ? "watching" : "watched",
       });
     });
 
@@ -393,7 +398,10 @@ export const MySpace: React.FC = () => {
         if (w.vote_average) existing.vote_average = w.vote_average;
         if (w.created_at) existing.created_at = w.created_at;
 
-        if (!existing.isWatching) {
+        // Keep in watching only unless explicitly moved to watched
+        if (existing.isWatching) {
+          existing.primaryStatus = "watching";
+        } else {
           existing.primaryStatus = isWatched ? "watched" : isPlanned ? "planned" : "watchlist";
         }
       } else {
@@ -502,6 +510,41 @@ export const MySpace: React.FC = () => {
     addToast({
       title: `Removed ${item.title} from library`,
       color: "warning",
+    });
+    reloadData();
+  };
+
+  // Move item between Watching and Watched
+  const handleToggleWatched = (item: UnifiedLibraryItem, markCompleted: boolean) => {
+    if (!user) return;
+    const uid = user.id;
+    const pid = activeProfileId;
+
+    // Update in profile history
+    setProfileHistoryItemCompleted(
+      uid,
+      pid,
+      item.media_id,
+      item.type,
+      markCompleted,
+      item.season,
+      item.episode
+    );
+
+    // If also in watchlist, update status accordingly
+    if (item.isWatchlist || item.isPlanned || item.isWatched) {
+      updateProfileWatchlistStatus(
+        uid,
+        pid,
+        item.media_id,
+        item.type,
+        markCompleted ? "completed" : "watchlist"
+      );
+    }
+
+    addToast({
+      title: markCompleted ? `Moved "${item.title}" to Watched` : `Moved "${item.title}" to Watching`,
+      color: markCompleted ? "success" : "primary",
     });
     reloadData();
   };
@@ -970,17 +1013,31 @@ export const MySpace: React.FC = () => {
 
                       {/* TV Season / Episode Info */}
                       {item.type === "tv" && item.season && item.episode && (
-                        <span className="absolute bottom-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-xs text-amber-400 border border-white/10">
+                        <span className="absolute top-8 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/80 backdrop-blur-xs text-amber-400 border border-white/10">
                           S{item.season} E{item.episode}
                         </span>
                       )}
+
+                      {/* Move to Watched / Watching Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleWatched(item, !item.isWatched)}
+                        title={item.isWatched ? "Move to Watching" : "Move to Watched"}
+                        className="absolute bottom-2 left-2 size-6 rounded-full bg-black/70 hover:bg-emerald-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md cursor-pointer z-10"
+                      >
+                        {item.isWatched ? (
+                          <FaClockRotateLeft className="w-2.5 h-2.5" />
+                        ) : (
+                          <FaCheck className="w-2.5 h-2.5" />
+                        )}
+                      </button>
 
                       {/* Remove Button */}
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item)}
                         title="Remove from library"
-                        className="absolute bottom-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md cursor-pointer"
+                        className="absolute bottom-2 right-2 size-6 rounded-full bg-black/70 hover:bg-red-600 text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md cursor-pointer z-10"
                       >
                         <FaTrash className="w-2.5 h-2.5" />
                       </button>
@@ -1024,15 +1081,48 @@ export const MySpace: React.FC = () => {
                         )}
                       </div>
 
-                      {isResume && (
-                        <Link
-                          href={resumeLink}
-                          className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                      <div className="mt-2.5 flex items-center justify-between gap-1 pt-2 border-t border-white/5">
+                        {isResume ? (
+                          <Link
+                            href={resumeLink}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                          >
+                            <FaPlay className="w-2 h-2" />
+                            Resume
+                          </Link>
+                        ) : (
+                          <Link
+                            href={detailLink}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-white/70 hover:text-white hover:underline"
+                          >
+                            <FaPlay className="w-2 h-2" />
+                            Watch
+                          </Link>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleWatched(item, !item.isWatched)}
+                          className={cn(
+                            "inline-flex items-center gap-1 text-[11px] font-semibold transition-colors cursor-pointer",
+                            item.isWatched
+                              ? "text-white/40 hover:text-primary"
+                              : "text-emerald-400 hover:text-emerald-300"
+                          )}
                         >
-                          <FaPlay className="w-2 h-2" />
-                          Resume
-                        </Link>
-                      )}
+                          {item.isWatched ? (
+                            <>
+                              <FaClockRotateLeft className="w-2.5 h-2.5" />
+                              <span>To Watching</span>
+                            </>
+                          ) : (
+                            <>
+                              <FaCheck className="w-2.5 h-2.5" />
+                              <span>Move Watched</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

@@ -98,9 +98,7 @@ const ProfileManager: React.FC = () => {
     setIsMoviesLoading(true);
 
     const history = getProfileHistory(uid, pid);
-    const inProgress = history.filter(
-      (item) => !item.completed && (!item.duration || item.last_position < item.duration * 0.95)
-    );
+    const inProgress = history.filter((item) => !item.completed);
     setContinueWatchingItems(inProgress);
 
     // Also load isolated profile watchlist

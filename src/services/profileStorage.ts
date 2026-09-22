@@ -526,6 +526,48 @@ export function removeFromProfileHistory(
   saveProfileHistory(uid, pid, filtered);
 }
 
+export function setProfileHistoryItemCompleted(
+  userId: string | undefined,
+  profileId: string | undefined,
+  mediaId: number,
+  type: ContentType,
+  completed: boolean,
+  season?: number,
+  episode?: number
+): void {
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  const current = getProfileHistory(uid, pid);
+  const updated = current.map((item) => {
+    if (item.media_id === mediaId && item.type === type) {
+      if (type !== "tv" || (item.season === season && item.episode === episode)) {
+        return { ...item, completed, updated_at: new Date().toISOString() };
+      }
+    }
+    return item;
+  });
+  saveProfileHistory(uid, pid, updated);
+}
+
+export function updateProfileWatchlistStatus(
+  userId: string | undefined,
+  profileId: string | undefined,
+  mediaId: number,
+  type: ContentType,
+  status: WatchlistStatus
+): void {
+  const uid = userId || "guest";
+  const pid = profileId || "main";
+  const current = getProfileWatchlist(uid, pid);
+  const updated = current.map((item) => {
+    if (item.id === mediaId && item.type === type) {
+      return { ...item, status };
+    }
+    return item;
+  });
+  saveProfileWatchlist(uid, pid, updated);
+}
+
 export function clearProfileHistory(
   userId: string | undefined,
   profileId: string | undefined
