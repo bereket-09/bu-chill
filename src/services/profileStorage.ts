@@ -1,4 +1,5 @@
 import { ContentType } from "@/types";
+import { DEFAULT_AVATAR_ID } from "@/constants/avatars";
 
 export type WatchlistStatus = "watchlist" | "planned" | "completed";
 
@@ -33,6 +34,13 @@ export interface ProfileHistoryItem {
   updated_at: string;
 }
 
+export interface UserProfileItem {
+  id: string;
+  name: string;
+  avatar: string;
+  isMain?: boolean;
+}
+
 /**
  * Gets the current active profile ID for a user. Defaults to "main".
  */
@@ -65,6 +73,208 @@ export function setActiveProfileId(userId: string | undefined, profileId: string
   } catch (e) {
     console.error("Failed to set active profile:", e);
   }
+}
+
+/**
+ * Gets all profiles for a user account (up to 5 profiles).
+ * Guarantees that at least one main profile exists.
+ */
+export function getUserProfiles(userId?: string, defaultName?: string): UserProfileItem[] {
+  if (typeof window === "undefined") return [];
+  const uid = userId || "guest";
+  try {
+    const raw = localStorage.getItem(`buchill_profiles_${uid}`);
+    let loaded: UserProfileItem[] = [];
+    if (raw) {
+      try {
+        loaded = JSON.parse(raw);
+      } catch (e) {
+        console.error("Failed to parse profiles", e);
+      }
+    }
+
+    if (!Array.isArray(loaded) || loaded.length === 0) {
+      const storedMainAvatar = localStorage.getItem(`buchill_avatar_${uid}`) || DEFAULT_AVATAR_ID;
+      loaded = [
+        {
+          id: "main",
+          name: defaultName || "Main Profile",
+          avatar: storedMainAvatar,
+          isMain: true,
+        },
+      ];
+      localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loaded));
+      return loaded;
+    }
+
+    // Clean up legacy auto-generated dummy profiles for logged-in accounts
+    if (userId) {
+      const cleaned = loaded.filter((p) => {
+        if (p.id === "kids" && p.name === "Kids & Anime") return false;
+        if (p.id === "chill" && p.name === "Guest Chill") return false;
+        return true;
+      });
+      if (cleaned.length !== loaded.length) {
+        loaded = cleaned;
+        localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loaded));
+      }
+    }
+
+    // Ensure main profile exists and is flagged isMain
+    const mainIdx = loaded.findIndex((p) => p.isMain || p.id === "main");
+    if (mainIdx >= 0) {
+      loaded[mainIdx].isMain = true;
+      if (defaultName && (loaded[mainIdx].name === "User" || loaded[mainIdx].name === "Main Profile")) {
+        loaded[mainIdx].name = defaultName;
+        localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loaded));
+      }
+    } else {
+      loaded.unshift({
+        id: "main",
+        name: defaultName || "Main Profile",
+        avatar: DEFAULT_AVATAR_ID,
+        isMain: true,
+      });
+      localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loaded));
+    }
+
+    return loaded;
+  } catch (e) {
+    console.error("Failed to read user profiles", e);
+    return [{ id: "main", name: defaultName || "Main Profile", avatar: DEFAULT_AVATAR_ID, isMain: true }];
+  }
+}
+
+/**
+ * Saves profiles array to storage and notifies subscribers.
+ */
+export function saveUserProfiles(userId: string | undefined, profiles: UserProfileItem[]): void {
+  if (typeof window === "undefined") return;
+  const uid = userId || "guest";
+  try {
+    localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(profiles));
+    window.dispatchEvent(
+      new CustomEvent("buchill_profiles_updated", { detail: { userId: uid, profiles } })
+    );
+  } catch (e) {
+    console.error("Failed to save user profiles", e);
+  }
+}
+
+/**
+ * Returns the currently active profile object.
+ */
+export function getActiveProfile(userId?: string, defaultName?: string): UserProfileItem {
+  const profiles = getUserProfiles(userId, defaultName);
+  const activeId = getActiveProfileId(userId);
+  const found = profiles.find((p) => p.id === activeId);
+  return (
+    found ||
+    profiles[0] || { id: "main", name: defaultName || "Main Profile", avatar: DEFAULT_AVATAR_ID, isMain: true }
+  );
+}
+
+/**
+ * Switches the active profile and fires sync events.
+ */
+export function switchActiveProfile(userId: string | undefined, profileId: string): void {
+  setActiveProfileId(userId, profileId);
+  if (typeof window === "undefined") return;
+  const uid = userId || "guest";
+  const profiles = getUserProfiles(uid);
+  const profile = profiles.find((p) => p.id === profileId);
+  if (profile) {
+    localStorage.setItem(`buchill_active_name_${uid}`, profile.name);
+    localStorage.setItem(`buchill_active_avatar_${uid}`, profile.avatar);
+  }
+  window.dispatchEvent(
+    new CustomEvent("buchill_profile_changed", { detail: { userId: uid, profileId, profile } })
+  );
+  window.dispatchEvent(
+    new CustomEvent("buchill_profiles_updated", { detail: { userId: uid, profiles } })
+  );
+}
+
+/**
+ * Updates an existing profile or adds a new profile (up to 5 profiles max).
+ */
+export function updateUserProfile(userId: string | undefined, profile: UserProfileItem): void {
+  if (typeof window === "undefined") return;
+  const uid = userId || "guest";
+  const profiles = getUserProfiles(uid);
+  const idx = profiles.findIndex((p) => p.id === profile.id);
+
+  let updated: UserProfileItem[];
+  if (idx >= 0) {
+    updated = [...profiles];
+    updated[idx] = { ...updated[idx], ...profile };
+  } else {
+    if (profiles.length >= 5) {
+      console.warn("Cannot add more than 5 profiles");
+      return;
+    }
+    updated = [...profiles, profile];
+  }
+
+  saveUserProfiles(uid, updated);
+
+  const activeId = getActiveProfileId(uid);
+  if (activeId === profile.id) {
+    localStorage.setItem(`buchill_active_name_${uid}`, profile.name);
+    localStorage.setItem(`buchill_active_avatar_${uid}`, profile.avatar);
+    window.dispatchEvent(
+      new CustomEvent("buchill_profile_changed", { detail: { userId: uid, profileId: profile.id, profile } })
+    );
+  }
+}
+
+/**
+ * Deletes a profile and completely purges all of its watch history and watchlist.
+ * Primary account profile ("main") cannot be deleted.
+ */
+export function deleteUserProfile(userId: string | undefined, profileId: string): UserProfileItem[] {
+  if (typeof window === "undefined") return [];
+  const uid = userId || "guest";
+  if (profileId === "main") {
+    console.warn("Cannot delete primary account profile");
+    return getUserProfiles(uid);
+  }
+
+  const current = getUserProfiles(uid);
+  const updated = current.filter((p) => p.id !== profileId);
+  saveUserProfiles(uid, updated);
+
+  // Clean up all isolated data associated with this profile
+  try {
+    localStorage.removeItem(getHistoryKey(uid, profileId));
+    localStorage.removeItem(getWatchlistKey(uid, profileId));
+
+    // Purge watch progress and TV last episode keys for this profile
+    const watchPrefix = `cinextma_watch_${profileId}_`;
+    const tvPrefix = `cinextma_last_episode_${profileId}_`;
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith(watchPrefix) || key.startsWith(tvPrefix))) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach((k) => localStorage.removeItem(k));
+  } catch (e) {
+    console.error("Failed to clean up profile data for deleted profile", e);
+  }
+
+  // If the deleted profile was currently active, switch back to main
+  const currentActive = getActiveProfileId(uid);
+  if (currentActive === profileId) {
+    switchActiveProfile(uid, "main");
+  } else {
+    window.dispatchEvent(
+      new CustomEvent("buchill_profiles_updated", { detail: { userId: uid, profiles: updated } })
+    );
+  }
+
+  return updated;
 }
 
 // -------------------------------------------------------------

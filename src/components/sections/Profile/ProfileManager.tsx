@@ -42,15 +42,14 @@ import {
   ProfileHistoryItem,
   getProfileWatchlist,
   ProfileWatchlistItem,
+  getUserProfiles,
+  getActiveProfileId,
+  switchActiveProfile,
+  updateUserProfile,
+  deleteUserProfile,
+  UserProfileItem,
 } from "@/services/profileStorage";
 import { getUserHistories } from "@/actions/histories";
-
-export interface UserProfileItem {
-  id: string;
-  name: string;
-  avatar: string;
-  isMain?: boolean;
-}
 
 export const AUDIO_LANGUAGES = [
   { key: "en", label: "English (Default)" },
@@ -158,54 +157,10 @@ const ProfileManager: React.FC = () => {
   // Initialize profiles
   useEffect(() => {
     const uid = user?.id || "guest";
-    const storedProfilesStr = localStorage.getItem(`buchill_profiles_${uid}`);
-    const storedMainAvatar = localStorage.getItem(`buchill_avatar_${uid}`) || DEFAULT_AVATAR_ID;
-
-    let loadedProfiles: UserProfileItem[] = [];
-    if (storedProfilesStr) {
-      try {
-        loadedProfiles = JSON.parse(storedProfilesStr);
-      } catch (e) {
-        console.error("Failed to parse stored profiles", e);
-      }
-    }
-
-    if (!loadedProfiles || loadedProfiles.length === 0) {
-      loadedProfiles = [
-        {
-          id: "main",
-          name: user?.username || "Main Profile",
-          avatar: storedMainAvatar,
-          isMain: true,
-        },
-      ];
-      localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loadedProfiles));
-    } else {
-      // Clean up legacy auto-generated dummy profiles for logged-in accounts
-      if (user?.id) {
-        const cleaned = loadedProfiles.filter((p) => {
-          if (p.id === "kids" && p.name === "Kids & Anime") return false;
-          if (p.id === "chill" && p.name === "Guest Chill") return false;
-          return true;
-        });
-        if (cleaned.length !== loadedProfiles.length) {
-          loadedProfiles = cleaned;
-          localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loadedProfiles));
-        }
-      }
-
-      const mainIdx = loadedProfiles.findIndex((p) => p.isMain || p.id === "main");
-      if (mainIdx >= 0) {
-        if (user?.username) {
-          loadedProfiles[mainIdx].name = user.username;
-        }
-        if (storedMainAvatar) loadedProfiles[mainIdx].avatar = storedMainAvatar;
-      }
-    }
-
+    const loadedProfiles = getUserProfiles(uid, user?.username);
     setProfiles(loadedProfiles);
 
-    const activeId = localStorage.getItem(`buchill_active_profile_${uid}`) || "main";
+    const activeId = getActiveProfileId(uid);
     setActiveProfileId(activeId);
     loadWatchingItems(uid, activeId);
 
@@ -262,38 +217,27 @@ const ProfileManager: React.FC = () => {
 
     setIsSaving(true);
     try {
-      let updatedProfiles = [...profiles];
-      const existingIdx = updatedProfiles.findIndex((p) => p.id === editingProfile.id);
+      const updatedProfileItem: UserProfileItem = {
+        id: editingProfile.id,
+        name: cleanName,
+        avatar: avatarId,
+        isMain: editingProfile.isMain || editingProfile.id === "main",
+      };
 
-      if (existingIdx >= 0) {
-        // Update existing
-        updatedProfiles[existingIdx] = {
-          ...updatedProfiles[existingIdx],
-          name: cleanName,
-          avatar: avatarId,
-        };
-      } else {
-        // Add new
-        updatedProfiles.push({
-          id: editingProfile.id,
-          name: cleanName,
-          avatar: avatarId,
-        });
-      }
-
-      setProfiles(updatedProfiles);
-      localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(updatedProfiles));
+      updateUserProfile(uid, updatedProfileItem);
 
       // If updating the main profile, sync username to Supabase profiles & localStorage avatar
-      if (editingProfile.isMain || editingProfile.id === "main") {
+      if (updatedProfileItem.isMain) {
         localStorage.setItem(`buchill_avatar_${uid}`, avatarId);
-
         if (user) {
           const supabase = createClient();
           await supabase.from("profiles").upsert({ id: user.id, username: cleanName });
           queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
         }
       }
+
+      const refreshed = getUserProfiles(uid, user?.username);
+      setProfiles(refreshed);
 
       addToast({
         title: "Profile saved successfully!",
@@ -322,20 +266,18 @@ const ProfileManager: React.FC = () => {
       return;
     }
 
-    if (!confirm(`Delete "${editingProfile.name}" profile? Streaming history for this profile will be removed.`)) {
+    if (!confirm(`Delete "${editingProfile.name}" profile? All watch history and watchlist for this profile will be permanently removed.`)) {
       return;
     }
 
-    const updated = profiles.filter((p) => p.id !== editingProfile.id);
+    const updated = deleteUserProfile(uid, editingProfile.id);
     setProfiles(updated);
-    localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(updated));
 
-    if (activeProfileId === editingProfile.id) {
-      setActiveProfileId("main");
-      localStorage.setItem(`buchill_active_profile_${uid}`, "main");
-    }
+    const newActiveId = getActiveProfileId(uid);
+    setActiveProfileId(newActiveId);
+    loadWatchingItems(uid, newActiveId);
 
-    addToast({ title: "Profile deleted", color: "primary" });
+    addToast({ title: `Deleted profile "${editingProfile.name}"`, color: "primary" });
     setViewMode("who_is_watching");
   };
 
@@ -349,21 +291,8 @@ const ProfileManager: React.FC = () => {
     const uid = user?.id || "guest";
     const wasAlreadyActive = activeProfileId === profile.id;
 
+    switchActiveProfile(uid, profile.id);
     setActiveProfileId(profile.id);
-    localStorage.setItem(`buchill_active_profile_${uid}`, profile.id);
-
-    // Save avatar for immediate navbar sync
-    if (profile.avatar) {
-      localStorage.setItem(`buchill_avatar_${uid}`, profile.avatar);
-      queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
-    }
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("buchill_profile_changed", { detail: { userId: uid, profileId: profile.id } })
-      );
-    }
-
     loadWatchingItems(uid, profile.id);
 
     if (wasAlreadyActive) {

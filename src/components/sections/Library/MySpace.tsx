@@ -31,7 +31,7 @@ import {
   DEFAULT_AVATAR_ID,
   resolveAvatarUrl,
 } from "@/constants/avatars";
-import { UserProfileItem } from "@/components/sections/Profile/ProfileManager";
+import { cn } from "@/utils/helpers";
 import {
   getActiveProfileId,
   getProfileWatchlist,
@@ -42,6 +42,9 @@ import {
   saveProfileHistory,
   removeFromProfileHistory,
   clearProfileHistory,
+  getUserProfiles,
+  switchActiveProfile,
+  UserProfileItem,
   ProfileWatchlistItem,
   ProfileHistoryItem,
 } from "@/services/profileStorage";
@@ -130,55 +133,10 @@ export const MySpace: React.FC = () => {
   // Load profiles on mount / user change
   useEffect(() => {
     if (!user) return;
-
-    const storedProfilesStr = localStorage.getItem(`buchill_profiles_${user.id}`);
-    const storedMainAvatar =
-      localStorage.getItem(`buchill_avatar_${user.id}`) || DEFAULT_AVATAR_ID;
-
-    let loadedProfiles: UserProfileItem[] = [];
-    if (storedProfilesStr) {
-      try {
-        loadedProfiles = JSON.parse(storedProfilesStr);
-      } catch (e) {
-        console.error("Failed to parse stored profiles", e);
-      }
-    }
-
-    if (!loadedProfiles || loadedProfiles.length === 0) {
-      loadedProfiles = [
-        {
-          id: "main",
-          name: user.username || "User",
-          avatar: storedMainAvatar,
-          isMain: true,
-        },
-      ];
-      localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(loadedProfiles));
-    } else {
-      // Clean up legacy auto-generated dummy profiles for logged-in accounts
-      if (user?.id) {
-        const cleaned = loadedProfiles.filter((p) => {
-          if (p.id === "kids" && p.name === "Kids & Anime") return false;
-          if (p.id === "chill" && p.name === "Guest Chill") return false;
-          return true;
-        });
-        if (cleaned.length !== loadedProfiles.length) {
-          loadedProfiles = cleaned;
-          localStorage.setItem(`buchill_profiles_${user.id}`, JSON.stringify(loadedProfiles));
-        }
-      }
-
-      const mainIdx = loadedProfiles.findIndex((p) => p.isMain || p.id === "main");
-      if (mainIdx >= 0) {
-        loadedProfiles[mainIdx].name = user.username || loadedProfiles[mainIdx].name;
-        if (storedMainAvatar) loadedProfiles[mainIdx].avatar = storedMainAvatar;
-      }
-    }
-
+    const loadedProfiles = getUserProfiles(user.id, user.username);
     setProfiles(loadedProfiles);
-
-    const activeId = getActiveProfileId(user.id);
-    setActiveId(activeId);
+    const currentActiveId = getActiveProfileId(user.id);
+    setActiveId(currentActiveId);
   }, [user]);
 
   // Reload profile-specific data whenever active profile or user changes
@@ -271,16 +229,29 @@ export const MySpace: React.FC = () => {
     reloadData();
 
     // Listen for custom events
-    const handleProfileChange = () => reloadData();
+    const handleProfileChange = () => {
+      if (user?.id) {
+        setProfiles(getUserProfiles(user.id, user.username));
+      }
+      reloadData();
+    };
+    const handleProfilesUpdate = () => {
+      if (user?.id) {
+        setProfiles(getUserProfiles(user.id, user.username));
+      }
+      reloadData();
+    };
     const handleWatchlistChange = () => reloadData();
     const handleHistoryChange = () => reloadData();
 
     window.addEventListener("buchill_profile_changed", handleProfileChange);
+    window.addEventListener("buchill_profiles_updated", handleProfilesUpdate);
     window.addEventListener("buchill_watchlist_changed", handleWatchlistChange);
     window.addEventListener("buchill_history_changed", handleHistoryChange);
 
     return () => {
       window.removeEventListener("buchill_profile_changed", handleProfileChange);
+      window.removeEventListener("buchill_profiles_updated", handleProfilesUpdate);
       window.removeEventListener("buchill_watchlist_changed", handleWatchlistChange);
       window.removeEventListener("buchill_history_changed", handleHistoryChange);
     };
@@ -497,6 +468,53 @@ export const MySpace: React.FC = () => {
             </Link>
           </div>
         </header>
+
+        {/* Profile Switcher Quick Bar (when multi-profile exists) */}
+        {profiles.length > 1 && (
+          <div className="mb-8 flex flex-wrap items-center gap-2.5 p-2 rounded-2xl bg-white/[0.04] border border-white/10 w-fit max-w-full">
+            <span className="text-xs font-bold text-white/50 px-2 uppercase tracking-wider">
+              Profile:
+            </span>
+            {profiles.map((p) => {
+              const isCurrent = p.id === activeProfileId;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    if (isCurrent) return;
+                    switchActiveProfile(user.id, p.id);
+                    addToast({
+                      title: `Switched to ${p.name}`,
+                      description: "Watch history and watchlist updated",
+                      color: "primary",
+                    });
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+                    isCurrent
+                      ? "bg-primary text-black shadow-md shadow-primary/25 font-bold"
+                      : "bg-white/5 text-white/70 hover:bg-white/15 hover:text-white"
+                  )}
+                >
+                  <img
+                    src={resolveAvatarUrl(p.avatar)}
+                    alt={p.name}
+                    className="size-5 rounded-full object-cover ring-1 ring-white/20"
+                  />
+                  <span>{p.name}</span>
+                </button>
+              );
+            })}
+            <Link
+              href="/profile"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-white/50 hover:text-white hover:bg-white/10 transition"
+            >
+              <LuUsers className="w-3.5 h-3.5" />
+              <span>{profiles.length < 5 ? "+ Add Profile" : "Manage"}</span>
+            </Link>
+          </div>
+        )}
 
         {/* ================================================================= */}
         {/* ROW 1: WATCHING (IN-PROGRESS MEDIA - only if items exist)        */}
