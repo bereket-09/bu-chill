@@ -24,6 +24,7 @@ import {
   FaClock,
   FaTv,
   FaFilm,
+  FaChevronDown,
 } from "react-icons/fa6";
 import { IoLogInOutline } from "react-icons/io5";
 import { signOut } from "@/actions/auth";
@@ -581,143 +582,169 @@ const ProfileManager: React.FC = () => {
   }
 
   // =========================================================
-  // VIEW 1: WHO'S WATCHING? WITH CONTINUE WATCHING SHELF
+  // VIEW 1: WHO'S WATCHING? (HERO TAKES FULL SCREEN) + BELOW-THE-FOLD SHELF
   // =========================================================
   return (
-    <div className="min-h-[85vh] w-full bg-black text-white flex flex-col font-sans select-none">
-      {/* Top Header */}
-      <header className="flex items-center justify-end px-6 py-5 md:px-12">
-        <button
-          type="button"
-          onClick={() => setIsManageMode((prev) => !prev)}
-          className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/15 hover:text-white hover:border-white/30"
-        >
-          {isManageMode ? (
-            <>
-              <FaCheck className="w-3.5 h-3.5 text-primary" />
-              <span>Done</span>
-            </>
-          ) : (
-            <>
-              <FaPen className="w-3.5 h-3.5 text-white/70" />
-              <span>Edit</span>
-            </>
-          )}
-        </button>
-      </header>
+    <div className="min-h-screen w-full bg-black text-white flex flex-col font-sans select-none">
+      {/* ================================================================= */}
+      {/* 1. HERO VIEWPORT: WHO'S WATCHING (TAKES MOST OF SCREEN)          */}
+      {/* ================================================================= */}
+      <section className="relative min-h-[90vh] sm:min-h-[93vh] w-full flex flex-col justify-between items-center px-6 py-6 md:px-12">
+        {/* Top Header / Edit Profile Button */}
+        <div className="w-full flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => setIsManageMode((prev) => !prev)}
+            className="flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-white/15 hover:text-white hover:border-white/30 cursor-pointer"
+          >
+            {isManageMode ? (
+              <>
+                <FaCheck className="w-3 h-3 text-primary" />
+                <span>Done</span>
+              </>
+            ) : (
+              <>
+                <FaPen className="w-3 h-3 text-white/70" />
+                <span>Edit</span>
+              </>
+            )}
+          </button>
+        </div>
 
-      {/* Main Profile Circles Container */}
-      <main className="flex flex-1 flex-col items-center justify-center px-6 pb-20 pt-8 sm:pt-12">
-        <h1 className="mb-10 sm:mb-14 text-center text-2xl font-bold tracking-tight sm:text-4xl text-white/90">
-          {isManageMode ? "Edit Profile" : "Who's watching?"}
-        </h1>
+        {/* Centered Profile Avatars & Titles */}
+        <div className="flex flex-col items-center justify-center my-auto w-full max-w-4xl py-6">
+          <h1 className="mb-10 sm:mb-14 text-center text-3xl sm:text-5xl font-extrabold tracking-tight text-white/95">
+            {isManageMode ? "Edit Profile" : "Who's watching?"}
+          </h1>
 
-        <div className="flex flex-wrap items-start justify-center gap-8 md:gap-14 max-w-4xl">
-          {profiles.map((profile, idx) => {
-            const avatarUrl = resolveAvatarUrl(profile.avatar);
-            const isActive = profile.id === activeProfileId;
+          <div className="flex flex-wrap items-start justify-center gap-8 md:gap-14 max-w-4xl">
+            {profiles.map((profile, idx) => {
+              const avatarUrl = resolveAvatarUrl(profile.avatar);
+              const isActive = profile.id === activeProfileId;
 
-            return (
+              return (
+                <button
+                  key={profile.id}
+                  type="button"
+                  onClick={() => handleSelectProfile(profile)}
+                  style={{ animationDelay: `${idx * 80}ms` }}
+                  className="group flex flex-col items-center gap-3 outline-none cursor-pointer animate-in fade-in zoom-in-95 duration-300"
+                >
+                  <div
+                    className={`relative size-24 sm:size-32 overflow-hidden rounded-full transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1.5 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.9)] bg-default-800 flex items-center justify-center ${
+                      isActive && !isManageMode
+                        ? "ring-3 ring-primary ring-offset-4 ring-offset-black shadow-[0_0_24px_rgba(0,255,200,0.35)]"
+                        : "ring-1 ring-white/15 group-hover:ring-2 group-hover:ring-white"
+                    }`}
+                  >
+                    <img
+                      src={avatarUrl}
+                      alt={profile.name}
+                      className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+
+                    {/* Loading Spinner Overlay when switching to this profile */}
+                    {switchingProfileId === profile.id && (
+                      <div className="absolute inset-0 bg-black/75 rounded-full flex flex-col items-center justify-center backdrop-blur-xs z-10 animate-in fade-in duration-200">
+                        <Spinner size="sm" color="primary" />
+                        <span className="text-[9px] font-bold text-primary mt-1">Loading...</span>
+                      </div>
+                    )}
+
+                    {/* Edit Pencil Overlay when in Manage Mode */}
+                    {isManageMode && (
+                      <div className="absolute inset-0 bg-black/65 rounded-full flex items-center justify-center border-2 border-white/80 backdrop-blur-[1px] transition-opacity duration-200">
+                        <FaPen className="w-6 h-6 text-white drop-shadow-md" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-sm sm:text-base font-semibold text-white/70 group-hover:text-white transition-colors">
+                      {profile.name}
+                    </span>
+                    {isActive && !isManageMode && (
+                      <span className="text-[9px] font-bold tracking-wider text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+
+            {/* Add Profile Button */}
+            {profiles.length < 5 && (
               <button
-                key={profile.id}
                 type="button"
-                onClick={() => handleSelectProfile(profile)}
-                style={{ animationDelay: `${idx * 80}ms` }}
+                onClick={handleAddNewProfile}
                 className="group flex flex-col items-center gap-3 outline-none cursor-pointer animate-in fade-in zoom-in-95 duration-300"
               >
-                <div
-                  className={`relative size-24 sm:size-32 overflow-hidden rounded-full transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1.5 group-hover:shadow-[0_12px_32px_rgba(0,0,0,0.9)] bg-default-800 flex items-center justify-center ${
-                    isActive && !isManageMode
-                      ? "ring-3 ring-primary ring-offset-4 ring-offset-black shadow-[0_0_24px_rgba(0,255,200,0.35)]"
-                      : "ring-1 ring-white/15 group-hover:ring-2 group-hover:ring-white"
-                  }`}
-                >
-                  <img
-                    src={avatarUrl}
-                    alt={profile.name}
-                    className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-
-                  {/* Loading Spinner Overlay when switching to this profile */}
-                  {switchingProfileId === profile.id && (
-                    <div className="absolute inset-0 bg-black/75 rounded-full flex flex-col items-center justify-center backdrop-blur-xs z-10 animate-in fade-in duration-200">
-                      <Spinner size="sm" color="primary" />
-                      <span className="text-[9px] font-bold text-primary mt-1">Loading...</span>
-                    </div>
-                  )}
-
-                  {/* Edit Pencil Overlay when in Manage Mode */}
-                  {isManageMode && (
-                    <div className="absolute inset-0 bg-black/65 rounded-full flex items-center justify-center border-2 border-white/80 backdrop-blur-[1px] transition-opacity duration-200">
-                      <FaPen className="w-6 h-6 text-white drop-shadow-md" />
-                    </div>
-                  )}
+                <div className="flex size-24 sm:size-32 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/[0.03] text-white/60 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1.5 group-hover:border-white group-hover:bg-white/10 group-hover:text-white">
+                  <FaPlus className="w-8 h-8 sm:w-10 sm:h-10 text-white/60 group-hover:text-white transition-colors" />
                 </div>
-
-                <div className="flex flex-col items-center gap-1">
-                  <span className="text-sm sm:text-base font-medium text-white/70 group-hover:text-white transition-colors">
-                    {profile.name}
-                  </span>
-                  {isActive && !isManageMode && (
-                    <span className="text-[10px] font-bold tracking-wider text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                      Active
-                    </span>
-                  )}
-                </div>
+                <span className="text-sm sm:text-base font-semibold text-white/70 group-hover:text-white transition-colors">
+                  Add
+                </span>
               </button>
-            );
-          })}
+            )}
+          </div>
 
-          {/* Add Profile Button */}
-          {profiles.length < 5 && (
-            <button
-              type="button"
-              onClick={handleAddNewProfile}
-              className="group flex flex-col items-center gap-3 outline-none cursor-pointer animate-in fade-in zoom-in-95 duration-300"
-            >
-              <div className="flex size-24 sm:size-32 items-center justify-center rounded-full border border-dashed border-white/25 bg-white/[0.03] text-white/60 transition-all duration-300 group-hover:scale-110 group-hover:-translate-y-1.5 group-hover:border-white group-hover:bg-white/10 group-hover:text-white">
-                <FaPlus className="w-8 h-8 sm:w-10 sm:h-10 text-white/60 group-hover:text-white transition-colors" />
-              </div>
-              <span className="text-sm sm:text-base font-medium text-white/70 group-hover:text-white transition-colors">
-                Add
-              </span>
-            </button>
+          {/* Quick Launch / Action Buttons - Sleek, Refined & Compact */}
+          {!isManageMode && (
+            <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-2.5">
+              <Link
+                href="/movies"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 sm:px-4.5 sm:py-2 text-black font-bold text-xs shadow-md shadow-white/10 transition-all hover:bg-white/90 hover:scale-105 active:scale-95"
+              >
+                {isMoviesLoading ? (
+                  <Spinner size="sm" color="current" />
+                ) : (
+                  <FaPlay className="text-[9px]" />
+                )}
+                <span>
+                  {isMoviesLoading
+                    ? `Loading...`
+                    : `Browse as ${profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}`}
+                </span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setViewMode("account_settings")}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-white/70 hover:text-white hover:bg-white/10 hover:border-white/30 transition-all cursor-pointer"
+              >
+                <FaGear className="w-3 h-3 text-white/50" />
+                <span>Streaming Setup</span>
+              </button>
+            </div>
           )}
         </div>
 
-        {/* Quick Launch / Action Pill */}
-        {!isManageMode && (
-          <div className="mt-8 sm:mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/movies"
-              className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 sm:px-6 sm:py-3 text-black font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(255,255,255,0.25)] transition hover:bg-white/90 hover:scale-105 active:scale-95"
-            >
-              {isMoviesLoading ? (
-                <Spinner size="sm" color="current" />
-              ) : (
-                <FaPlay className="text-[11px]" />
-              )}
-              <span>
-                {isMoviesLoading
-                  ? `Loading movies for ${profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}...`
-                  : `Browse as ${profiles.find((p) => p.id === activeProfileId)?.name || "Profile"}`}
-              </span>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setViewMode("account_settings")}
-              className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 hover:border-white/30 transition cursor-pointer"
-            >
-              <FaGear className="w-3.5 h-3.5" />
-              <span>Streaming Setup</span>
-            </button>
-          </div>
+        {/* Bottom subtle indicator to scroll to Continue Watching */}
+        {!isManageMode && (continueWatchingItems.length > 0 || watchlistItems.length > 0) ? (
+          <button
+            type="button"
+            onClick={() => {
+              document.getElementById("profile-library-shelf")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="flex items-center gap-1.5 text-xs text-white/35 hover:text-white/80 transition-colors pt-4 pb-2 animate-bounce cursor-pointer select-none"
+          >
+            <span>Scroll down for movies & continue watching</span>
+            <FaChevronDown className="w-3 h-3" />
+          </button>
+        ) : (
+          <div className="h-6" />
         )}
+      </section>
 
+      {/* ================================================================= */}
+      {/* 2. LOWER SECTION (BELOW THE FOLD): CONTINUE WATCHING & LIBRARY    */}
+      {/* ================================================================= */}
+      <div id="profile-library-shelf" className="w-full max-w-6xl mx-auto px-4 sm:px-8 pb-32 pt-8 scroll-mt-6">
         {/* Movie Loading Skeletons when changing profile */}
         {!isManageMode && isMoviesLoading && (
-          <section className="w-full max-w-6xl mt-14 sm:mt-18 px-2 sm:px-4 animate-in fade-in duration-300">
+          <section className="w-full mt-8 px-2 sm:px-4 animate-in fade-in duration-300">
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5 sm:gap-3">
                 <Spinner size="sm" color="primary" />
@@ -755,7 +782,7 @@ const ProfileManager: React.FC = () => {
 
         {/* Continue Watching Section (Only shown if titles in progress exist) */}
         {!isManageMode && !isMoviesLoading && continueWatchingItems.length > 0 && (
-          <section className="w-full max-w-6xl mt-14 sm:mt-18 px-2 sm:px-4">
+          <section className="w-full mt-8 px-2 sm:px-4">
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5 sm:gap-3">
                 <div className="size-2 rounded-full bg-primary animate-pulse" />
@@ -900,7 +927,7 @@ const ProfileManager: React.FC = () => {
 
         {/* Watchlist Section (Only shown if watchlist has items and not loading) */}
         {!isManageMode && !isMoviesLoading && watchlistItems.length > 0 && (
-          <section className="w-full max-w-6xl mt-12 sm:mt-16 px-2 sm:px-4">
+          <section className="w-full mt-12 sm:mt-16 px-2 sm:px-4">
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5 sm:gap-3">
                 <div className="size-2 rounded-full bg-amber-400" />
@@ -964,7 +991,7 @@ const ProfileManager: React.FC = () => {
 
         {/* Clean Minimal Library State (Shown if profile has no items and not loading) */}
         {!isManageMode && !isMoviesLoading && continueWatchingItems.length === 0 && watchlistItems.length === 0 && (
-          <div className="w-full max-w-6xl mt-14 sm:mt-18 px-4 flex flex-col items-center justify-center py-16 text-center select-none animate-in fade-in duration-300">
+          <div className="w-full mt-10 px-4 flex flex-col items-center justify-center py-12 text-center select-none animate-in fade-in duration-300">
             <p className="text-sm text-white/40 font-medium">
               No movies or TV shows in progress for {profiles.find((p) => p.id === activeProfileId)?.name || "this profile"}
             </p>
@@ -978,7 +1005,7 @@ const ProfileManager: React.FC = () => {
         )}
 
         {/* Quick Settings Footer Link */}
-        <div className="mt-16 sm:mt-20 flex items-center gap-6">
+        <div className="mt-14 flex justify-center items-center gap-6">
           <Link
             href="/settings"
             className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-white/40 hover:text-white transition-colors cursor-pointer"
@@ -987,7 +1014,7 @@ const ProfileManager: React.FC = () => {
             <span>Help & Settings</span>
           </Link>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
