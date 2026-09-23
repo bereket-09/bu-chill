@@ -58,16 +58,28 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
     return () => window.removeEventListener("buchill_adshield_changed", handleSync);
   }, []);
 
+  // Known anti-sandbox embed providers (e.g. Videasy) that actively inspect the environment
+  // and refuse to play if the iframe tag has ANY sandbox attribute applied.
+  const isAntiSandboxHost = useMemo(() => {
+    if (!src) return false;
+    return /videasy\.to|player\.videasy/i.test(src);
+  }, [src]);
+
   const sandbox = useMemo(() => {
-    // Base flags: allows video playback, scripts, CORS HLS requests, form interactions, airplay/presentation
-    // NOTICE: allow-top-navigation is NEVER included! Top window cannot be hijacked or redirected!
+    // If user selected "direct" mode or host aggressively blocks sandboxed iframes:
+    // Completely omit sandbox attribute from the iframe DOM element!
+    if (shieldMode === "direct" || isAntiSandboxHost) {
+      return undefined;
+    }
+
+    // Strict mode: 0 popups, 0 redirects!
     if (shieldMode === "strict") {
-      // 100% Popup trap: clicking play triggers video directly, 0 popups spawned!
       return "allow-scripts allow-same-origin allow-forms allow-presentation";
     }
-    // Balanced mode: allows popups in case a server strictly refuses to play without popup capability
+
+    // Balanced mode: allows popups for stubborn players that require window.open
     return "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups";
-  }, [shieldMode]);
+  }, [shieldMode, isAntiSandboxHost]);
 
   // Auto-dismiss "Server issues? Try next" prompt after iframe loads
   const [showServerIssuePrompt, setShowServerIssuePrompt] = useState(false);

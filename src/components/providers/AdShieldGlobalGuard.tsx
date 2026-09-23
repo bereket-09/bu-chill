@@ -176,17 +176,50 @@ export default function AdShieldGlobalGuard() {
       }
     };
 
+    // 6. Anti-Tab-Hijack Guard: Prevent unauthorized top window redirects by rogue embeds
+    let isInternalNavigation = false;
+    const handleInternalNavigationClick = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement)?.closest("a");
+      if (anchor) {
+        const href = anchor.getAttribute("href") || "";
+        if (href.startsWith("/") || href.startsWith("#") || isLegitimateUrl(href)) {
+          isInternalNavigation = true;
+          setTimeout(() => {
+            isInternalNavigation = false;
+          }, 3500);
+        }
+      }
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isInternalNavigation) {
+        // If an embed tries to redirect the top window away from movie/show players
+        if (
+          typeof window !== "undefined" &&
+          (window.location.pathname.includes("/player") || window.location.pathname.includes("/watch"))
+        ) {
+          e.preventDefault();
+          e.returnValue = "";
+          return "";
+        }
+      }
+    };
+
     window.addEventListener("click", handleCaptureClick, { capture: true });
+    window.addEventListener("click", handleInternalNavigationClick, { capture: false });
     window.addEventListener("mousedown", handleUserInteraction, { capture: true });
     window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       window.open = originalOpen;
       HTMLAnchorElement.prototype.click = originalAnchorClick;
       HTMLFormElement.prototype.submit = originalFormSubmit;
       window.removeEventListener("click", handleCaptureClick, { capture: true });
+      window.removeEventListener("click", handleInternalNavigationClick, { capture: false });
       window.removeEventListener("mousedown", handleUserInteraction, { capture: true });
       window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
 
