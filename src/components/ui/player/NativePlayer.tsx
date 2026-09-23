@@ -26,6 +26,7 @@ import {
   MdSpeed,
   MdAspectRatio,
   MdPictureInPictureAlt,
+  MdKeyboard,
 } from "react-icons/md";
 import { List } from "@/utils/icons";
 import Link from "next/link";
@@ -124,6 +125,7 @@ export const NativePlayer: React.FC<NativePlayerProps> = ({
   // Popover menus
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAudioSubsOpen, setIsAudioSubsOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"main" | "speed" | "quality" | "aspect">("main");
 
   // Timeline tooltip
@@ -530,6 +532,13 @@ export const NativePlayer: React.FC<NativePlayerProps> = ({
           if (hasNextEpisode && onNextEpisode) {
             e.preventDefault();
             onNextEpisode();
+          }
+          break;
+        case "?":
+        case "/":
+          if (e.key === "?" || e.shiftKey) {
+            e.preventDefault();
+            setIsShortcutsOpen((prev) => !prev);
           }
           break;
       }
@@ -1248,6 +1257,17 @@ export const NativePlayer: React.FC<NativePlayerProps> = ({
               <MdPictureInPictureAlt className="text-xl sm:text-2xl" />
             </button>
 
+            {/* Keyboard Shortcuts Button */}
+            <button
+              type="button"
+              onClick={() => setIsShortcutsOpen((prev) => !prev)}
+              className="text-white/80 hover:text-white hover:scale-110 active:scale-95 transition-all p-1.5 hidden sm:inline-flex"
+              aria-label="Keyboard Shortcuts"
+              title="Keyboard Shortcuts (?)"
+            >
+              <MdKeyboard className="text-xl sm:text-2xl" />
+            </button>
+
             {/* Fullscreen Button */}
             <button
               type="button"
@@ -1265,6 +1285,79 @@ export const NativePlayer: React.FC<NativePlayerProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Keyboard Shortcuts Overlay Modal */}
+      {isShortcutsOpen && (
+        <div
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200"
+          onClick={() => setIsShortcutsOpen(false)}
+        >
+          <div
+            className="relative max-w-md w-full rounded-2xl border border-white/20 bg-neutral-900/95 p-6 shadow-2xl text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
+              <div className="flex items-center gap-2">
+                <MdKeyboard className="text-xl text-primary" />
+                <h3 className="font-bold text-base">Keyboard Shortcuts</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsShortcutsOpen(false)}
+                className="text-white/50 hover:text-white transition-colors text-sm px-2 py-1 rounded-md hover:bg-white/10"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex items-center justify-between bg-white/[0.04] p-2 rounded-lg">
+                <span className="text-white/70">Play / Pause</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/15 font-mono text-[11px] font-bold">Space / K</kbd>
+              </div>
+              <div className="flex items-center justify-between bg-white/[0.04] p-2 rounded-lg">
+                <span className="text-white/70">Fullscreen</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/15 font-mono text-[11px] font-bold">F</kbd>
+              </div>
+              <div className="flex items-center justify-between bg-white/[0.04] p-2 rounded-lg">
+                <span className="text-white/70">Mute / Unmute</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/15 font-mono text-[11px] font-bold">M</kbd>
+              </div>
+              <div className="flex items-center justify-between bg-white/[0.04] p-2 rounded-lg">
+                <span className="text-white/70">Rewind 10s</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/15 font-mono text-[11px] font-bold">J / ←</kbd>
+              </div>
+              <div className="flex items-center justify-between bg-white/[0.04] p-2 rounded-lg">
+                <span className="text-white/70">Forward 10s</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/15 font-mono text-[11px] font-bold">L / →</kbd>
+              </div>
+              <div className="flex items-center justify-between bg-white/[0.04] p-2 rounded-lg">
+                <span className="text-white/70">Volume</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/15 font-mono text-[11px] font-bold">↑ / ↓</kbd>
+              </div>
+              <div className="flex items-center justify-between bg-white/[0.04] p-2 rounded-lg">
+                <span className="text-white/70">Captions</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/15 font-mono text-[11px] font-bold">C</kbd>
+              </div>
+              <div className="flex items-center justify-between bg-white/[0.04] p-2 rounded-lg">
+                <span className="text-white/70">Next Episode</span>
+                <kbd className="px-2 py-0.5 rounded bg-white/15 font-mono text-[11px] font-bold">N</kbd>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-[11px] text-white/40">
+              <span>Press <kbd className="font-mono text-white/70">?</kbd> anytime to toggle</span>
+              <button
+                type="button"
+                onClick={() => setIsShortcutsOpen(false)}
+                className="text-primary hover:underline font-semibold"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

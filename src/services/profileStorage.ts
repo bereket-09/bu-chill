@@ -39,6 +39,7 @@ export interface UserProfileItem {
   name: string;
   avatar: string;
   isMain?: boolean;
+  isKid?: boolean;
 }
 
 /**
@@ -172,6 +173,19 @@ export function getActiveProfile(userId?: string, defaultName?: string): UserPro
     found ||
     profiles[0] || { id: "main", name: defaultName || "Main Profile", avatar: DEFAULT_AVATAR_ID, isMain: true }
   );
+}
+
+/**
+ * Checks whether the currently active profile is flagged as a Kids profile.
+ */
+export function isCurrentProfileKid(userId?: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const profile = getActiveProfile(userId);
+    return Boolean(profile?.isKid);
+  } catch {
+    return false;
+  }
 }
 
 /**

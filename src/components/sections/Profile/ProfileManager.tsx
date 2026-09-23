@@ -85,6 +85,7 @@ const ProfileManager: React.FC = () => {
   const [editingProfile, setEditingProfile] = useState<UserProfileItem | null>(null);
   const [editName, setEditName] = useState<string>("");
   const [editAvatarIndex, setEditAvatarIndex] = useState<number>(0);
+  const [editIsKid, setEditIsKid] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Playback Preferences
@@ -238,6 +239,7 @@ const ProfileManager: React.FC = () => {
   const handleOpenEdit = (profile: UserProfileItem) => {
     setEditingProfile(profile);
     setEditName(profile.name);
+    setEditIsKid(Boolean(profile.isKid));
 
     // Find avatar index in presets
     const idx = AVATAR_PRESETS.findIndex((a) => a.id === profile.avatar || a.url === profile.avatar);
@@ -259,9 +261,11 @@ const ProfileManager: React.FC = () => {
       id: `profile_${Date.now()}`,
       name: "",
       avatar: DEFAULT_AVATAR_ID,
+      isKid: false,
     };
     setEditingProfile(newProfile);
     setEditName("");
+    setEditIsKid(false);
     setEditAvatarIndex(0);
     setViewMode("edit_profile");
   };
@@ -286,6 +290,7 @@ const ProfileManager: React.FC = () => {
         name: cleanName,
         avatar: avatarId,
         isMain: editingProfile.isMain || editingProfile.id === "main",
+        isKid: editIsKid,
       };
 
       updateUserProfile(uid, updatedProfileItem);
@@ -433,6 +438,8 @@ const ProfileManager: React.FC = () => {
         setName={setEditName}
         selectedIndex={editAvatarIndex}
         setSelectedIndex={setEditAvatarIndex}
+        isKid={editIsKid}
+        setIsKid={setEditIsKid}
         onSave={handleSaveProfile}
         onCancel={() => setViewMode("who_is_watching")}
         onDelete={editingProfile.isMain || editingProfile.id === "main" ? undefined : handleDeleteProfile}
@@ -660,8 +667,13 @@ const ProfileManager: React.FC = () => {
                   </div>
 
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-sm sm:text-base font-semibold text-white/70 group-hover:text-white transition-colors">
-                      {profile.name}
+                    <span className="text-sm sm:text-base font-semibold text-white/70 group-hover:text-white transition-colors flex items-center gap-1.5">
+                      <span>{profile.name}</span>
+                      {profile.isKid && (
+                        <span className="text-[10px] font-bold tracking-tight text-amber-300 bg-amber-400/15 border border-amber-400/30 px-1.5 py-0.5 rounded-full">
+                          🧸 Kids
+                        </span>
+                      )}
                     </span>
                     {isActive && !isManageMode && (
                       <span className="text-[9px] font-bold tracking-wider text-primary uppercase bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
@@ -1030,6 +1042,8 @@ export interface EditProfileViewProps {
   setName: (val: string) => void;
   selectedIndex: number;
   setSelectedIndex: (idx: number) => void;
+  isKid: boolean;
+  setIsKid: (val: boolean) => void;
   onSave: () => void;
   onCancel: () => void;
   onDelete?: () => void;
@@ -1042,6 +1056,8 @@ export const EditProfileView: React.FC<EditProfileViewProps> = ({
   setName,
   selectedIndex,
   setSelectedIndex,
+  isKid,
+  setIsKid,
   onSave,
   onCancel,
   onDelete,
@@ -1095,7 +1111,7 @@ export const EditProfileView: React.FC<EditProfileViewProps> = ({
         </div>
 
         {/* Profile Name Input */}
-        <div className="w-full max-w-sm mt-2">
+        <div className="w-full max-w-sm mt-2 flex flex-col gap-4">
           <input
             autoFocus
             type="text"
@@ -1105,6 +1121,22 @@ export const EditProfileView: React.FC<EditProfileViewProps> = ({
             maxLength={20}
             className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3.5 text-base text-white placeholder-white/40 outline-none transition focus:border-white focus:bg-white/10 text-center sm:text-left"
           />
+
+          {/* Kids Mode Toggle */}
+          <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] p-3.5 transition-colors hover:border-white/20">
+            <div className="flex flex-col text-left pr-2">
+              <span className="text-sm font-semibold text-white/90 flex items-center gap-1.5">
+                <span>🧸</span> Kids Profile
+              </span>
+              <span className="text-xs text-white/45">Family-friendly content only</span>
+            </div>
+            <Switch
+              isSelected={isKid}
+              onValueChange={setIsKid}
+              color="primary"
+              size="sm"
+            />
+          </div>
         </div>
 
         {/* Action Button: Save & Continue */}

@@ -9,6 +9,7 @@ import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { usePathname, useRouter } from "next/navigation";
 import useDiscoverFilters from "@/hooks/useDiscoverFilters";
 import AdShieldGlobalGuard from "@/components/providers/AdShieldGlobalGuard";
+import PWAInstallPrompt from "@/components/ui/other/PWAInstallPrompt";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,7 @@ export default function Providers({ children }: PropsWithChildren) {
             </ProgressProvider>
           </Suspense>
         </NextThemesProvider>
+        <PWAInstallPrompt />
       </HeroUIProvider>
     </QueryClientProvider>
   );

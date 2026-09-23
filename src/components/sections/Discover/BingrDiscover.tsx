@@ -29,6 +29,15 @@ const QUERY_TABS = [
   { id: "discover", label: "Browse All", icon: <IoCompass className="w-3.5 h-3.5 text-purple-400" /> },
 ];
 
+const VIBE_PRESETS = [
+  { id: "all", label: "All Vibes", icon: "✨", genres: "" },
+  { id: "cozy", label: "Cozy & Feel-Good", icon: "☕", genres: "35,10749" },
+  { id: "mindbending", label: "Mind-Bending", icon: "🧠", genres: "878,9648" },
+  { id: "popcorn", label: "Popcorn Action", icon: "🍿", genres: "28,12" },
+  { id: "dark", label: "Late Night Thrills", icon: "🌙", genres: "27,53" },
+  { id: "family", label: "Family Fun", icon: "🧸", genres: "16,10751" },
+];
+
 const GENRE_PILLS = [
   { id: "28", name: "Action", tvId: "10759" },
   { id: "16", name: "Animation", tvId: "16" },
@@ -49,12 +58,13 @@ export const BingrDiscover: React.FC = () => {
   const rawType = searchParams.get("type") || "todayTrending";
   const rawContent = (searchParams.get("content") as "movie" | "tv") || "movie";
   const rawGenres = searchParams.get("genres") || "";
+  const rawVibe = searchParams.get("vibe") || "all";
 
   const [fuzzySearch, setFuzzySearch] = useState("");
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Sync state helpers
-  const updateUrl = (params: { type?: string; content?: string; genres?: string }) => {
+  const updateUrl = (params: { type?: string; content?: string; genres?: string; vibe?: string }) => {
     const next = new URLSearchParams(searchParams.toString());
     if (params.type !== undefined) {
       if (params.type) next.set("type", params.type);
@@ -68,7 +78,19 @@ export const BingrDiscover: React.FC = () => {
       if (params.genres) next.set("genres", params.genres);
       else next.delete("genres");
     }
+    if (params.vibe !== undefined) {
+      if (params.vibe && params.vibe !== "all") next.set("vibe", params.vibe);
+      else next.delete("vibe");
+    }
     router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+  };
+
+  const handleVibeSelect = (vibe: typeof VIBE_PRESETS[number]) => {
+    if (vibe.id === "all") {
+      updateUrl({ vibe: "all", genres: "" });
+    } else {
+      updateUrl({ vibe: vibe.id, genres: vibe.genres, type: "discover" });
+    }
   };
 
   const handleTypeChange = (newType: string) => {
@@ -267,6 +289,31 @@ export const BingrDiscover: React.FC = () => {
             Matching {displayItems.length} of {allItems.length} loaded titles
           </div>
         )}
+      </div>
+
+      {/* ================= VIBE & MOOD QUICK SELECTOR ================= */}
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1" style={{ scrollbarWidth: "none" }}>
+        <span className="text-xs font-bold uppercase tracking-wider text-amber-400/80 mr-1 shrink-0 flex items-center gap-1">
+          <span>✨</span> Vibe:
+        </span>
+        {VIBE_PRESETS.map((vibe) => {
+          const isActive = rawVibe === vibe.id || (!rawVibe && vibe.id === "all");
+          return (
+            <button
+              key={vibe.id}
+              type="button"
+              onClick={() => handleVibeSelect(vibe)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                isActive
+                  ? "bg-amber-400 text-black border-amber-400 shadow-md shadow-amber-400/20 scale-105"
+                  : "bg-white/[0.04] text-white/70 hover:text-white hover:bg-white/10 border-white/10"
+              }`}
+            >
+              <span>{vibe.icon}</span>
+              <span>{vibe.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ================= CATEGORY / QUERY TYPE PILLS ================= */}

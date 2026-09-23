@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import SafeImage from "@/components/ui/other/SafeImage";
 import { SportsMatch } from "@/services/sports";
@@ -9,7 +9,7 @@ import {
   getSportsBadgeUrl,
   getCategoryFallbackImage,
 } from "./SportsHeroCarousel";
-import { IoPlay, IoTimeOutline, IoRadio } from "react-icons/io5";
+import { IoPlay, IoTimeOutline, IoRadio, IoCalendarOutline, IoCheckmark } from "react-icons/io5";
 
 interface SportsMatchCardProps {
   match: SportsMatch;
@@ -35,9 +35,25 @@ const CATEGORY_ICONS: Record<string, string> = {
 };
 
 export const SportsMatchCard: React.FC<SportsMatchCardProps> = ({ match }) => {
+  const [copied, setCopied] = useState(false);
+
   const isLive =
     match.category !== "upcoming" &&
     new Date(match.date).getTime() < Date.now() + 1000 * 60 * 60 * 3;
+
+  const countdownText = useMemo(() => {
+    if (!match.date || isLive) return null;
+    const diff = new Date(match.date).getTime() - Date.now();
+    if (diff <= 0) return "Starting soon";
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours > 24) {
+      const days = Math.floor(hours / 24);
+      return `In ${days}d ${hours % 24}h`;
+    }
+    if (hours > 0) return `In ${hours}h ${mins}m`;
+    return `In ${mins}m`;
+  }, [match.date, isLive]);
 
   const matchTime = match.date
     ? new Date(match.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -46,6 +62,17 @@ export const SportsMatchCard: React.FC<SportsMatchCardProps> = ({ match }) => {
   const matchDate = match.date
     ? new Date(match.date).toLocaleDateString([], { month: "short", day: "numeric" })
     : "";
+
+  const handleCopyReminder = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const formatted = `⚽ Live Match Reminder: ${match.title} kicks off on ${matchDate} at ${matchTime} on Bu-Chill!`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(formatted);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const categoryLabel =
     CATEGORY_ICONS[match.category?.toLowerCase()] || match.category || "Sports";
@@ -83,16 +110,39 @@ export const SportsMatchCard: React.FC<SportsMatchCardProps> = ({ match }) => {
               LIVE
             </span>
           ) : (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white/90 backdrop-blur-md border border-white/10">
-              <IoTimeOutline className="w-3 h-3 text-white/50" />
-              {matchDate} • {matchTime}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/60 text-white/90 backdrop-blur-md border border-white/10">
+                <IoTimeOutline className="w-3 h-3 text-white/50" />
+                {matchDate} • {matchTime}
+              </span>
+              {countdownText && (
+                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-primary/20 text-primary border border-primary/30 backdrop-blur-md">
+                  {countdownText}
+                </span>
+              )}
+            </div>
           )}
         </div>
 
-        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/70 backdrop-blur-md text-white/90 border border-white/10 capitalize shadow">
-          {categoryLabel}
-        </span>
+        <div className="flex items-center gap-1.5">
+          {!isLive && (
+            <button
+              type="button"
+              onClick={handleCopyReminder}
+              title="Copy match reminder"
+              className="p-1 rounded-full bg-black/60 hover:bg-black/90 text-white/70 hover:text-white border border-white/10 backdrop-blur-md transition-all hover:scale-110 active:scale-95 cursor-pointer"
+            >
+              {copied ? (
+                <IoCheckmark className="w-3 h-3 text-primary" />
+              ) : (
+                <IoCalendarOutline className="w-3 h-3" />
+              )}
+            </button>
+          )}
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/70 backdrop-blur-md text-white/90 border border-white/10 capitalize shadow">
+            {categoryLabel}
+          </span>
+        </div>
       </div>
 
       {/* Center / Bottom: Teams & Logos Showcase */}

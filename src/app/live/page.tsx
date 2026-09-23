@@ -14,6 +14,7 @@ import {
   toggleStoredFavorite,
   normalizeCategory,
 } from "@/services/iptv";
+import { isCurrentProfileKid } from "@/services/profileStorage";
 import LivePlayer from "@/components/sections/Live/LivePlayer";
 import LiveChannelCard from "@/components/sections/Live/LiveChannelCard";
 import CustomM3UModal from "@/components/sections/Live/CustomM3UModal";
@@ -86,6 +87,25 @@ export default function LiveTvPage() {
   useEffect(() => {
     setFavorites(getStoredFavorites());
     setCustomChannels(getStoredCustomChannels());
+
+    // Check if active profile is kid
+    const isKid = isCurrentProfileKid();
+    if (isKid) {
+      setSelectedCategory("Kids");
+    }
+
+    const handleProfileChange = () => {
+      const kid = isCurrentProfileKid();
+      if (kid) {
+        setSelectedCategory("Kids");
+      }
+    };
+    window.addEventListener("buchill_profile_changed", handleProfileChange);
+    window.addEventListener("buchill_profiles_updated", handleProfileChange);
+    return () => {
+      window.removeEventListener("buchill_profile_changed", handleProfileChange);
+      window.removeEventListener("buchill_profiles_updated", handleProfileChange);
+    };
   }, []);
 
   // Fetch playlist channels from API (cached server-side M3U feeds)

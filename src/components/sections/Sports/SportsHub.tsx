@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { SportsMatch } from "@/services/sports";
+import { isCurrentProfileKid } from "@/services/profileStorage";
 import SportsHeroCarousel from "./SportsHeroCarousel";
 import SportsTray from "./SportsTray";
 import SportsMatchCard from "./SportsMatchCard";
@@ -100,6 +101,35 @@ export const SportsHub: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"trays" | "grid">("trays");
+  const [isKidProfile, setIsKidProfile] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsKidProfile(isCurrentProfileKid());
+    const handleProfileChange = () => {
+      setIsKidProfile(isCurrentProfileKid());
+    };
+    window.addEventListener("buchill_profile_changed", handleProfileChange);
+    window.addEventListener("buchill_profiles_updated", handleProfileChange);
+    return () => {
+      window.removeEventListener("buchill_profile_changed", handleProfileChange);
+      window.removeEventListener("buchill_profiles_updated", handleProfileChange);
+    };
+  }, []);
+
+  const sportCategories = useMemo(() => {
+    if (!isKidProfile) return SPORT_CATEGORIES;
+    return [
+      { id: "all", label: "Family Sports", icon: "🧸" },
+      { id: "live", label: "Live Now", icon: "🔴" },
+      { id: "popular", label: "Popular", icon: "🔥" },
+      { id: "football", label: "Football", icon: "⚽" },
+      { id: "basketball", label: "Basketball", icon: "🏀" },
+      { id: "tennis", label: "Tennis", icon: "🎾" },
+      { id: "motorsport", label: "Motorsport / F1", icon: "🏎️" },
+      { id: "baseball", label: "Baseball", icon: "⚾" },
+      { id: "hockey", label: "Hockey", icon: "🏒" },
+    ];
+  }, [isKidProfile]);
 
   // 1. Fetch full matches schedule (unified across all sports)
   const {
@@ -142,9 +172,17 @@ export const SportsHub: React.FC = () => {
     refetchPopular();
   };
 
-  // Combine and sort matches: Live now comes first, then by date
+  // Combine and sort matches: Live now comes first, then by date (combat sports filtered for kids)
   const sortedMatches = useMemo(() => {
-    const list = [...(allMatches || [])];
+    let list = [...(allMatches || [])];
+    if (isKidProfile) {
+      const combatWords = ["ufc", "mma", "fight", "boxing", "wwe", "combat"];
+      list = list.filter((m) => {
+        const cat = (m.category || "").toLowerCase();
+        const title = (m.title || "").toLowerCase();
+        return !combatWords.some((w) => cat.includes(w) || title.includes(w));
+      });
+    }
     return list.sort((a, b) => {
       const aIsLive =
         a.category !== "upcoming" && new Date(a.date).getTime() < Date.now() + 1000 * 60 * 60 * 3;
@@ -154,7 +192,7 @@ export const SportsHub: React.FC = () => {
       if (!aIsLive && bIsLive) return 1;
       return a.date - b.date;
     });
-  }, [allMatches]);
+  }, [allMatches, isKidProfile]);
 
   // Featured Hero Matches: pick 5 diverse sport matches (like Bingr)
   const heroMatches = useMemo(() => {
@@ -202,7 +240,7 @@ export const SportsHub: React.FC = () => {
 
   // Matches grouped by sport categories for trays
   const categoryTrays = useMemo(() => {
-    return CATEGORY_TRAY_ORDER.map((def) => {
+    return CATEGORY_TRAY_ORDER.filter((def) => !isKidProfile || def.key !== "fight").map((def) => {
       const matches = sortedMatches.filter((m) => {
         const cat = (m.category || "").toLowerCase();
         const matchesCat = def.matchers.some((k) => cat.includes(k));
@@ -214,7 +252,7 @@ export const SportsHub: React.FC = () => {
         matches,
       };
     }).filter((tray) => tray.matches.length > 0);
-  }, [sortedMatches]);
+  }, [sortedMatches, isKidProfile]);
 
   // Filtered matches for Search or Grid Mode
   const filteredMatches = useMemo(() => {
@@ -343,7 +381,7 @@ export const SportsHub: React.FC = () => {
           className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1"
           style={{ scrollbarWidth: "none" }}
         >
-          {SPORT_CATEGORIES.map((cat) => {
+          {sportCategories.map((cat) => {
             const isActive = selectedCategory === cat.id;
             return (
               <button

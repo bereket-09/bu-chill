@@ -428,6 +428,18 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
               />
             )
           )}
+
+          {/* Floating Next Episode Button for Embed Mode */}
+          {!isNative && props.nextEpisodeNumber && (
+            <button
+              type="button"
+              onClick={handleNextEpisode}
+              className="pointer-events-auto absolute bottom-5 right-5 z-30 flex items-center gap-2 rounded-full border border-white/20 bg-neutral-900/90 hover:bg-neutral-800 text-white px-4 py-2 text-xs font-bold shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer group"
+            >
+              <span>Next Episode (E{props.nextEpisodeNumber})</span>
+              <span className="text-primary font-black group-hover:translate-x-0.5 transition-transform">→</span>
+            </button>
+          )}
         </Card>
       </div>
 

@@ -113,8 +113,8 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
             className={cn(
               "absolute top-2 right-2 z-10 p-1.5 rounded-full backdrop-blur-md transition-all hover:scale-110",
               isFavorite
-                ? "bg-black/60 text-yellow-400 opacity-100"
-                : "bg-black/40 text-white/40 hover:text-white hover:bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity"
+                ? "bg-black/60 text-yellow-400 opacity-100 shadow-sm"
+                : "bg-black/40 text-white/50 hover:text-white hover:bg-black/70 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
             )}
             aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
           >
