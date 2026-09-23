@@ -9,7 +9,6 @@ import {
   IoPlay,
 } from "react-icons/io5";
 import { cn } from "@/utils/helpers";
-import { getAdShieldMode, AdShieldMode } from "@/utils/adShield";
 
 interface AdShieldIframeProps extends React.IframeHTMLAttributes<HTMLIFrameElement> {
   src: string;
@@ -46,29 +45,10 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
   const [countdown, setCountdown] = useState(timeoutSeconds);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Shield Mode: "strict" (Brave-like: 0 popups, 0 redirects) | "balanced" (allow popups for stubborn players)
-  const [shieldMode, setShieldMode] = useState<AdShieldMode>("strict");
-
-  useEffect(() => {
-    setShieldMode(getAdShieldMode());
-    const handleSync = (e: any) => {
-      if (e.detail) setShieldMode(e.detail);
-    };
-    window.addEventListener("buchill_adshield_changed", handleSync);
-    return () => window.removeEventListener("buchill_adshield_changed", handleSync);
-  }, []);
-
-  // Known anti-sandbox embed providers (e.g. Bingr, Videasy) that actively inspect the environment
-  // and refuse to play if the iframe tag has ANY sandbox attribute applied.
-  const isAntiSandboxHost = useMemo(() => {
-    if (!src) return false;
-    return /bingr\.one|videasy\.to|player\.videasy/i.test(src);
-  }, [src]);
-
-  const sandbox = useMemo(() => {
-    // Shield UI is hidden for now: omit sandbox parameter completely for 100% embed playback compatibility
-    return undefined;
-  }, []);
+  // Sandboxing disabled across the entire app unless explicitly turned on by env flag
+  const enableSandbox = process.env.NEXT_PUBLIC_ENABLE_IFRAME_SANDBOX === "true";
+  const sandbox = enableSandbox ? "allow-scripts allow-same-origin allow-forms allow-presentation" : undefined;
+  const { sandbox: _ignoredSandbox, ...cleanRest } = rest;
 
   // Auto-dismiss "Server issues? Try next" prompt after iframe loads
   const [showServerIssuePrompt, setShowServerIssuePrompt] = useState(false);
@@ -325,17 +305,17 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
       {/* The embed player iframe */}
       <iframe
         ref={iframeRef}
-        key={`${src}_${sandbox ? "sandboxed" : "nosandbox"}`}
+        key={src}
         src={src}
         title={title}
-        sandbox={sandbox}
+        {...(sandbox ? { sandbox } : {})}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         referrerPolicy={referrerPolicy}
         allowFullScreen={allowFullScreen}
         className="w-full h-full border-0 bg-black"
         onLoad={handleIframeLoad}
         onError={handleIframeError}
-        {...rest}
+        {...cleanRest}
       />
     </div>
   );

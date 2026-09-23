@@ -55,8 +55,10 @@ function isLegitimateUrl(rawUrl: string): boolean {
  * channels, and video players without embed scripts knowing.
  */
 export default function AdShieldGlobalGuard() {
+  const isEnabled = process.env.NEXT_PUBLIC_ENABLE_GLOBAL_ADSHIELD === "true";
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isEnabled || typeof window === "undefined") return;
 
     // 0. Anti-Adblock Deceiver / Cloaking (sites think ads run without issue)
     try {
