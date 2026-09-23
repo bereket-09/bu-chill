@@ -35,24 +35,21 @@ export const AdShieldHeaderToggle: React.FC<AdShieldHeaderToggleProps> = ({ clas
       case "strict":
         return {
           label: "Strict",
-          textColor: "text-emerald-400",
           tooltip: "AdShield: Strict (0 Popups, 0 Redirects). Click to switch to Balanced.",
-          icon: <IoShieldCheckmark className="w-3.5 h-3.5 shrink-0 text-emerald-400" />,
+          icon: <IoShieldCheckmark className="w-4 h-4 shrink-0 text-emerald-400" />,
         };
       case "balanced":
         return {
           label: "Balanced",
-          textColor: "text-amber-400",
           tooltip: "AdShield: Balanced (Popups allowed for stubborn players). Click for Direct mode.",
-          icon: <IoShieldOutline className="w-3.5 h-3.5 shrink-0 text-amber-400" />,
+          icon: <IoShieldOutline className="w-4 h-4 shrink-0 text-amber-400" />,
         };
       case "direct":
       default:
         return {
           label: "Direct",
-          textColor: "text-sky-400",
           tooltip: "AdShield: Direct (Sandbox disabled for anti-sandbox embeds like Videasy). Click for Strict.",
-          icon: <IoShieldOutline className="w-3.5 h-3.5 shrink-0 text-sky-400" />,
+          icon: <IoShieldOutline className="w-4 h-4 shrink-0 text-sky-400" />,
         };
     }
   };
@@ -64,16 +61,13 @@ export const AdShieldHeaderToggle: React.FC<AdShieldHeaderToggleProps> = ({ clas
       type="button"
       onClick={toggle}
       className={cn(
-        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-black/40 hover:bg-white/10 text-white/90 backdrop-blur-md transition-all active:scale-95 shadow-md select-none cursor-pointer",
+        "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg border border-white/10 bg-black/40 hover:bg-white/10 text-white/90 backdrop-blur-md transition-all active:scale-95 shadow-md select-none cursor-pointer",
         className
       )}
       title={badge.tooltip}
       aria-label={`AdShield mode: ${badge.label}`}
     >
       {badge.icon}
-      <span className={cn("hidden sm:inline font-semibold text-[11px]", badge.textColor)}>
-        {badge.label}
-      </span>
     </button>
   );
 };
