@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
-import { cn } from "@/utils/helpers";
 import {
   IoPlayForward,
   IoRefresh,
@@ -9,7 +8,10 @@ import {
   IoPause,
   IoPlay,
   IoShieldCheckmark,
+  IoClose,
 } from "react-icons/io5";
+import { cn } from "@/utils/helpers";
+import { getAdShieldMode, setAdShieldMode, AdShieldMode } from "@/utils/adShield";
 
 interface AdShieldIframeProps extends React.IframeHTMLAttributes<HTMLIFrameElement> {
   src: string;
@@ -47,23 +49,22 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
   const [isPaused, setIsPaused] = useState(false);
 
   // Shield Mode: "strict" (Brave-like: 0 popups, 0 redirects) | "balanced" (allow popups for stubborn players)
-  const [shieldMode, setShieldMode] = useState<"strict" | "balanced">("strict");
+  const [shieldMode, setShieldMode] = useState<AdShieldMode>("strict");
+  const [isBadgeDismissed, setIsBadgeDismissed] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("buchill_adshield_mode") as "strict" | "balanced" | null;
-      if (saved) setShieldMode(saved);
-    }
+    setShieldMode(getAdShieldMode());
+    const handleSync = (e: any) => {
+      if (e.detail) setShieldMode(e.detail);
+    };
+    window.addEventListener("buchill_adshield_changed", handleSync);
+    return () => window.removeEventListener("buchill_adshield_changed", handleSync);
   }, []);
 
   const toggleShieldMode = () => {
-    setShieldMode((prev) => {
-      const next = prev === "strict" ? "balanced" : "strict";
-      try {
-        localStorage.setItem("buchill_adshield_mode", next);
-      } catch {}
-      return next;
-    });
+    const next = shieldMode === "strict" ? "balanced" : "strict";
+    setAdShieldMode(next);
+    setShieldMode(next);
   };
 
   const sandbox = useMemo(() => {
@@ -327,23 +328,33 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
         </div>
       )}
 
-      {/* Top-Right Brave-Grade Shield Status Indicator & Quick Switch */}
-      <div className="pointer-events-auto absolute top-3 right-3 z-30 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/80 px-2.5 py-1 text-[10px] font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-black/95 shadow-xl">
-        <IoShieldCheckmark className={`w-3.5 h-3.5 ${shieldMode === "strict" ? "text-emerald-400" : "text-amber-400"}`} />
-        <span>AdShield: {shieldMode === "strict" ? "Brave Strict (0 Ads)" : "Balanced"}</span>
-        <button
-          type="button"
-          onClick={toggleShieldMode}
-          className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/90 transition-colors cursor-pointer"
-          title={
-            shieldMode === "strict"
-              ? "Switch to Balanced mode if the player refuses to load without popups"
-              : "Switch to Strict mode to block 100% of popups"
-          }
-        >
-          {shieldMode === "strict" ? "Relax" : "Strict"}
-        </button>
-      </div>
+      {/* Top-Right Brave-Grade Shield Status Indicator & Quick Switch - placed safely below player header controls */}
+      {!isBadgeDismissed && (
+        <div className="pointer-events-auto absolute top-20 right-4 sm:top-20 sm:right-8 z-30 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/85 px-2.5 py-1 text-[10px] font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-black/95 shadow-xl">
+          <IoShieldCheckmark className={`w-3.5 h-3.5 ${shieldMode === "strict" ? "text-emerald-400" : "text-amber-400"}`} />
+          <span>AdShield: {shieldMode === "strict" ? "Brave Strict (0 Ads)" : "Balanced"}</span>
+          <button
+            type="button"
+            onClick={toggleShieldMode}
+            className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/90 transition-colors cursor-pointer"
+            title={
+              shieldMode === "strict"
+                ? "Switch to Balanced mode if the player refuses to load without popups"
+                : "Switch to Strict mode to block 100% of popups"
+            }
+          >
+            {shieldMode === "strict" ? "Relax" : "Strict"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsBadgeDismissed(true)}
+            className="ml-0.5 text-white/50 hover:text-white transition-colors p-0.5"
+            title="Dismiss badge"
+          >
+            <IoClose className="w-3 h-3" />
+          </button>
+        </div>
+      )}
 
       {/* The embed player iframe */}
       <iframe
