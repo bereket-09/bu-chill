@@ -26,8 +26,31 @@ export async function POST(request: Request) {
       data: { user },
     } = await supabase.auth.getUser();
 
+    // 1. Enforce Authentication: Only logged-in users can use AI chat
+    if (!user) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized",
+          message: "Please sign in to your Bu-Chill account to chat with the AI concierge.",
+          requiresLogin: true,
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
-    const { messages = [] } = body as { messages: ChatMessage[] };
+    const { messages = [], localHistory = [] } = body as {
+      messages: ChatMessage[];
+      localHistory?: Array<{
+        title: string;
+        type: string;
+        progress?: number;
+        completed?: boolean;
+        season_number?: number;
+        episode_number?: number;
+        genres?: string[];
+      }>;
+    };
 
     if (!messages || messages.length === 0) {
       return NextResponse.json(
@@ -36,40 +59,86 @@ export async function POST(request: Request) {
       );
     }
 
-    let historyItems = "";
-    let watchlistItems = "";
+    // 2. Fetch user's watch history and watchlist from Supabase database
+    let dbHistories: any[] = [];
+    let dbWatchlist: any[] = [];
 
-    // If user is logged in, fetch their watch history and watchlist for personalized grounding
-    if (user) {
-      try {
-        const [{ data: histories }, { data: watchlist }] = await Promise.all([
-          supabase
-            .from("histories")
-            .select("title, type")
-            .eq("user_id", user.id)
-            .order("updated_at", { ascending: false })
-            .limit(10),
-          supabase
-            .from("watchlist")
-            .select("title, type")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: false })
-            .limit(10),
-        ]);
+    try {
+      const [{ data: hData }, { data: wData }] = await Promise.all([
+        supabase
+          .from("histories")
+          .select("title, type, season, episode, duration, last_position, completed, vote_average")
+          .eq("user_id", user.id)
+          .order("updated_at", { ascending: false })
+          .limit(30),
+        supabase
+          .from("watchlist")
+          .select("title, type, vote_average")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20),
+      ]);
+      dbHistories = hData || [];
+      dbWatchlist = wData || [];
+    } catch (err) {
+      console.warn("Could not fetch user history from Supabase for AI context:", err);
+    }
 
-        historyItems = (histories || [])
-          .map((h) => `${h.title || ""} (${h.type || "movie"})`)
-          .filter(Boolean)
-          .join(", ");
+    // 3. Unify and deduplicate watch history across local profile storage & Supabase database
+    const seenTitles = new Set<string>();
+    const unifiedHistory: string[] = [];
 
-        watchlistItems = (watchlist || [])
-          .map((w) => `${w.title || ""} (${w.type || "movie"})`)
-          .filter(Boolean)
-          .join(", ");
-      } catch (err) {
-        console.warn("Could not fetch user history for AI context:", err);
+    // Prioritize local profile items (most recent session)
+    for (const item of localHistory) {
+      if (!item.title) continue;
+      const key = `${item.title.toLowerCase()}_${item.type}`;
+      if (!seenTitles.has(key)) {
+        seenTitles.add(key);
+        let desc = `${item.title} (${item.type})`;
+        if (item.season_number && item.episode_number) {
+          desc += ` [S${item.season_number}E${item.episode_number}]`;
+        }
+        if (item.completed) {
+          desc += ` - Completed`;
+        } else if (item.progress && item.progress > 0) {
+          desc += ` - In Progress (${Math.round(item.progress)}% watched)`;
+        }
+        if (item.genres && item.genres.length > 0) {
+          desc += ` (Genres: ${item.genres.slice(0, 3).join(", ")})`;
+        }
+        unifiedHistory.push(desc);
       }
     }
+
+    // Also include any stored in Supabase database
+    for (const item of dbHistories) {
+      if (!item.title) continue;
+      const key = `${item.title.toLowerCase()}_${item.type}`;
+      if (!seenTitles.has(key)) {
+        seenTitles.add(key);
+        let desc = `${item.title} (${item.type})`;
+        if (item.season && item.episode) {
+          desc += ` [S${item.season}E${item.episode}]`;
+        }
+        if (item.completed) {
+          desc += ` - Completed`;
+        } else if (item.duration && item.last_position) {
+          const pct = Math.round((item.last_position / item.duration) * 100);
+          desc += ` - In Progress (${pct}% watched)`;
+        }
+        unifiedHistory.push(desc);
+      }
+    }
+
+    const historyItemsFormatted =
+      unifiedHistory.length > 0
+        ? unifiedHistory.map((h) => `- ${h}`).join("\n")
+        : "No watch history recorded yet.";
+
+    const watchlistFormatted =
+      dbWatchlist.length > 0
+        ? dbWatchlist.map((w) => `- ${w.title || ""} (${w.type || "movie"})`).join("\n")
+        : "No saved titles in watchlist yet.";
 
     const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
     const baseURL = process.env.AI_BASE_URL || "https://api.groq.com/openai/v1";
@@ -77,20 +146,27 @@ export async function POST(request: Request) {
       process.env.AI_MODEL ||
       (process.env.GROQ_API_KEY ? "qwen/qwen3.8-27b" : "gpt-4o-mini");
 
-    const systemPrompt = `You are "Be Chill AI Concierge" 🍿, a knowledgeable, charismatic movie and TV series curator for the Be Chill streaming platform.
-Your job is to talk to the user about what they are in the mood for (vibe, genre, plot twist, emotion, pace, aesthetic) and recommend 2 to 4 exceptional titles that match their request.
+    const username = user.user_metadata?.full_name || user.email?.split("@")[0] || "cinephile";
 
-User's Real Watch Profile:
-- Recently Watched on Be Chill: ${historyItems || "No watch history recorded yet"}
-- Saved to Watchlist: ${watchlistItems || "No saved titles yet"}
+    const systemPrompt = `You are "Be Chill AI Concierge" 🍿, a world-class, charismatic movie and TV series advisor for the Be Chill streaming platform.
+You are talking to an authenticated member: "${username}".
 
-Important Guidelines:
-1. Speak conversationally like an experienced cinephile. Explain the vibe and why each recommendation fits their taste.
-2. If they have watched movies in their history, occasionally reference how their past taste informs these recommendations.
-3. At the very end of your response, you MUST include a JSON block enclosed strictly in \`\`\`recommendations and \`\`\` containing the exact list of recommended titles:
+KNOWLEDGE BASE: THIS USER'S REAL WATCH HISTORY ON BE CHILL:
+${historyItemsFormatted}
+
+USER'S SAVED WATCHLIST:
+${watchlistFormatted}
+
+CRITICAL RULES FOR PERSONALIZATION & WATCH HISTORY:
+1. You have DEEP, FIRST-CLASS KNOWLEDGE of everything this user has watched on Be Chill (listed above).
+2. DO NOT recommend movies or TV series they have already completed or watched, unless they explicitly ask for a rewatch or discussion about that specific title.
+3. EXPLICIT TASTE TIE-INS: Actively reference their watched titles to explain why your recommendations fit their taste! (e.g. "Since you completed [Title] and loved its tension, you'll be blown away by...", or "Picking up on your love for [Title]...").
+4. Tailor your recommendations to the user's specific genre patterns, favorite actors/directors, or thematic mood drawn from their watch history.
+5. Recommend 2 to 4 exceptional titles that match their current request or prompt.
+6. At the very end of your response, you MUST include a JSON block enclosed strictly in \`\`\`recommendations and \`\`\` containing the exact list of recommended titles:
 \`\`\`recommendations
 [
-  { "title": "Exact Title", "type": "movie", "reason": "Short reason why it fits" }
+  { "title": "Exact Title", "type": "movie", "reason": "Short personalized reason based on their taste" }
 ]
 \`\`\`
 Note: "type" must be either "movie" or "tv".`;
