@@ -52,11 +52,31 @@ function isLegitimateUrl(rawUrl: string): boolean {
  * AdShieldGlobalGuard:
  * Intercepts and completely neutralizes rogue ad popups, window.open calls,
  * target="_blank" click-hijacks, and hidden popunder triggers across ALL pages,
- * channels, and video players.
+ * channels, and video players without embed scripts knowing.
  */
 export default function AdShieldGlobalGuard() {
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    // 0. Anti-Adblock Deceiver / Cloaking (sites think ads run without issue)
+    try {
+      (window as any).canRunAds = true;
+      (window as any).isAdBlocked = false;
+      (window as any).google_ad_client = {};
+      (window as any).google_ad_status = 1;
+      (window as any).adBlockerDetected = false;
+      (window as any).uBlockOrigin = false;
+
+      // Create decoy bait element so height-based ad detectors pass
+      let bait = document.getElementById("ad-detector-decoy");
+      if (!bait) {
+        bait = document.createElement("div");
+        bait.id = "ad-detector-decoy";
+        bait.className = "adsbox ad-placement pub_300x250 text-ad";
+        bait.style.cssText = "position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;pointer-events:none;";
+        document.body.appendChild(bait);
+      }
+    } catch {}
 
     // 1. Monkey-patch window.open globally
     const originalOpen = window.open;
@@ -148,11 +168,11 @@ export default function AdShieldGlobalGuard() {
     };
 
     const handleWindowBlur = () => {
-      // If the window blurred within 400ms of a user click inside the platform, it's a popunder attempt!
-      if (Date.now() - lastUserClickTime < 400) {
+      // If the window blurred within 1200ms of a user click inside the platform, it's a popunder attempt!
+      if (Date.now() - lastUserClickTime < 1200) {
         setTimeout(() => {
           window.focus();
-        }, 50);
+        }, 30);
       }
     };
 

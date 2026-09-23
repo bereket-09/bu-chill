@@ -39,6 +39,7 @@ import { WatchPartyRoom, WatchPartyMember, WatchPartyMessage } from "@/types/wat
 import { getMoviePlayers, getTvShowPlayers } from "@/utils/players";
 import { PlayersProps } from "@/types";
 import { resolveAvatarUrl } from "@/constants/avatars";
+import AdShieldIframe from "@/components/ui/player/AdShieldIframe";
 
 const QUICK_REACTIONS = ["🍿", "🔥", "😭", "👏", "🤣", "❤️"];
 
@@ -422,12 +423,12 @@ export default function WatchPartyRoomPage() {
           {/* Active Iframe Embed */}
           <div className="relative flex-1 w-full bg-black flex items-center justify-center">
             {currentPlayer ? (
-              <iframe
+              <AdShieldIframe
                 src={currentPlayer.source}
                 title={`Watch Party - ${room.media_title}`}
                 className="w-full h-full border-0"
                 allowFullScreen
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                serverName={currentPlayer.title}
               />
             ) : (
               <p className="text-white/40 text-sm">No player stream available</p>

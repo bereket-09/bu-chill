@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import { cn } from "@/utils/helpers";
-import { IoPlayForward, IoRefresh, IoServerOutline, IoPause, IoPlay } from "react-icons/io5";
+import {
+  IoPlayForward,
+  IoRefresh,
+  IoServerOutline,
+  IoPause,
+  IoPlay,
+  IoShieldCheckmark,
+} from "react-icons/io5";
 
 interface AdShieldIframeProps extends React.IframeHTMLAttributes<HTMLIFrameElement> {
   src: string;
@@ -38,6 +45,37 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [countdown, setCountdown] = useState(timeoutSeconds);
   const [isPaused, setIsPaused] = useState(false);
+
+  // Shield Mode: "strict" (Brave-like: 0 popups, 0 redirects) | "balanced" (allow popups for stubborn players)
+  const [shieldMode, setShieldMode] = useState<"strict" | "balanced">("strict");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("buchill_adshield_mode") as "strict" | "balanced" | null;
+      if (saved) setShieldMode(saved);
+    }
+  }, []);
+
+  const toggleShieldMode = () => {
+    setShieldMode((prev) => {
+      const next = prev === "strict" ? "balanced" : "strict";
+      try {
+        localStorage.setItem("buchill_adshield_mode", next);
+      } catch {}
+      return next;
+    });
+  };
+
+  const sandbox = useMemo(() => {
+    // Base flags: allows video playback, scripts, CORS HLS requests, form interactions, airplay/presentation
+    // NOTICE: allow-top-navigation is NEVER included! Top window cannot be hijacked or redirected!
+    if (shieldMode === "strict") {
+      // 100% Popup trap: clicking play triggers video directly, 0 popups spawned!
+      return "allow-scripts allow-same-origin allow-forms allow-presentation";
+    }
+    // Balanced mode: allows popups in case a server strictly refuses to play without popup capability
+    return "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups";
+  }, [shieldMode]);
 
   // Auto-dismiss "Server issues? Try next" prompt after iframe loads
   const [showServerIssuePrompt, setShowServerIssuePrompt] = useState(false);
@@ -289,12 +327,31 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
         </div>
       )}
 
+      {/* Top-Right Brave-Grade Shield Status Indicator & Quick Switch */}
+      <div className="pointer-events-auto absolute top-3 right-3 z-30 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/80 px-2.5 py-1 text-[10px] font-semibold text-white/80 backdrop-blur-md transition-all hover:bg-black/95 shadow-xl">
+        <IoShieldCheckmark className={`w-3.5 h-3.5 ${shieldMode === "strict" ? "text-emerald-400" : "text-amber-400"}`} />
+        <span>AdShield: {shieldMode === "strict" ? "Brave Strict (0 Ads)" : "Balanced"}</span>
+        <button
+          type="button"
+          onClick={toggleShieldMode}
+          className="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/90 transition-colors cursor-pointer"
+          title={
+            shieldMode === "strict"
+              ? "Switch to Balanced mode if the player refuses to load without popups"
+              : "Switch to Strict mode to block 100% of popups"
+          }
+        >
+          {shieldMode === "strict" ? "Relax" : "Strict"}
+        </button>
+      </div>
+
       {/* The embed player iframe */}
       <iframe
         ref={iframeRef}
         key={src}
         src={src}
         title={title}
+        sandbox={sandbox}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
         referrerPolicy={referrerPolicy}
         allowFullScreen={allowFullScreen}
