@@ -1,4 +1,4 @@
-export type AdShieldMode = "strict" | "balanced" | "direct";
+export type AdShieldMode = "strict" | "balanced";
 
 export function getAdShieldMode(): AdShieldMode {
   if (typeof window === "undefined") return "strict";

@@ -58,27 +58,22 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
     return () => window.removeEventListener("buchill_adshield_changed", handleSync);
   }, []);
 
-  // Known anti-sandbox embed providers (e.g. Videasy) that actively inspect the environment
+  // Known anti-sandbox embed providers (e.g. Bingr, Videasy) that actively inspect the environment
   // and refuse to play if the iframe tag has ANY sandbox attribute applied.
   const isAntiSandboxHost = useMemo(() => {
     if (!src) return false;
-    return /videasy\.to|player\.videasy/i.test(src);
+    return /bingr\.one|videasy\.to|player\.videasy/i.test(src);
   }, [src]);
 
   const sandbox = useMemo(() => {
-    // If user selected "direct" mode or host aggressively blocks sandboxed iframes:
-    // Completely omit sandbox attribute from the iframe DOM element!
-    if (shieldMode === "direct" || isAntiSandboxHost) {
+    // If Amber ("balanced") mode is selected: NO sandbox parameter is applied to the iframe!
+    // Also auto-bypassed for known anti-sandbox hosts like Bingr and Videasy.
+    if (shieldMode === "balanced" || isAntiSandboxHost) {
       return undefined;
     }
 
-    // Strict mode: 0 popups, 0 redirects!
-    if (shieldMode === "strict") {
-      return "allow-scripts allow-same-origin allow-forms allow-presentation";
-    }
-
-    // Balanced mode: allows popups for stubborn players that require window.open
-    return "allow-scripts allow-same-origin allow-forms allow-presentation allow-popups";
+    // Strict mode (Emerald): Brave-grade 0-popup sandbox
+    return "allow-scripts allow-same-origin allow-forms allow-presentation";
   }, [shieldMode, isAntiSandboxHost]);
 
   // Auto-dismiss "Server issues? Try next" prompt after iframe loads
@@ -336,7 +331,7 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
       {/* The embed player iframe */}
       <iframe
         ref={iframeRef}
-        key={src}
+        key={`${src}_${sandbox ? "sandboxed" : "nosandbox"}`}
         src={src}
         title={title}
         sandbox={sandbox}

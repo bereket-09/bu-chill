@@ -22,39 +22,12 @@ export const AdShieldHeaderToggle: React.FC<AdShieldHeaderToggleProps> = ({ clas
   }, []);
 
   const toggle = () => {
-    let next: AdShieldMode = "strict";
-    if (mode === "strict") next = "balanced";
-    else if (mode === "balanced") next = "direct";
-    else next = "strict";
+    const next: AdShieldMode = mode === "strict" ? "balanced" : "strict";
     setAdShieldMode(next);
     setMode(next);
   };
 
-  const getBadgeConfig = () => {
-    switch (mode) {
-      case "strict":
-        return {
-          label: "Strict",
-          tooltip: "AdShield: Strict (0 Popups, 0 Redirects). Click to switch to Balanced.",
-          icon: <IoShieldCheckmark className="w-4 h-4 shrink-0 text-emerald-400" />,
-        };
-      case "balanced":
-        return {
-          label: "Balanced",
-          tooltip: "AdShield: Balanced (Popups allowed for stubborn players). Click for Direct mode.",
-          icon: <IoShieldOutline className="w-4 h-4 shrink-0 text-amber-400" />,
-        };
-      case "direct":
-      default:
-        return {
-          label: "Direct",
-          tooltip: "AdShield: Direct (Sandbox disabled for anti-sandbox embeds like Videasy). Click for Strict.",
-          icon: <IoShieldOutline className="w-4 h-4 shrink-0 text-sky-400" />,
-        };
-    }
-  };
-
-  const badge = getBadgeConfig();
+  const isStrict = mode === "strict";
 
   return (
     <button
@@ -64,10 +37,18 @@ export const AdShieldHeaderToggle: React.FC<AdShieldHeaderToggleProps> = ({ clas
         "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg border border-white/10 bg-black/40 hover:bg-white/10 text-white/90 backdrop-blur-md transition-all active:scale-95 shadow-md select-none cursor-pointer",
         className
       )}
-      title={badge.tooltip}
-      aria-label={`AdShield mode: ${badge.label}`}
+      title={
+        isStrict
+          ? "AdShield: Strict (0 Popups). Click to remove sandbox parameter for Bingr & anti-sandbox embeds."
+          : "AdShield: Amber / No-Sandbox (No sandbox parameter applied). Click for Strict 0-popup mode."
+      }
+      aria-label={`AdShield mode: ${isStrict ? "Strict" : "No-Sandbox"}`}
     >
-      {badge.icon}
+      {isStrict ? (
+        <IoShieldCheckmark className="w-4 h-4 shrink-0 text-emerald-400" />
+      ) : (
+        <IoShieldOutline className="w-4 h-4 shrink-0 text-amber-400" />
+      )}
     </button>
   );
 };
