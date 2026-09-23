@@ -6,7 +6,6 @@ import Link from "next/link";
 import { IoArrowBack, IoGridOutline } from "react-icons/io5";
 import { MdSkipNext } from "react-icons/md";
 import EmbedServerDropdown from "@/components/ui/player/EmbedServerDropdown";
-import AdShieldHeaderToggle from "@/components/ui/player/AdShieldHeaderToggle";
 import { PlayersProps } from "@/types";
 import { Episode } from "tmdb-ts";
 
@@ -85,8 +84,6 @@ const TvShowPlayerHeader: React.FC<TvShowPlayerHeaderProps> = ({
             <span className="hidden sm:inline">Next Episode</span>
           </Link>
         )}
-
-        <AdShieldHeaderToggle />
 
         <EmbedServerDropdown
           servers={servers}

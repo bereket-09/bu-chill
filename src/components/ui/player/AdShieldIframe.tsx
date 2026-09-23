@@ -66,15 +66,9 @@ export const AdShieldIframe: React.FC<AdShieldIframeProps> = ({
   }, [src]);
 
   const sandbox = useMemo(() => {
-    // If Amber ("balanced") mode is selected: NO sandbox parameter is applied to the iframe!
-    // Also auto-bypassed for known anti-sandbox hosts like Bingr and Videasy.
-    if (shieldMode === "balanced" || isAntiSandboxHost) {
-      return undefined;
-    }
-
-    // Strict mode (Emerald): Brave-grade 0-popup sandbox
-    return "allow-scripts allow-same-origin allow-forms allow-presentation";
-  }, [shieldMode, isAntiSandboxHost]);
+    // Shield UI is hidden for now: omit sandbox parameter completely for 100% embed playback compatibility
+    return undefined;
+  }, []);
 
   // Auto-dismiss "Server issues? Try next" prompt after iframe loads
   const [showServerIssuePrompt, setShowServerIssuePrompt] = useState(false);

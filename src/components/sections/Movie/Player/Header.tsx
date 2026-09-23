@@ -5,7 +5,6 @@ import { cn } from "@/utils/helpers";
 import Link from "next/link";
 import { IoArrowBack } from "react-icons/io5";
 import EmbedServerDropdown from "@/components/ui/player/EmbedServerDropdown";
-import AdShieldHeaderToggle from "@/components/ui/player/AdShieldHeaderToggle";
 import { PlayersProps } from "@/types";
 
 interface MoviePlayerHeaderProps {
@@ -57,9 +56,8 @@ const MoviePlayerHeader: React.FC<MoviePlayerHeaderProps> = ({
         </div>
       </div>
 
-      {/* Top-Right: AdShield Toggle + Bingr Embed Server Tab Dropdown */}
+      {/* Top-Right: Bingr Embed Server Tab Dropdown */}
       <div className="pointer-events-auto flex shrink-0 items-center gap-2 sm:gap-3">
-        <AdShieldHeaderToggle />
         <EmbedServerDropdown
           servers={servers}
           selectedSource={selectedSource}
