@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { SportsMatch } from "@/services/sports";
+import { SportsMatch, isMatchLiveNow } from "@/services/sports";
 import { isCurrentProfileKid } from "@/services/profileStorage";
 import SportsHeroCarousel from "./SportsHeroCarousel";
 import SportsTray from "./SportsTray";
 import SportsMatchCard from "./SportsMatchCard";
+import SafeImage from "@/components/ui/other/SafeImage";
 import {
   IoSearchOutline,
   IoClose,
@@ -15,85 +17,132 @@ import {
   IoRefresh,
   IoGridOutline,
   IoListOutline,
+  IoTvOutline,
+  IoPlay,
 } from "react-icons/io5";
 
 const SPORT_CATEGORIES = [
   { id: "all", label: "All Sports", icon: "🏆" },
   { id: "live", label: "Live Now", icon: "🔴" },
   { id: "popular", label: "Popular", icon: "🔥" },
-  { id: "football", label: "Football", icon: "⚽" },
-  { id: "basketball", label: "Basketball", icon: "🏀" },
-  { id: "fight", label: "Combat / UFC", icon: "🥊" },
-  { id: "motorsport", label: "Motorsport / F1", icon: "🏎️" },
-  { id: "cricket", label: "Cricket", icon: "🏏" },
-  { id: "baseball", label: "Baseball", icon: "⚾" },
-  { id: "american-football", label: "NFL", icon: "🏈" },
-  { id: "tennis", label: "Tennis", icon: "🎾" },
-  { id: "hockey", label: "Hockey", icon: "🏒" },
-  { id: "rugby", label: "Rugby", icon: "🏉" },
+  { id: "football", label: "Football ⚽", icon: "⚽" },
+  { id: "basketball", label: "Basketball 🏀", icon: "🏀" },
+  { id: "fight", label: "Combat / UFC 🥊", icon: "🥊" },
+  { id: "motorsport", label: "Motorsport / F1 🏎️", icon: "🏎️" },
+  { id: "cricket", label: "Cricket 🏏", icon: "🏏" },
+  { id: "baseball", label: "Baseball ⚾", icon: "⚾" },
+  { id: "american-football", label: "NFL 🏈", icon: "🏈" },
+  { id: "tennis", label: "Tennis 🎾", icon: "🎾" },
+  { id: "hockey", label: "Hockey 🏒", icon: "🏒" },
+  { id: "rugby", label: "Rugby 🏉", icon: "🏉" },
 ];
 
 const CATEGORY_TRAY_ORDER: { key: string; label: string; icon: string; matchers: string[]; exclusions?: string[] }[] = [
   {
     key: "football",
-    label: "Football / Soccer",
+    label: "Football & Soccer ⚽",
     icon: "⚽",
     matchers: ["football", "soccer"],
     exclusions: ["american"],
   },
   {
     key: "basketball",
-    label: "Basketball / NBA",
+    label: "Basketball / NBA 🏀",
     icon: "🏀",
-    matchers: ["basketball", "nba"],
+    matchers: ["basketball", "nba", "nbl"],
   },
   {
     key: "fight",
-    label: "Fight & Combat (UFC, Boxing, MMA)",
+    label: "Fight & Combat (UFC, Boxing, MMA) 🥊",
     icon: "🥊",
     matchers: ["combat", "fight", "mma", "ufc", "boxing", "wwe"],
   },
   {
     key: "motorsport",
-    label: "Motor Sports & Racing (F1)",
+    label: "Motor Sports & Racing (F1) 🏎️",
     icon: "🏎️",
     matchers: ["motor", "motorsport", "f1", "racing", "nascar", "motogp"],
   },
   {
     key: "cricket",
-    label: "Cricket",
+    label: "Cricket 🏏",
     icon: "🏏",
     matchers: ["cricket"],
   },
   {
     key: "american-football",
-    label: "American Football / NFL",
+    label: "American Football / NFL 🏈",
     icon: "🏈",
     matchers: ["american-football", "american football", "nfl"],
   },
   {
     key: "baseball",
-    label: "Baseball / MLB",
+    label: "Baseball / MLB ⚾",
     icon: "⚾",
     matchers: ["baseball", "mlb"],
   },
   {
     key: "tennis",
-    label: "Tennis",
+    label: "Tennis 🎾",
     icon: "🎾",
     matchers: ["tennis"],
   },
   {
     key: "hockey",
-    label: "Ice Hockey / NHL",
+    label: "Ice Hockey / NHL 🏒",
     icon: "🏒",
     matchers: ["hockey", "nhl"],
   },
   {
     key: "rugby",
-    label: "Rugby",
+    label: "Rugby 🏉",
     icon: "🏉",
     matchers: ["rugby"],
+  },
+];
+
+const LIVE_SPORTS_CHANNELS = [
+  {
+    id: "live-bein-sports-xtra",
+    name: "beIN SPORTS XTRA",
+    badge: "24/7 Football",
+    logo: "https://i.ibb.co/HT49GPmB/XTRA-2.png",
+    category: "Soccer / Football",
+  },
+  {
+    id: "live-espn-ocho",
+    name: "ESPN8: The Ocho",
+    badge: "Live Sports",
+    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/ESPN_wordmark.svg/960px-ESPN_wordmark.svg.png",
+    category: "Sports Network",
+  },
+  {
+    id: "live-redbull-tv",
+    name: "Red Bull TV",
+    badge: "Extreme & Racing",
+    logo: "https://raw.githubusercontent.com/iptv-org/epg/master/sites/redbull.tv/redbull.tv.png",
+    category: "Motorsport & Action",
+  },
+  {
+    id: "nfl-network",
+    name: "NFL Network",
+    badge: "24/7 Football",
+    logo: "https://streamed.pk/api/images/badge/GwZg7AZpYEZgHCAjAJgCzrAThFlBWSUYAUwVmDW2nmAmD32FrWGHXbeAENgBjUgg5sSdTt0z1Rvdqyw8xAkphghaSdmCRg+IbiBIgAJiAhrzh3WeWEYwJnxRcwZeEXminTWmBdjREEA.webp",
+    category: "American Football",
+  },
+  {
+    id: "sky-sports-golf-29059",
+    name: "Sky Sports Golf",
+    badge: "24/7 Golf",
+    logo: "https://streamed.pk/api/images/badge/GwZg7AZpYEZgHCAjAJgCzrAThFlBWSUYAUwVmDW2nmAmD32FrWGHXbeAENgBjUgg5sSdTt0z1Rvdqyw8xAkuhB8wKYAAZ1sMHxDcQAExAQQiHIZghrZvgQpN7XMGXhF5ojU1phXY0QggA.webp",
+    category: "Golf",
+  },
+  {
+    id: "247-fox-footy",
+    name: "Fox Footy",
+    badge: "24/7 AFL",
+    logo: "https://streamed.pk/api/images/proxy/GwZg7AZpYEZgHCAjAJgCzrAY29lBWSUYAUwVmDTAE5p5gJhqDh61hh1OPgBDYLKQRcOJBt15cyAE1LBCETI3BiOzKtR.webp",
+    category: "Footy",
   },
 ];
 
@@ -184,10 +233,8 @@ export const SportsHub: React.FC = () => {
       });
     }
     return list.sort((a, b) => {
-      const aIsLive =
-        a.category !== "upcoming" && new Date(a.date).getTime() < Date.now() + 1000 * 60 * 60 * 3;
-      const bIsLive =
-        b.category !== "upcoming" && new Date(b.date).getTime() < Date.now() + 1000 * 60 * 60 * 3;
+      const aIsLive = isMatchLiveNow(a);
+      const bIsLive = isMatchLiveNow(b);
       if (aIsLive && !bIsLive) return -1;
       if (!aIsLive && bIsLive) return 1;
       return a.date - b.date;
@@ -199,7 +246,6 @@ export const SportsHub: React.FC = () => {
     const featured: SportsMatch[] = [];
     const usedIds = new Set<string>();
 
-    // Try finding one match from each major sport category
     for (const tray of CATEGORY_TRAY_ORDER) {
       const match = sortedMatches.find((m) => {
         if (usedIds.has(m.id)) return false;
@@ -216,7 +262,6 @@ export const SportsHub: React.FC = () => {
       }
     }
 
-    // Fallback if not enough diverse sports
     if (featured.length < 5) {
       for (const m of sortedMatches) {
         if (!usedIds.has(m.id)) {
@@ -230,12 +275,9 @@ export const SportsHub: React.FC = () => {
     return featured;
   }, [sortedMatches]);
 
-  // Live Right Now matches
+  // Live Right Now matches (strictly live)
   const liveMatches = useMemo(() => {
-    return sortedMatches.filter(
-      (m) =>
-        m.category !== "upcoming" && new Date(m.date).getTime() < Date.now() + 1000 * 60 * 60 * 3
-    );
+    return sortedMatches.filter(isMatchLiveNow);
   }, [sortedMatches]);
 
   // Matches grouped by sport categories for trays
@@ -259,10 +301,7 @@ export const SportsHub: React.FC = () => {
     return sortedMatches.filter((match) => {
       // Category filter
       if (selectedCategory === "live") {
-        const isLive =
-          match.category !== "upcoming" &&
-          new Date(match.date).getTime() < Date.now() + 1000 * 60 * 60 * 3;
-        if (!isLive) return false;
+        return isMatchLiveNow(match);
       } else if (selectedCategory === "popular") {
         if (!match.popular) return false;
       } else if (selectedCategory !== "all") {
@@ -406,6 +445,58 @@ export const SportsHub: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* ================= 24/7 LIVE SPORTS & FOOTBALL SATELLITE TV ================= */}
+      {!isSearchOrCategoryActive && (
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <IoTvOutline className="w-5 h-5 text-red-500" />
+              <h3 className="text-base sm:text-lg font-black text-white tracking-wide">
+                24/7 Live Sports & Soccer TV
+              </h3>
+            </div>
+            <Link
+              href="/live"
+              className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              <span>Explore All Live TV Channels ↗</span>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            {LIVE_SPORTS_CHANNELS.map((ch) => (
+              <Link
+                key={ch.id}
+                href={`/sports/watch?id=${encodeURIComponent(ch.id)}`}
+                className="group relative p-3 rounded-2xl bg-[#12131a] border border-white/10 hover:border-white/25 hover:bg-[#181a24] transition-all flex flex-col items-center text-center space-y-2.5 shadow-md overflow-hidden"
+              >
+                <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 p-2 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <SafeImage
+                    src={ch.logo}
+                    alt={ch.name}
+                    width={36}
+                    height={36}
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
+                <div className="space-y-0.5 w-full">
+                  <h4 className="text-xs font-bold text-white line-clamp-1 group-hover:text-primary transition-colors">
+                    {ch.name}
+                  </h4>
+                  <div className="flex items-center justify-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">
+                      {ch.badge}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ================= 3. CONTENT AREA: TRAYS OR GRID ================= */}
       {isLoading ? (

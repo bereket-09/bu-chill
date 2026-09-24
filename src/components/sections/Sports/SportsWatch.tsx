@@ -5,7 +5,13 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Hls from "hls.js";
 import { useQuery } from "@tanstack/react-query";
-import { SportsMatch, SportsStream } from "@/services/sports";
+import {
+  SportsMatch,
+  SportsStream,
+  isMatchLiveNow,
+  parseMatchSlug,
+  VERIFIED_LIVE_SPORTS_CHANNELS,
+} from "@/services/sports";
 import SafeImage from "@/components/ui/other/SafeImage";
 import AdShieldIframe from "@/components/ui/player/AdShieldIframe";
 import { getSportsBadgeUrl, getSportsPosterUrl } from "./SportsHeroCarousel";
@@ -25,6 +31,8 @@ import {
   IoTimeOutline,
   IoFlame,
   IoWarningOutline,
+  IoOpenOutline,
+  IoTvOutline,
 } from "react-icons/io5";
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 
@@ -71,20 +79,22 @@ export const SportsWatch: React.FC = () => {
     staleTime: 1000 * 60 * 3,
   });
 
+  // Resolve current match from matches schedule, or gracefully synthesize manual/external match IDs
   const currentMatch = useMemo(() => {
-    return (allMatches || []).find((m) => m.id === matchId) || null;
+    const found = (allMatches || []).find((m) => m.id === matchId);
+    if (found) return found;
+    if (matchId) return parseMatchSlug(matchId);
+    return null;
   }, [allMatches, matchId]);
 
-  // Count live matches for badge
-  const liveMatchesCount = useMemo(() => {
-    return (allMatches || []).filter(
-      (m) =>
-        m.category !== "upcoming" &&
-        new Date(m.date).getTime() < Date.now() + 1000 * 60 * 60 * 3
-    ).length;
+  // Live matches right now
+  const liveMatches = useMemo(() => {
+    return (allMatches || []).filter(isMatchLiveNow);
   }, [allMatches]);
 
-  // 2. Fetch streams for this match
+  const liveMatchesCount = liveMatches.length;
+
+  // 2. Fetch streams for this match with automatic verified sports fallbacks
   const {
     data: streams,
     isLoading: isStreamsLoading,
@@ -93,16 +103,19 @@ export const SportsWatch: React.FC = () => {
   } = useQuery<SportsStream[]>({
     queryKey: ["sports-streams", matchId],
     queryFn: async () => {
-      if (!currentMatch?.sources) return [];
+      const sources = currentMatch?.sources?.length
+        ? currentMatch.sources
+        : [{ source: "solaris", id: matchId }];
       const res = await fetch("/api/sports/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sources: currentMatch.sources }),
+        body: JSON.stringify({ sources, matchId }),
       });
-      if (!res.ok) return [];
-      return res.json();
+      if (!res.ok) return VERIFIED_LIVE_SPORTS_CHANNELS;
+      const data = await res.json();
+      return Array.isArray(data) && data.length > 0 ? data : VERIFIED_LIVE_SPORTS_CHANNELS;
     },
-    enabled: Boolean(currentMatch?.sources && currentMatch.sources.length > 0),
+    enabled: Boolean(matchId),
     staleTime: 1000 * 60 * 2,
   });
 
@@ -117,7 +130,12 @@ export const SportsWatch: React.FC = () => {
       ? streams[activeServerIndex] || streams[0]
       : null;
 
-  const isDirectHls = activeStream?.embedUrl?.includes(".m3u8");
+  const isDirectHls = Boolean(
+    activeStream?.embedUrl &&
+      (activeStream.embedUrl.includes(".m3u8") ||
+        activeStream.embedUrl.includes("/hls-proxy") ||
+        activeStream.embedUrl.includes("/stream-proxy"))
+  );
 
   // HLS stream loader
   const initHls = useCallback(() => {
@@ -136,7 +154,7 @@ export const SportsWatch: React.FC = () => {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        manifestLoadingTimeOut: 12000,
+        manifestLoadingTimeOut: 15000,
       });
 
       hlsRef.current = hls;
@@ -202,11 +220,7 @@ export const SportsWatch: React.FC = () => {
     let list = [...(allMatches || [])];
 
     if (drawerCategory === "live") {
-      list = list.filter(
-        (m) =>
-          m.category !== "upcoming" &&
-          new Date(m.date).getTime() < Date.now() + 1000 * 60 * 60 * 3
-      );
+      list = list.filter(isMatchLiveNow);
     } else if (drawerCategory !== "all") {
       list = list.filter((m) =>
         m.category?.toLowerCase().includes(drawerCategory.toLowerCase())
@@ -226,6 +240,10 @@ export const SportsWatch: React.FC = () => {
 
     return list;
   }, [allMatches, drawerCategory, drawerSearch]);
+
+  const matchTitle = currentMatch?.title || "Live Sports Match";
+  const homeBadge = getSportsBadgeUrl(currentMatch?.teams?.home?.badge);
+  const awayBadge = getSportsBadgeUrl(currentMatch?.teams?.away?.badge);
 
   return (
     <div className="w-full min-h-screen bg-black text-white font-sans overflow-x-hidden">
@@ -283,9 +301,8 @@ export const SportsWatch: React.FC = () => {
             <AdShieldIframe
               src={activeStream.embedUrl}
               allowFullScreen
-              referrerPolicy="no-referrer"
               className="w-full h-full border-0 bg-black"
-              title={currentMatch?.title || "Sports Stream"}
+              title={matchTitle}
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center space-y-4">
@@ -306,7 +323,7 @@ export const SportsWatch: React.FC = () => {
                   </p>
                   <p className="text-xs text-white/50 leading-relaxed">
                     Live sports streams typically activate 15–30 minutes before kickoff.
-                    If the match has started, click below to refresh live satellite sources.
+                    Click below to refresh live satellite sources.
                   </p>
                   <button
                     type="button"
@@ -336,9 +353,9 @@ export const SportsWatch: React.FC = () => {
                 <IoWarningOutline className="w-6 h-6" />
               </div>
               <div className="space-y-1 max-w-sm">
-                <h4 className="text-base font-bold text-white">Direct Feed Unavailable</h4>
+                <h4 className="text-base font-bold text-white">Direct Feed Offline / Kickoff Pending</h4>
                 <p className="text-xs text-white/60 leading-relaxed">
-                  This satellite feed is offline or pending kickoff. Switch to an alternate HD server for instant playback.
+                  This satellite feed is currently waiting for broadcast. Switch to an alternate HD server for instant playback.
                 </p>
               </div>
               {streams && streams.length > 1 && (
@@ -411,10 +428,42 @@ export const SportsWatch: React.FC = () => {
           )}
         </div>
 
+        {/* Fallback & Match Status Notification Banner */}
+        {activeStream?.isBackup && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs">
+            <div className="flex items-center gap-2.5">
+              <IoTvOutline className="w-5 h-5 text-amber-400 shrink-0" />
+              <span>
+                Direct match satellite feed for <strong>{matchTitle}</strong> is pending kickoff or concluded. Playing <strong>24/7 Live Sports TV</strong> backup channel.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href={`https://totalsporteki.is/?s=${encodeURIComponent(matchTitle)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] transition-colors"
+              >
+                <span>TotalSportek</span>
+                <IoOpenOutline className="w-3 h-3" />
+              </a>
+              <a
+                href={`https://streameaste.is/search?q=${encodeURIComponent(matchTitle)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] transition-colors"
+              >
+                <span>HesGoal</span>
+                <IoOpenOutline className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+        )}
+
         {/* ================= STREAM DETAILS & SERVER SELECTOR ================= */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 p-5 sm:p-6 rounded-2xl bg-[#0f1014] border border-white/10 shadow-xl">
           {/* Match Info */}
-          <div className="space-y-1.5 max-w-xl">
+          <div className="space-y-2 max-w-xl">
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-red-600 text-white shadow-sm">
                 <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
@@ -426,9 +475,37 @@ export const SportsWatch: React.FC = () => {
                 </span>
               )}
             </div>
-            <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
-              {currentMatch?.title || "Live Sports Match"}
-            </h2>
+
+            <div className="flex items-center gap-3">
+              {homeBadge && awayBadge ? (
+                <div className="flex items-center -space-x-2 shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 p-1 flex items-center justify-center overflow-hidden">
+                    <SafeImage
+                      src={homeBadge}
+                      alt={currentMatch?.teams?.home?.name || ""}
+                      width={24}
+                      height={24}
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-white/10 border border-white/10 p-1 flex items-center justify-center overflow-hidden">
+                    <SafeImage
+                      src={awayBadge}
+                      alt={currentMatch?.teams?.away?.name || ""}
+                      width={24}
+                      height={24}
+                      className="object-contain"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                {matchTitle}
+              </h2>
+            </div>
           </div>
 
           {/* Server Switcher Picker */}
@@ -452,7 +529,10 @@ export const SportsWatch: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2">
                 {streams.map((stream, idx) => {
                   const isCurrent = idx === activeServerIndex;
-                  const isHls = stream.embedUrl?.includes(".m3u8");
+                  const isHls =
+                    stream.embedUrl?.includes(".m3u8") ||
+                    stream.embedUrl?.includes("/hls-proxy") ||
+                    stream.embedUrl?.includes("/stream-proxy");
                   return (
                     <button
                       key={stream.id || idx}
@@ -490,6 +570,93 @@ export const SportsWatch: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* ================= MORE LIVE GAMES BROADCASTING NOW ================= */}
+        {liveMatches.length > 0 && (
+          <div className="space-y-4 pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+                </span>
+                <h3 className="text-base sm:text-lg font-black text-white tracking-wide">
+                  Live Matches Broadcasting Right Now
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setDrawerCategory("live");
+                  setShowDrawer(true);
+                }}
+                className="text-xs text-primary hover:underline font-bold"
+              >
+                View all ({liveMatches.length})
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+              {liveMatches.slice(0, 4).map((m) => {
+                const isSelected = m.id === matchId;
+                const mHomeBadge = getSportsBadgeUrl(m.teams?.home?.badge);
+                const mAwayBadge = getSportsBadgeUrl(m.teams?.away?.badge);
+
+                return (
+                  <Link
+                    key={m.id}
+                    href={`/sports/watch?id=${encodeURIComponent(m.id)}`}
+                    className={`p-3.5 rounded-2xl border transition-all ${
+                      isSelected
+                        ? "bg-red-950/30 border-red-500/80 ring-1 ring-red-500"
+                        : "bg-[#101116] border-white/10 hover:border-white/20 hover:bg-[#161720]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between text-[11px] mb-2">
+                      <span className="flex items-center gap-1 font-black text-red-500 uppercase tracking-wider">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                        LIVE
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-white/10 text-white/60 text-[10px] uppercase font-bold">
+                        {m.category}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      {mHomeBadge && mAwayBadge && (
+                        <div className="flex items-center -space-x-1.5 shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-white/10 p-0.5 flex items-center justify-center overflow-hidden">
+                            <SafeImage
+                              src={mHomeBadge}
+                              alt={m.teams?.home?.name || ""}
+                              width={18}
+                              height={18}
+                              className="object-contain"
+                              unoptimized
+                            />
+                          </div>
+                          <div className="w-6 h-6 rounded-full bg-white/10 p-0.5 flex items-center justify-center overflow-hidden">
+                            <SafeImage
+                              src={mAwayBadge}
+                              alt={m.teams?.away?.name || ""}
+                              width={18}
+                              height={18}
+                              className="object-contain"
+                              unoptimized
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <h4 className="text-xs font-bold text-white line-clamp-1">
+                        {m.title}
+                      </h4>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================= STUNNING QUICK MATCH SWITCHER DRAWER ================= */}
@@ -572,12 +739,9 @@ export const SportsWatch: React.FC = () => {
               ) : (
                 drawerFilteredMatches.map((match) => {
                   const isCurrent = match.id === matchId;
-                  const isLive =
-                    match.category !== "upcoming" &&
-                    new Date(match.date).getTime() <
-                      Date.now() + 1000 * 60 * 60 * 3;
-                  const homeBadge = getSportsBadgeUrl(match.teams?.home?.badge);
-                  const awayBadge = getSportsBadgeUrl(match.teams?.away?.badge);
+                  const isLive = isMatchLiveNow(match);
+                  const mHomeBadge = getSportsBadgeUrl(match.teams?.home?.badge);
+                  const mAwayBadge = getSportsBadgeUrl(match.teams?.away?.badge);
                   const matchTime = match.date
                     ? new Date(match.date).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -619,11 +783,11 @@ export const SportsWatch: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        {homeBadge && awayBadge ? (
+                        {mHomeBadge && mAwayBadge ? (
                           <div className="flex items-center -space-x-2 shrink-0">
                             <div className="w-7 h-7 rounded-full bg-white/10 border border-white/10 p-1 flex items-center justify-center overflow-hidden">
                               <SafeImage
-                                src={homeBadge}
+                                src={mHomeBadge}
                                 alt={match.teams?.home?.name || ""}
                                 width={20}
                                 height={20}
@@ -633,7 +797,7 @@ export const SportsWatch: React.FC = () => {
                             </div>
                             <div className="w-7 h-7 rounded-full bg-white/10 border border-white/10 p-1 flex items-center justify-center overflow-hidden">
                               <SafeImage
-                                src={awayBadge}
+                                src={mAwayBadge}
                                 alt={match.teams?.away?.name || ""}
                                 width={20}
                                 height={20}
@@ -661,4 +825,3 @@ export const SportsWatch: React.FC = () => {
 };
 
 export default SportsWatch;
-
