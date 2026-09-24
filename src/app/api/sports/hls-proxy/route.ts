@@ -91,12 +91,21 @@ export async function GET(request: NextRequest) {
     }
 
     const contentType = upstreamRes.headers.get("content-type") || "";
+    const isSegment =
+      url.includes(".ts") ||
+      url.includes(".m4s") ||
+      url.includes(".mp4") ||
+      url.includes(".aac") ||
+      url.includes(".image") ||
+      url.includes("tiktokcdn");
+
     const isManifest =
-      contentType.includes("mpegurl") ||
-      contentType.includes("application/x-mpegURL") ||
-      contentType.includes("vnd.apple.mpegurl") ||
-      url.includes(".m3u8") ||
-      url.includes("/playlist");
+      !isSegment &&
+      (contentType.includes("mpegurl") ||
+        contentType.includes("application/x-mpegURL") ||
+        contentType.includes("vnd.apple.mpegurl") ||
+        url.includes(".m3u8") ||
+        url.endsWith(".m3u"));
 
     if (isManifest) {
       const manifestText = await upstreamRes.text();
@@ -114,9 +123,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Binary segment (.ts / .m4s / etc.)
-    const body = upstreamRes.body;
-    const isSegment = url.includes(".ts") || url.includes(".m4s") || url.includes(".image");
+    // Binary media segment (.ts / .m4s / etc.)
+    const body = await upstreamRes.arrayBuffer();
     const cacheControl = isSegment
       ? "public, max-age=86400, s-maxage=86400, immutable"
       : "public, max-age=2, s-maxage=3, stale-while-revalidate=5";
