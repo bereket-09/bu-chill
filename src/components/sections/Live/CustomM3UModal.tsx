@@ -26,7 +26,13 @@ import {
   MdOutlineFeaturedPlayList,
   MdDownload,
 } from "react-icons/md";
+import { IoGlobeOutline, IoSearchOutline } from "react-icons/io5";
 import { cn } from "@/utils/helpers";
+import {
+  IPTV_COUNTRIES,
+  IptvCountry,
+  getIptvCountryPlaylistUrl,
+} from "@/constants/iptvCountries";
 
 interface CustomM3UModalProps {
   isOpen: boolean;
@@ -44,9 +50,11 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
   customChannelCount,
 }) => {
   const [url, setUrl] = useState("");
-  const [activeTab, setActiveTab] = useState<"presets" | "url" | "file">("presets");
+  const [activeTab, setActiveTab] = useState<"presets" | "countries" | "url" | "file">("presets");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
+  const [countrySearch, setCountrySearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -118,6 +126,19 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
     await handleImportUrl(preset.url, preset.name);
   };
 
+  const handleCountrySelect = async (country: IptvCountry) => {
+    setSelectedCountryCode(country.code);
+    const targetUrl = getIptvCountryPlaylistUrl(country.code);
+    await handleImportUrl(targetUrl, `${country.flag} ${country.name} (${country.code})`);
+    setSelectedCountryCode(null);
+  };
+
+  const filteredCountries = IPTV_COUNTRIES.filter((c) => {
+    if (!countrySearch.trim()) return true;
+    const q = countrySearch.toLowerCase().trim();
+    return c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q);
+  });
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -184,12 +205,12 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
 
         <ModalBody className="space-y-4 py-4">
           {/* Navigation Tabs */}
-          <div className="flex rounded-xl bg-black/40 p-1 border border-white/10 text-xs font-semibold">
+          <div className="flex rounded-xl bg-black/40 p-1 border border-white/10 text-xs font-semibold overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setActiveTab("presets")}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all",
+                "flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg whitespace-nowrap transition-all",
                 activeTab === "presets"
                   ? "bg-primary text-white shadow"
                   : "text-white/60 hover:text-white hover:bg-white/5"
@@ -200,22 +221,35 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
             </button>
             <button
               type="button"
+              onClick={() => setActiveTab("countries")}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg whitespace-nowrap transition-all",
+                activeTab === "countries"
+                  ? "bg-primary text-white shadow"
+                  : "text-white/60 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <IoGlobeOutline className="text-base" />
+              <span>By Country (250+)</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab("url")}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all",
+                "flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg whitespace-nowrap transition-all",
                 activeTab === "url"
                   ? "bg-primary text-white shadow"
                   : "text-white/60 hover:text-white hover:bg-white/5"
               )}
             >
               <MdLink className="text-base" />
-              <span>Enter M3U URL</span>
+              <span>Enter URL</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("file")}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all",
+                "flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg whitespace-nowrap transition-all",
                 activeTab === "file"
                   ? "bg-primary text-white shadow"
                   : "text-white/60 hover:text-white hover:bg-white/5"
@@ -305,7 +339,77 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: CUSTOM URL */}
+          {/* TAB 2: BROWSE BY COUNTRY (IPTV-Org 250+ Countries) */}
+          {activeTab === "countries" && (
+            <div className="space-y-3 py-1">
+              <div className="flex items-center justify-between text-xs text-white/60">
+                <span>Select any country to import its official IPTV-Org playlist:</span>
+                <span className="text-[10px] text-primary font-bold">
+                  250+ Countries & Territories
+                </span>
+              </div>
+
+              {/* Country search filter */}
+              <div className="flex items-center bg-black/40 border border-white/15 focus-within:border-primary/50 rounded-xl px-3 py-2 gap-2 shadow-inner">
+                <IoSearchOutline className="text-white/40 text-sm shrink-0" />
+                <input
+                  type="text"
+                  value={countrySearch}
+                  onChange={(e) => setCountrySearch(e.target.value)}
+                  placeholder="Filter countries (e.g. Canada, US, Japan, Germany, France)..."
+                  className="bg-transparent text-xs text-white placeholder-white/40 focus:outline-none w-full"
+                />
+                {countrySearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCountrySearch("")}
+                    className="text-white/40 hover:text-white text-xs font-semibold px-1"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Countries Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[360px] overflow-y-auto pr-1">
+                {filteredCountries.map((c) => {
+                  const isThisLoading = isLoading && selectedCountryCode === c.code;
+                  return (
+                    <button
+                      key={c.code}
+                      type="button"
+                      disabled={isLoading}
+                      onClick={() => handleCountrySelect(c)}
+                      className="flex items-center justify-between p-2.5 rounded-xl border border-white/10 bg-white/5 hover:border-primary/50 hover:bg-white/10 transition-all text-left group cursor-pointer disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-2 min-w-0 pr-1">
+                        <span className="text-lg leading-none shrink-0">{c.flag}</span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-white group-hover:text-primary transition-colors truncate">
+                            {c.name}
+                          </p>
+                          <span className="text-[10px] text-white/40 font-mono">
+                            {c.code}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0">
+                        {isThisLoading ? (
+                          <Spinner size="sm" color="primary" />
+                        ) : (
+                          <span className="text-[10px] text-primary/70 group-hover:text-primary font-bold">
+                            Load →
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: CUSTOM URL */}
           {activeTab === "url" && (
             <div className="space-y-4 py-2">
               <div className="space-y-2">
@@ -344,14 +448,26 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
                   Quick-paste popular playlists:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {POPULAR_M3U_PLAYLISTS.slice(0, 5).map((preset) => (
+                  {[
+                    { label: "IPTV-Org Master (All Countries)", url: "https://iptv-org.github.io/iptv/index.country.m3u" },
+                    { label: "IPTV-Org Global Index", url: "https://iptv-org.github.io/iptv/index.m3u" },
+                    { label: "English Channels (Global)", url: "https://iptv-org.github.io/iptv/languages/eng.m3u" },
+                    { label: "🇺🇸 United States (US)", url: "https://iptv-org.github.io/iptv/countries/us.m3u" },
+                    { label: "🇬🇧 United Kingdom (UK)", url: "https://iptv-org.github.io/iptv/countries/uk.m3u" },
+                    { label: "🇨🇦 Canada (CA)", url: "https://iptv-org.github.io/iptv/countries/ca.m3u" },
+                    { label: "🇩🇪 Germany (DE)", url: "https://iptv-org.github.io/iptv/countries/de.m3u" },
+                    { label: "🇫🇷 France (FR)", url: "https://iptv-org.github.io/iptv/countries/fr.m3u" },
+                    { label: "Live Sports & Action", url: "https://iptv-org.github.io/iptv/categories/sports.m3u" },
+                    { label: "Movies & Cinema (24/7)", url: "https://iptv-org.github.io/iptv/categories/movies.m3u" },
+                    { label: "Animation & Kids", url: "https://iptv-org.github.io/iptv/categories/animation.m3u" },
+                  ].map((preset) => (
                     <button
-                      key={preset.id}
+                      key={preset.url}
                       type="button"
                       onClick={() => setUrl(preset.url)}
                       className="rounded-lg bg-white/10 hover:bg-white/20 px-2 py-1 text-[11px] text-white/80 transition-colors"
                     >
-                      {preset.name}
+                      {preset.label}
                     </button>
                   ))}
                 </div>

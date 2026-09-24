@@ -5,14 +5,14 @@ import {
   Channel,
   normalizeCategory,
 } from "@/services/iptv";
+import { resolveIptvCountry } from "@/constants/iptvCountries";
 
 export const dynamic = "force-dynamic";
-
 
 function parseM3UContent(text: string, defaultGroup?: string): Channel[] {
   const lines = text.split(/\r?\n/);
   const channels: Channel[] = [];
-  let currentInfo: Partial<Channel> | null = null;
+  let currentInfo: (Partial<Channel> & { rawGroupTitle?: string }) | null = null;
   const seenUrls = new Set<string>();
 
   for (let i = 0; i < lines.length; i++) {
@@ -42,6 +42,7 @@ function parseM3UContent(text: string, defaultGroup?: string): Channel[] {
 
       const groupMatch = line.match(/group-title="([^"]*)"/i);
       if (groupMatch && groupMatch[1]) {
+        currentInfo.rawGroupTitle = groupMatch[1].trim();
         currentInfo.group = normalizeCategory(groupMatch[1].trim());
       } else if (defaultGroup) {
         currentInfo.group = defaultGroup;
@@ -57,7 +58,8 @@ function parseM3UContent(text: string, defaultGroup?: string): Channel[] {
         currentInfo.language = langMatch[1].trim();
       }
     } else if (line.startsWith("#EXTGRP:") && currentInfo) {
-      currentInfo.group = normalizeCategory(line.replace("#EXTGRP:", "").trim());
+      currentInfo.rawGroupTitle = line.replace("#EXTGRP:", "").trim();
+      currentInfo.group = normalizeCategory(currentInfo.rawGroupTitle);
     } else if (line && !line.startsWith("#") && currentInfo) {
       const streamUrl = line;
       const isDirectStream =
@@ -76,12 +78,21 @@ function parseM3UContent(text: string, defaultGroup?: string): Channel[] {
             "-" +
             Math.random().toString(36).substring(2, 6);
 
+        const resolvedCountry = resolveIptvCountry({
+          tvgCountry: currentInfo.country,
+          tvgId: currentInfo.id,
+          groupTitle: currentInfo.rawGroupTitle,
+          channelName: name,
+        });
+
         channels.push({
           id,
           name,
           logo: currentInfo.logo,
           group: currentInfo.group || defaultGroup || "Entertainment",
-          country: currentInfo.country || "Global",
+          country: resolvedCountry.name,
+          countryCode: resolvedCountry.code,
+          countryFlag: resolvedCountry.flag,
           language: currentInfo.language || "English",
           url: streamUrl,
         });

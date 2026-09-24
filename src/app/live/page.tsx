@@ -142,13 +142,32 @@ export default function LiveTvPage() {
     });
   }, [customChannels, playlistChannels]);
 
-  // Available countries
+  // Available countries with flags and counts
   const availableCountries = useMemo(() => {
-    const set = new Set<string>();
+    const map = new Map<string, { name: string; code?: string; flag: string; count: number }>();
     allChannels.forEach((c) => {
-      if (c.country) set.add(c.country);
+      const countryName = c.country || "Global";
+      const flag = c.countryFlag || (countryName === "Global" ? "🌐" : "");
+      const existing = map.get(countryName);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(countryName, {
+          name: countryName,
+          code: c.countryCode,
+          flag,
+          count: 1,
+        });
+      }
     });
-    return Array.from(set).sort();
+
+    const list = Array.from(map.values());
+    list.sort((a, b) => {
+      if (a.name === "Global") return 1;
+      if (b.name === "Global") return -1;
+      return a.name.localeCompare(b.name);
+    });
+    return list;
   }, [allChannels]);
 
   // Channel count per category
@@ -235,8 +254,11 @@ export default function LiveTvPage() {
       }
 
       // Country filter
-      if (selectedCountry !== "all" && ch.country !== selectedCountry) {
-        return false;
+      if (selectedCountry !== "all") {
+        const matches =
+          ch.country === selectedCountry ||
+          ch.countryCode?.toLowerCase() === selectedCountry.toLowerCase();
+        if (!matches) return false;
       }
 
       // Search query
@@ -244,7 +266,9 @@ export default function LiveTvPage() {
         const q = searchQuery.toLowerCase();
         const matchesName = ch.name.toLowerCase().includes(q);
         const matchesCategory = channelCategory.toLowerCase().includes(q);
-        const matchesCountry = ch.country?.toLowerCase().includes(q);
+        const matchesCountry =
+          ch.country?.toLowerCase().includes(q) ||
+          ch.countryCode?.toLowerCase() === q;
         if (!matchesName && !matchesCategory && !matchesCountry) return false;
       }
 
@@ -378,19 +402,19 @@ export default function LiveTvPage() {
             {/* Country / Region Filter Dropdown */}
             {availableCountries.length > 0 && (
               <div className="flex items-center bg-[#121319] border border-white/10 rounded-xl px-2.5 sm:px-3 py-2 gap-1.5 text-xs shrink-0">
-                <IoGlobeOutline className="w-3.5 h-3.5 text-white/40" />
+                <IoGlobeOutline className="w-3.5 h-3.5 text-white/40 shrink-0" />
                 <select
                   value={selectedCountry}
                   onChange={(e) => setSelectedCountry(e.target.value)}
-                  className="bg-transparent text-white font-bold focus:outline-none cursor-pointer max-w-[100px] sm:max-w-none truncate"
+                  className="bg-transparent text-white font-bold focus:outline-none cursor-pointer max-w-[130px] sm:max-w-none truncate"
                   aria-label="Filter by Country"
                 >
                   <option value="all" className="bg-[#121319] text-white">
-                    All Regions
+                    🌐 All Regions ({allChannels.length.toLocaleString()})
                   </option>
                   {availableCountries.map((c) => (
-                    <option key={c} value={c} className="bg-[#121319] text-white">
-                      {c}
+                    <option key={c.name} value={c.name} className="bg-[#121319] text-white">
+                      {c.flag ? `${c.flag} ` : ""}{c.name} ({c.count.toLocaleString()})
                     </option>
                   ))}
                 </select>

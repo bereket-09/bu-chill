@@ -153,8 +153,12 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
             </span>
 
             {channel.country && (
-              <span className="rounded-md bg-white/5 border border-white/10 px-1.5 py-0.5 font-semibold text-white/50 shrink-0">
-                {channel.country}
+              <span
+                className="flex items-center gap-1 rounded-md bg-white/5 border border-white/10 px-1.5 py-0.5 font-semibold text-white/60 shrink-0"
+                title={channel.country}
+              >
+                {channel.countryFlag && <span className="text-[11px] leading-none">{channel.countryFlag}</span>}
+                <span className="max-w-[75px] truncate">{channel.country}</span>
               </span>
             )}
           </div>
@@ -245,8 +249,9 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
               <span>{categoryName}</span>
             </span>
             {channel.country && (
-              <span className="rounded bg-white/5 border border-white/5 px-1 py-0.2 text-[9px] font-semibold text-white/50">
-                {channel.country}
+              <span className="flex items-center gap-0.5 rounded bg-white/5 border border-white/5 px-1 py-0.2 text-[9px] font-semibold text-white/60">
+                {channel.countryFlag && <span>{channel.countryFlag}</span>}
+                <span className="max-w-[65px] truncate">{channel.country}</span>
               </span>
             )}
           </div>
@@ -268,8 +273,9 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
 
         {/* Country Pill (Desktop) */}
         {channel.country && (
-          <span className="hidden md:inline-flex rounded-md bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/50">
-            {channel.country}
+          <span className="hidden md:inline-flex items-center gap-1 rounded-md bg-white/5 border border-white/10 px-2 py-0.5 text-[10px] font-semibold text-white/70">
+            {channel.countryFlag && <span className="text-xs leading-none">{channel.countryFlag}</span>}
+            <span>{channel.country}</span>
           </span>
         )}
 

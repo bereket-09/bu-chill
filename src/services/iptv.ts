@@ -1,3 +1,10 @@
+import {
+  resolveIptvCountry,
+  ResolvedCountry,
+  IPTV_COUNTRIES,
+  getIptvCountryPlaylistUrl,
+} from "@/constants/iptvCountries";
+
 export interface Channel {
   id: string;
   name: string;
@@ -6,6 +13,8 @@ export interface Channel {
   category?: string;
   url: string;
   country?: string;
+  countryCode?: string;
+  countryFlag?: string;
   language?: string;
 }
 
@@ -144,7 +153,7 @@ export function normalizeCategory(rawGroup?: string): ChannelCategory {
 }
 
 // High-reliability curated public HLS streams
-export const CURATED_CHANNELS: Channel[] = [
+const RAW_CURATED_CHANNELS: Channel[] = [
   // --- NEWS ---
   {
     id: "sky-news-uk",
@@ -679,6 +688,22 @@ export const CURATED_CHANNELS: Channel[] = [
   },
 ];
 
+export const CURATED_CHANNELS: Channel[] = RAW_CURATED_CHANNELS.map((ch) => {
+  const resolved = resolveIptvCountry({
+    tvgCountry: ch.country,
+    tvgId: ch.id,
+    groupTitle: ch.group,
+    channelName: ch.name,
+    defaultCountry: ch.country,
+  });
+  return {
+    ...ch,
+    country: resolved.name,
+    countryCode: resolved.code,
+    countryFlag: resolved.flag,
+  };
+});
+
 export interface M3UPlaylistPreset {
   id: string;
   name: string;
@@ -691,6 +716,26 @@ export interface M3UPlaylistPreset {
 }
 
 export const POPULAR_M3U_PLAYLISTS: M3UPlaylistPreset[] = [
+  {
+    id: "iptv-all-countries",
+    name: "IPTV-Org Master (All Countries)",
+    description: "Global broadcast index of 5,000+ live linear TV channels across 150+ countries worldwide",
+    category: "Global",
+    url: "https://iptv-org.github.io/iptv/index.country.m3u",
+    badge: "150+ Countries",
+    channelCountEstimate: "5,000+",
+    featured: true,
+  },
+  {
+    id: "iptv-index",
+    name: "IPTV-Org Global Index",
+    description: "Direct master catalog from iptv-org containing all verified global channels",
+    category: "Global",
+    url: "https://iptv-org.github.io/iptv/index.m3u",
+    badge: "Global Index",
+    channelCountEstimate: "4,000+",
+    featured: true,
+  },
   {
     id: "iptv-eng",
     name: "English Channels (Global)",
@@ -773,7 +818,7 @@ export const POPULAR_M3U_PLAYLISTS: M3UPlaylistPreset[] = [
     description: "Local, regional, and national free streams from the United States",
     category: "US",
     url: "https://iptv-org.github.io/iptv/countries/us.m3u",
-    badge: "US",
+    badge: "🇺🇸 US",
     channelCountEstimate: "800+",
   },
   {
@@ -782,18 +827,99 @@ export const POPULAR_M3U_PLAYLISTS: M3UPlaylistPreset[] = [
     description: "Public and digital channels broadcasting across the United Kingdom",
     category: "UK",
     url: "https://iptv-org.github.io/iptv/countries/uk.m3u",
-    badge: "UK",
+    badge: "🇬🇧 UK",
     channelCountEstimate: "200+",
+  },
+  {
+    id: "iptv-ca",
+    name: "Canada (CA Live TV)",
+    description: "Broadcast networks and local stations across Canadian provinces",
+    category: "Canada",
+    url: "https://iptv-org.github.io/iptv/countries/ca.m3u",
+    badge: "🇨🇦 CA",
+    channelCountEstimate: "150+",
+  },
+  {
+    id: "iptv-de",
+    name: "Germany (DE Live TV)",
+    description: "Public broadcasters and linear channels across Germany",
+    category: "Germany",
+    url: "https://iptv-org.github.io/iptv/countries/de.m3u",
+    badge: "🇩🇪 DE",
+    channelCountEstimate: "180+",
+  },
+  {
+    id: "iptv-fr",
+    name: "France (FR Live TV)",
+    description: "National and regional French television channels",
+    category: "France",
+    url: "https://iptv-org.github.io/iptv/countries/fr.m3u",
+    badge: "🇫🇷 FR",
+    channelCountEstimate: "120+",
+  },
+  {
+    id: "iptv-es",
+    name: "Spain (ES Live TV)",
+    description: "Spanish national, autonomic and regional channels",
+    category: "Spain",
+    url: "https://iptv-org.github.io/iptv/countries/es.m3u",
+    badge: "🇪🇸 ES",
+    channelCountEstimate: "140+",
+  },
+  {
+    id: "iptv-it",
+    name: "Italy (IT Live TV)",
+    description: "Italian national and local digital linear channels",
+    category: "Italy",
+    url: "https://iptv-org.github.io/iptv/countries/it.m3u",
+    badge: "🇮🇹 IT",
+    channelCountEstimate: "110+",
+  },
+  {
+    id: "iptv-au",
+    name: "Australia (AU Live TV)",
+    description: "Australian terrestrial, news and entertainment broadcasts",
+    category: "Australia",
+    url: "https://iptv-org.github.io/iptv/countries/au.m3u",
+    badge: "🇦🇺 AU",
+    channelCountEstimate: "90+",
+  },
+  {
+    id: "iptv-in",
+    name: "India (IN Live TV)",
+    description: "National and regional Indian language streams (Hindi, Tamil, Telugu, etc.)",
+    category: "India",
+    url: "https://iptv-org.github.io/iptv/countries/in.m3u",
+    badge: "🇮🇳 IN",
+    channelCountEstimate: "160+",
+  },
+  {
+    id: "iptv-jp",
+    name: "Japan (JP Live TV)",
+    description: "Japanese digital television networks and web news feeds",
+    category: "Japan",
+    url: "https://iptv-org.github.io/iptv/countries/jp.m3u",
+    badge: "🇯🇵 JP",
+    channelCountEstimate: "80+",
+  },
+  {
+    id: "iptv-ua",
+    name: "Ukraine (UA Live TV)",
+    description: "National news, entertainment, and cultural channels from Ukraine",
+    category: "Ukraine",
+    url: "https://iptv-org.github.io/iptv/countries/ua.m3u",
+    badge: "🇺🇦 UA",
+    channelCountEstimate: "100+",
   },
 ];
 
 /**
- * Robust M3U / M3U8 string parser
+ * Robust M3U / M3U8 string parser with automatic IPTV-Org country, category, and metadata resolution
  */
-export function parseM3U(content: string, maxLimit = 1500): Channel[] {
+export function parseM3U(content: string, maxLimit = 5000): Channel[] {
   const lines = content.split(/\r?\n/);
   const channels: Channel[] = [];
-  let currentInfo: Partial<Channel> | null = null;
+  let currentInfo: (Partial<Channel> & { rawGroupTitle?: string }) | null = null;
   const seenIds = new Set<string>();
 
   for (let i = 0; i < lines.length; i++) {
@@ -827,9 +953,10 @@ export function parseM3U(content: string, maxLimit = 1500): Channel[] {
         currentInfo.logo = logoMatch[1].trim();
       }
 
-      // Parse group-title
+      // Parse group-title (keep raw group title for country resolution e.g. group-title="United States")
       const groupMatch = line.match(/group-title="([^"]*)"/i);
       if (groupMatch && groupMatch[1]) {
+        currentInfo.rawGroupTitle = groupMatch[1].trim();
         currentInfo.group = normalizeCategory(groupMatch[1].trim());
       }
 
@@ -845,7 +972,8 @@ export function parseM3U(content: string, maxLimit = 1500): Channel[] {
         currentInfo.language = langMatch[1].trim();
       }
     } else if (line.startsWith("#EXTGRP:") && currentInfo) {
-      currentInfo.group = normalizeCategory(line.replace("#EXTGRP:", "").trim());
+      currentInfo.rawGroupTitle = line.replace("#EXTGRP:", "").trim();
+      currentInfo.group = normalizeCategory(currentInfo.rawGroupTitle);
     } else if (line && !line.startsWith("#") && currentInfo) {
       // This is the stream URL line
       const streamUrl = line;
@@ -870,13 +998,23 @@ export function parseM3U(content: string, maxLimit = 1500): Channel[] {
         }
         seenIds.add(channelId);
 
+        // Resolve country with 100% accuracy using iptv-org standards
+        const resolved = resolveIptvCountry({
+          tvgCountry: currentInfo.country,
+          tvgId: currentInfo.id,
+          groupTitle: currentInfo.rawGroupTitle,
+          channelName,
+        });
+
         channels.push({
           id: channelId,
           name: channelName,
           logo: currentInfo.logo,
           group: normalizeCategory(currentInfo.group || "Entertainment"),
           category: normalizeCategory(currentInfo.group || "Entertainment"),
-          country: currentInfo.country || "Global",
+          country: resolved.name,
+          countryCode: resolved.code,
+          countryFlag: resolved.flag,
           language: currentInfo.language || "English",
           url: streamUrl,
         });
