@@ -613,9 +613,9 @@ export const MySpace: React.FC = () => {
               <img
                 src={resolveAvatarUrl(activeProfile.avatar)}
                 alt={activeProfile.name}
-                className="size-16 sm:size-20 rounded-2xl object-cover ring-2 ring-primary/40 shadow-[0_0_24px_rgba(0,255,200,0.25)] transition-transform duration-300 group-hover:scale-105"
+                className="size-16 sm:size-20 rounded-full object-cover ring-2 ring-primary/40 shadow-[0_0_24px_rgba(0,255,200,0.25)] transition-transform duration-300 group-hover:scale-105"
               />
-              <span className="absolute -bottom-1 -right-1 size-4 rounded-full bg-emerald-500 ring-2 ring-black animate-pulse" />
+              <span className="absolute bottom-0 right-0 size-4 rounded-full bg-emerald-500 ring-2 ring-black animate-pulse" />
             </div>
 
             {/* Profile Name & Status */}
