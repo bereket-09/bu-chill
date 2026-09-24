@@ -29,7 +29,7 @@ export class OMSSService {
    */
   public static async getMovieStreams(
     id: number | string,
-    timeoutMs: number = 4000
+    timeoutMs: number = 15000
   ): Promise<OMSSStreamResponse | null> {
     const baseUrl = this.getBaseUrl();
     if (!baseUrl) return null;
@@ -47,7 +47,7 @@ export class OMSSService {
 
       if (!res.ok) return null;
       const data = await res.json();
-      return this.normalizeResponse(data);
+      return this.normalizeResponse(data, baseUrl);
     } catch {
       return null;
     }
@@ -60,7 +60,7 @@ export class OMSSService {
     id: number | string,
     season: number,
     episode: number,
-    timeoutMs: number = 4000
+    timeoutMs: number = 15000
   ): Promise<OMSSStreamResponse | null> {
     const baseUrl = this.getBaseUrl();
     if (!baseUrl) return null;
@@ -78,7 +78,7 @@ export class OMSSService {
 
       if (!res.ok) return null;
       const data = await res.json();
-      return this.normalizeResponse(data);
+      return this.normalizeResponse(data, baseUrl);
     } catch {
       return null;
     }
@@ -87,7 +87,7 @@ export class OMSSService {
   /**
    * Normalizes various OMSS provider response shapes into a standard format.
    */
-  private static normalizeResponse(data: any): OMSSStreamResponse | null {
+  private static normalizeResponse(data: any, baseUrl?: string): OMSSStreamResponse | null {
     if (!data) return null;
 
     const sources: OMSSSource[] = [];
@@ -102,11 +102,24 @@ export class OMSSService {
 
     for (const item of rawSources) {
       if (item.url || item.file) {
+        let streamUrl = item.url || item.file;
+        if (baseUrl && streamUrl && streamUrl.includes("/v1/proxy")) {
+          const proxySubpath = streamUrl.substring(streamUrl.indexOf("/v1/proxy"));
+          streamUrl = `${baseUrl.replace(/\/$/, "")}${proxySubpath}`;
+        }
+
+        const providerName =
+          typeof item.provider === "object" && item.provider !== null
+            ? item.provider.name || item.provider.id || "CinePro Core"
+            : typeof item.provider === "string"
+            ? item.provider
+            : "CinePro Core";
+
         sources.push({
-          url: item.url || item.file,
+          url: streamUrl,
           quality: item.quality || item.label || "Auto",
-          type: item.type || (item.url?.includes(".m3u8") ? "hls" : "mp4"),
-          provider: item.provider || "CinePro Core",
+          type: item.type || (streamUrl.includes(".m3u8") ? "hls" : "mp4"),
+          provider: providerName,
         });
       }
     }
@@ -120,10 +133,16 @@ export class OMSSService {
 
     for (const sub of rawSubs) {
       if (sub.url || sub.file) {
+        let subUrl = sub.url || sub.file;
+        if (baseUrl && subUrl && subUrl.includes("/v1/proxy")) {
+          const proxySubpath = subUrl.substring(subUrl.indexOf("/v1/proxy"));
+          subUrl = `${baseUrl.replace(/\/$/, "")}${proxySubpath}`;
+        }
+
         subtitles.push({
           label: sub.label || sub.language || "Unknown",
           language: sub.language || sub.lang || "en",
-          src: sub.url || sub.file,
+          src: subUrl,
           default: Boolean(sub.default),
         });
       }
