@@ -10,6 +10,9 @@ import { resolveIptvCountry } from "@/constants/iptvCountries";
 export const dynamic = "force-dynamic";
 
 function parseM3UContent(text: string, defaultGroup?: string): Channel[] {
+  const urlTvgMatch = text.match(/(?:url-tvg|x-tvg-url)="([^"]+)"/i);
+  const playlistEpgUrl = urlTvgMatch ? urlTvgMatch[1].trim() : undefined;
+
   const lines = text.split(/\r?\n/);
   const channels: Channel[] = [];
   let currentInfo: (Partial<Channel> & { rawGroupTitle?: string }) | null = null;
@@ -72,21 +75,24 @@ function parseM3UContent(text: string, defaultGroup?: string): Channel[] {
       if (isDirectStream && !isYouTubeWeb && !seenUrls.has(streamUrl)) {
         seenUrls.add(streamUrl);
         const name = currentInfo.name || "Live Channel";
+        const originalTvgId = currentInfo.id;
         const id =
-          currentInfo.id ||
+          originalTvgId ||
           name.toLowerCase().replace(/[^a-z0-9]/g, "-") +
             "-" +
             Math.random().toString(36).substring(2, 6);
 
         const resolvedCountry = resolveIptvCountry({
           tvgCountry: currentInfo.country,
-          tvgId: currentInfo.id,
+          tvgId: originalTvgId,
           groupTitle: currentInfo.rawGroupTitle,
           channelName: name,
         });
 
         channels.push({
           id,
+          tvgId: originalTvgId,
+          epgUrl: playlistEpgUrl,
           name,
           logo: currentInfo.logo,
           group: currentInfo.group || defaultGroup || "Entertainment",

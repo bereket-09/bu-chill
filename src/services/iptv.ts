@@ -16,6 +16,8 @@ export interface Channel {
   countryCode?: string;
   countryFlag?: string;
   language?: string;
+  tvgId?: string;
+  epgUrl?: string;
 }
 
 export const CHANNEL_CATEGORIES = [
@@ -717,6 +719,26 @@ export interface M3UPlaylistPreset {
 
 export const POPULAR_M3U_PLAYLISTS: M3UPlaylistPreset[] = [
   {
+    id: "pluto-tv-us",
+    name: "Pluto TV 24/7 FAST Channels",
+    description: "300+ free linear FAST channels: Paramount Movies, Showtime, MTV, CBS News, Comedy Central & Crime",
+    category: "General",
+    url: "https://raw.githubusercontent.com/NasiLemakk/Pluto-TV-Playlists/main/output/plutotv_us.m3u8",
+    badge: "⭐ Pluto TV",
+    channelCountEstimate: "350+",
+    featured: true,
+  },
+  {
+    id: "free-tv-movies",
+    name: "Free-TV Movies & Cinema",
+    description: "Curated 24/7 movies, FilmRise, Pluto Movies, cult cinema & Hollywood classics",
+    category: "Movies",
+    url: "https://raw.githubusercontent.com/Free-TV/IPTV/master/playlists/playlist_zz_movies.m3u8",
+    badge: "🎬 FAST Movies",
+    channelCountEstimate: "200+",
+    featured: true,
+  },
+  {
     id: "iptv-all-countries",
     name: "IPTV-Org Master (All Countries)",
     description: "Global broadcast index of 5,000+ live linear TV channels across 150+ countries worldwide",
@@ -917,6 +939,10 @@ export const POPULAR_M3U_PLAYLISTS: M3UPlaylistPreset[] = [
  * Robust M3U / M3U8 string parser with automatic IPTV-Org country, category, and metadata resolution
  */
 export function parseM3U(content: string, maxLimit = 5000): Channel[] {
+  // Extract top-level EPG guide URL if present (url-tvg="..." or x-tvg-url="...")
+  const urlTvgMatch = content.match(/(?:url-tvg|x-tvg-url)="([^"]+)"/i);
+  const playlistEpgUrl = urlTvgMatch ? urlTvgMatch[1].trim() : undefined;
+
   const lines = content.split(/\r?\n/);
   const channels: Channel[] = [];
   let currentInfo: (Partial<Channel> & { rawGroupTitle?: string }) | null = null;
@@ -988,8 +1014,9 @@ export function parseM3U(content: string, maxLimit = 5000): Channel[] {
 
       if (isDirectStream && !isYouTubeWeb) {
         const channelName = currentInfo.name || "Live Stream";
+        const originalTvgId = currentInfo.id;
         let channelId =
-          currentInfo.id ||
+          originalTvgId ||
           channelName.toLowerCase().replace(/[^a-z0-9]/g, "-");
 
         // Ensure unique channelId
@@ -1001,13 +1028,15 @@ export function parseM3U(content: string, maxLimit = 5000): Channel[] {
         // Resolve country with 100% accuracy using iptv-org standards
         const resolved = resolveIptvCountry({
           tvgCountry: currentInfo.country,
-          tvgId: currentInfo.id,
+          tvgId: originalTvgId,
           groupTitle: currentInfo.rawGroupTitle,
           channelName,
         });
 
         channels.push({
           id: channelId,
+          tvgId: originalTvgId,
+          epgUrl: playlistEpgUrl,
           name: channelName,
           logo: currentInfo.logo,
           group: normalizeCategory(currentInfo.group || "Entertainment"),

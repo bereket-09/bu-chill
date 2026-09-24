@@ -23,9 +23,13 @@ import {
   MdKeyboardArrowDown,
   MdRefresh,
   MdAspectRatio,
+  MdSchedule,
+  MdVpnLock,
+  MdNetworkCheck,
 } from "react-icons/md";
 import Link from "next/link";
 import SafeImage from "@/components/ui/other/SafeImage";
+import { ChannelEpg } from "@/types/epg";
 
 export interface LivePlayerProps {
   channel: Channel;
@@ -63,89 +67,148 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
   const [showControls, setShowControls] = useState(true);
   const [aspectRatio, setAspectRatio] = useState<"contain" | "cover">("contain");
   const [showChannelDrawer, setShowChannelDrawer] = useState(false);
+  const [showGuideDrawer, setShowGuideDrawer] = useState(false);
   const [drawerSearch, setDrawerSearch] = useState("");
   const [drawerCategory, setDrawerCategory] = useState("All");
   const [showOsd, setShowOsd] = useState(true);
 
+  // Stream proxy state (for CORS/Geo-locked streams)
+  const [useProxy, setUseProxy] = useState(false);
+  const [proxyAttempted, setProxyAttempted] = useState(false);
+
+  // EPG Electronic Program Guide state
+  const [epgData, setEpgData] = useState<ChannelEpg | null>(null);
+  const [isLoadingEpg, setIsLoadingEpg] = useState(false);
+
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const osdTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Trigger OSD on channel change
+  // Reset proxy and trigger OSD on channel change
   useEffect(() => {
+    setUseProxy(false);
+    setProxyAttempted(false);
     setShowOsd(true);
     if (osdTimerRef.current) clearTimeout(osdTimerRef.current);
     osdTimerRef.current = setTimeout(() => {
       setShowOsd(false);
-    }, 4000);
+    }, 4500);
     return () => {
       if (osdTimerRef.current) clearTimeout(osdTimerRef.current);
     };
   }, [channel.id]);
+
+  // Fetch EPG schedule on channel change and update every 60 seconds
+  useEffect(() => {
+    let isMounted = true;
+    const fetchEpg = () => {
+      setIsLoadingEpg(true);
+      const params = new URLSearchParams({
+        channelId: channel.tvgId || channel.id,
+        channelName: channel.name,
+        category: channel.category || channel.group || "Entertainment",
+        epgUrl: channel.epgUrl || "",
+      });
+
+      fetch(`/api/live/epg?${params.toString()}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data: ChannelEpg | null) => {
+          if (isMounted && data) {
+            setEpgData(data);
+          }
+          if (isMounted) setIsLoadingEpg(false);
+        })
+        .catch(() => {
+          if (isMounted) setIsLoadingEpg(false);
+        });
+    };
+
+    fetchEpg();
+    const interval = setInterval(fetchEpg, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [channel.id, channel.name, channel.category, channel.group, channel.tvgId, channel.epgUrl]);
 
   // Mouse idle hide controls
   const handleMouseMove = useCallback(() => {
     setShowControls(true);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
-      if (isPlaying && !showChannelDrawer) {
+      if (isPlaying && !showChannelDrawer && !showGuideDrawer) {
         setShowControls(false);
       }
     }, 3500);
-  }, [isPlaying, showChannelDrawer]);
+  }, [isPlaying, showChannelDrawer, showGuideDrawer]);
 
-  // Load and play HLS stream
-  const initHls = useCallback(() => {
-    const video = videoRef.current;
-    if (!video || !channel.url) return;
+  // Load and play HLS stream (with automatic proxy failover)
+  const initHls = useCallback(
+    (forceProxy?: boolean) => {
+      const video = videoRef.current;
+      if (!video || !channel.url) return;
 
-    setHasError(false);
-    setIsBuffering(true);
+      setHasError(false);
+      setIsBuffering(true);
 
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        liveSyncDurationCount: 3,
-        liveMaxLatencyDurationCount: 8,
-        manifestLoadingTimeOut: 15000,
-        levelLoadingTimeOut: 15000,
-      });
+      const activeProxy = forceProxy !== undefined ? forceProxy : useProxy;
+      const playUrl = activeProxy
+        ? `/api/live/stream-proxy?url=${encodeURIComponent(channel.url)}`
+        : channel.url;
 
-      hlsRef.current = hls;
-      hls.loadSource(channel.url);
-      hls.attachMedia(video);
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: 8,
+          manifestLoadingTimeOut: 15000,
+          levelLoadingTimeOut: 15000,
+        });
 
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        setIsBuffering(false);
-        video.play().catch(() => setIsPlaying(false));
-      });
+        hlsRef.current = hls;
+        hls.loadSource(playUrl);
+        hls.attachMedia(video);
 
-      hls.on(Hls.Events.ERROR, (_, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              setHasError(true);
-              setIsBuffering(false);
-              break;
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setIsBuffering(false);
+          video.play().catch(() => setIsPlaying(false));
+        });
+
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                // If direct stream fails, auto-fallback to stream proxy once
+                if (!activeProxy && !proxyAttempted) {
+                  setProxyAttempted(true);
+                  setUseProxy(true);
+                  initHls(true);
+                  return;
+                }
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                setHasError(true);
+                setIsBuffering(false);
+                break;
+            }
           }
-        }
-      });
-    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = channel.url;
-      video.play().catch(() => setIsPlaying(false));
-    }
-  }, [channel.url]);
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = playUrl;
+        video.play().catch(() => setIsPlaying(false));
+      }
+    },
+    [channel.url, useProxy, proxyAttempted]
+  );
 
   useEffect(() => {
     initHls();
@@ -322,14 +385,29 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
             This broadcast feed may be temporarily offline or restricted. Try reloading the stream or zapping to another channel.
           </p>
           <div className="flex items-center gap-3 pt-2">
-            <button
-              type="button"
-              onClick={initHls}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-white/90 shadow-lg"
-            >
-              <MdRefresh className="w-4 h-4" />
-              <span>Retry Signal</span>
-            </button>
+            {!useProxy ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setUseProxy(true);
+                  setProxyAttempted(true);
+                  initHls(true);
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shadow-lg transition-all"
+              >
+                <MdVpnLock className="w-4 h-4" />
+                <span>Try via Proxy</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => initHls(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-black font-bold text-xs hover:bg-white/90 shadow-lg"
+              >
+                <MdRefresh className="w-4 h-4" />
+                <span>Retry Stream</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowChannelDrawer(true)}
@@ -344,35 +422,62 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
       {/* ================= ON-SCREEN TV OSD BANNER ================= */}
       <div
         className={cn(
-          "absolute top-3 left-3 sm:top-6 sm:left-6 z-20 flex items-center gap-2.5 sm:gap-3.5 p-2 sm:p-2.5 pr-3.5 sm:pr-5 rounded-xl sm:rounded-2xl bg-black/85 backdrop-blur-xl border border-white/15 shadow-2xl transition-all duration-500 pointer-events-none max-w-[55%] sm:max-w-xs",
+          "absolute top-3 left-3 sm:top-6 sm:left-6 z-20 flex flex-col gap-2 p-2.5 sm:p-3 pr-4 sm:pr-6 rounded-xl sm:rounded-2xl bg-black/85 backdrop-blur-xl border border-white/15 shadow-2xl transition-all duration-500 pointer-events-none max-w-[70%] sm:max-w-sm",
           showOsd
             ? "opacity-100 translate-y-0"
             : "opacity-0 -translate-y-4"
         )}
       >
-        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl overflow-hidden bg-white/10 p-1 border border-white/10 shrink-0">
-          {channel.logo ? (
-            <SafeImage src={channel.logo} alt={channel.name} fill className="object-contain p-0.5 sm:p-1" unoptimized />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center font-black text-[10px] sm:text-xs text-white">
-              {channel.name.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase text-red-500 tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-              LIVE
-            </span>
-            {(channel.group || channel.category) && (
-              <span className="text-[9px] sm:text-[10px] font-bold text-white/50 uppercase px-1 sm:px-1.5 py-0.2 rounded bg-white/10 truncate max-w-[80px] sm:max-w-none">
-                {channel.group || channel.category}
-              </span>
+        <div className="flex items-center gap-2.5 sm:gap-3.5">
+          <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl overflow-hidden bg-white/10 p-1 border border-white/10 shrink-0">
+            {channel.logo ? (
+              <SafeImage src={channel.logo} alt={channel.name} fill className="object-contain p-0.5 sm:p-1" unoptimized />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-black text-[10px] sm:text-xs text-white">
+                {channel.name.slice(0, 2).toUpperCase()}
+              </div>
             )}
           </div>
-          <h3 className="text-xs sm:text-sm font-black text-white truncate">{channel.name}</h3>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="flex items-center gap-1 text-[9px] sm:text-[10px] font-black uppercase text-red-500 tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                LIVE
+              </span>
+              {useProxy && (
+                <span className="text-[8px] sm:text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Proxy Mode
+                </span>
+              )}
+              {(channel.group || channel.category) && (
+                <span className="text-[9px] sm:text-[10px] font-bold text-white/50 uppercase px-1 sm:px-1.5 py-0.2 rounded bg-white/10 truncate max-w-[80px] sm:max-w-none">
+                  {channel.group || channel.category}
+                </span>
+              )}
+            </div>
+            <h3 className="text-xs sm:text-sm font-black text-white truncate">{channel.name}</h3>
+          </div>
         </div>
+
+        {/* EPG Program Indicator */}
+        {epgData?.currentProgram && (
+          <div className="pt-1.5 border-t border-white/10 space-y-1">
+            <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-white/80 gap-2">
+              <span className="font-semibold truncate text-amber-300">
+                Now: {epgData.currentProgram.title}
+              </span>
+              <span className="text-[9px] text-white/40 shrink-0">
+                {epgData.currentProgram.timeRemainingMinutes}m left
+              </span>
+            </div>
+            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-amber-400 transition-all duration-1000 rounded-full"
+                style={{ width: `${epgData.currentProgram.progress}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Top Floating Action Controls */}
@@ -382,10 +487,32 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
           showControls || showChannelDrawer ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
+        {/* TV Guide Trigger Button */}
+        <button
+          type="button"
+          onClick={() => {
+            setShowGuideDrawer((prev) => !prev);
+            setShowChannelDrawer(false);
+          }}
+          className={cn(
+            "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl backdrop-blur-md border text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95",
+            showGuideDrawer
+              ? "bg-amber-500/25 border-amber-500/50 text-amber-300"
+              : "bg-black/60 hover:bg-black/80 text-white border-white/15"
+          )}
+          title="Open Electronic Program Guide (EPG)"
+        >
+          <MdSchedule className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+          <span className="hidden sm:inline">TV Guide</span>
+        </button>
+
         {/* Quick Channel Switcher Trigger Button */}
         <button
           type="button"
-          onClick={() => setShowChannelDrawer((prev) => !prev)}
+          onClick={() => {
+            setShowChannelDrawer((prev) => !prev);
+            setShowGuideDrawer(false);
+          }}
           className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-black/60 hover:bg-black/80 text-white backdrop-blur-md border border-white/15 text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95"
           title="Open Channel Switcher (Press C)"
         >
@@ -481,8 +608,51 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
           </span>
         </div>
 
-        {/* Right: Aspect Ratio, Stream Refresh, Fullscreen */}
+        {/* Right: TV Guide, Proxy Toggle, Aspect Ratio, Stream Refresh, Fullscreen */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* TV Guide Button */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowGuideDrawer((prev) => !prev);
+              setShowChannelDrawer(false);
+            }}
+            className={cn(
+              "p-1.5 sm:p-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border",
+              showGuideDrawer
+                ? "bg-amber-500/25 border-amber-500/50 text-amber-300"
+                : "bg-white/10 border-white/10 hover:bg-white/20 text-white"
+            )}
+            title="Electronic Program Guide (EPG)"
+          >
+            <MdSchedule className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+            <span className="hidden sm:inline text-[11px]">Guide</span>
+          </button>
+
+          {/* Proxy Mode Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              const nextProxy = !useProxy;
+              setUseProxy(nextProxy);
+              initHls(nextProxy);
+            }}
+            className={cn(
+              "p-1.5 sm:p-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border",
+              useProxy
+                ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
+                : "bg-white/10 border-white/10 hover:bg-white/20 text-white/70"
+            )}
+            title={useProxy ? "Stream Proxy Active (Click to switch to direct)" : "Direct Stream (Click to enable stream proxy fallback)"}
+          >
+            {useProxy ? (
+              <MdVpnLock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
+            ) : (
+              <MdNetworkCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            )}
+            <span className="hidden md:inline text-[11px]">{useProxy ? "Proxy" : "Direct"}</span>
+          </button>
+
           <button
             type="button"
             onClick={toggleAspectRatio}
@@ -495,7 +665,7 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
 
           <button
             type="button"
-            onClick={initHls}
+            onClick={() => initHls()}
             className="p-1.5 sm:p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
             title="Reconnect Stream"
           >
@@ -609,6 +779,144 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
                   </button>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= ON-SCREEN TV GUIDE (EPG) DRAWER ================= */}
+      {showGuideDrawer && (
+        <div className="absolute inset-0 z-40 flex items-center justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="w-full sm:w-[420px] h-full bg-[#0d0e12]/95 backdrop-blur-2xl border-l border-white/15 p-4 sm:p-5 flex flex-col space-y-4 shadow-2xl overflow-hidden">
+            {/* Guide Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  <MdSchedule className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <span>TV Guide & Schedule</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-white/10 text-white/60 uppercase">
+                      {epgData?.source || "Live"}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-white/50 truncate max-w-[240px]">
+                    {channel.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGuideDrawer(false)}
+                className="p-1.5 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <IoClose className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Guide Content */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3.5 custom-scrollbar" style={{ scrollbarWidth: "thin" }}>
+              {/* Currently Airing Card */}
+              {epgData?.currentProgram && (
+                <div className="p-3.5 rounded-xl bg-gradient-to-br from-amber-500/15 via-white/5 to-transparent border border-amber-500/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1 text-[10px] font-black uppercase text-amber-400 tracking-wider">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      Now Airing
+                    </span>
+                    <span className="text-[10px] text-white/50 font-medium">
+                      {epgData.currentProgram.timeRemainingMinutes}m left
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-white leading-tight">
+                    {epgData.currentProgram.title}
+                  </h4>
+                  {epgData.currentProgram.description && (
+                    <p className="text-xs text-white/60 line-clamp-3 leading-relaxed">
+                      {epgData.currentProgram.description}
+                    </p>
+                  )}
+                  {/* Progress Bar */}
+                  <div className="space-y-1 pt-1">
+                    <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                        style={{ width: `${epgData.currentProgram.progress}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[9px] text-white/40">
+                      <span>
+                        {new Date(epgData.currentProgram.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      <span>{epgData.currentProgram.progress}% elapsed</span>
+                      <span>
+                        {new Date(epgData.currentProgram.stop).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Up Next Card */}
+              {epgData?.nextProgram && (
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                  <div className="flex items-center justify-between text-[10px] text-white/40">
+                    <span className="font-bold text-white/60 uppercase">Up Next</span>
+                    <span>
+                      {new Date(epgData.nextProgram.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  <h5 className="text-xs font-bold text-white truncate">
+                    {epgData.nextProgram.title}
+                  </h5>
+                  {epgData.nextProgram.description && (
+                    <p className="text-[11px] text-white/50 line-clamp-2">
+                      {epgData.nextProgram.description}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Upcoming Timeline List */}
+              <div className="space-y-2 pt-1">
+                <span className="text-[11px] font-bold text-white/40 uppercase tracking-wider block">
+                  Upcoming Schedule
+                </span>
+                {epgData?.upcoming && epgData.upcoming.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {epgData.upcoming.map((prog, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2.5 rounded-lg bg-black/40 border border-white/5 hover:border-white/15 transition-colors flex items-start justify-between gap-3"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs font-semibold text-white truncate block">
+                            {prog.title}
+                          </span>
+                          {prog.description && (
+                            <span className="text-[10px] text-white/40 line-clamp-1 block">
+                              {prog.description}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] font-bold text-amber-400/90 block">
+                            {new Date(prog.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          <span className="text-[9px] text-white/30 block">
+                            {prog.durationMinutes}m
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-white/40 text-xs">
+                    No further upcoming schedule available for this channel.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
