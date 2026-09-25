@@ -70,6 +70,12 @@ export default function LiveTvPage() {
   const [isScrolledPastPlayer, setIsScrolledPastPlayer] = useState(false);
   const playerSectionRef = useRef<HTMLDivElement>(null);
 
+  // Public Satellite Search state (scraped on-demand from iptvcat)
+  const [publicResults, setPublicResults] = useState<Channel[]>([]);
+  const [isSearchingPublic, setIsSearchingPublic] = useState(false);
+  const [publicSearchError, setPublicSearchError] = useState("");
+  const [hasSearchedPublic, setHasSearchedPublic] = useState(false);
+
   // Track if user has scrolled past the main video player using IntersectionObserver (0 scroll lag/flicker)
   useEffect(() => {
     const el = playerSectionRef.current;
@@ -134,16 +140,16 @@ export default function LiveTvPage() {
     };
   }, [selectedPlaylistId]);
 
-  // Combined channels list (User's Custom Channels + Current Playlist Channels)
+  // Combined channels list (User's Custom Channels + Public Discovered Feeds + Current Playlist Channels)
   const allChannels = useMemo(() => {
-    const combined = [...customChannels, ...playlistChannels];
+    const combined = [...customChannels, ...publicResults, ...playlistChannels];
     const seen = new Set<string>();
     return combined.filter((ch) => {
       if (seen.has(ch.id)) return false;
       seen.add(ch.id);
       return true;
     });
-  }, [customChannels, playlistChannels]);
+  }, [customChannels, publicResults, playlistChannels]);
 
   // Available countries with flags and counts
   const availableCountries = useMemo(() => {
@@ -248,6 +254,51 @@ export default function LiveTvPage() {
     setCustomChannels([]);
     setChannelIdParam("bbc-news");
   }, [setChannelIdParam]);
+
+  const handleSearchPublic = useCallback(async (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    setIsSearchingPublic(true);
+    setPublicSearchError("");
+    setHasSearchedPublic(true);
+
+    try {
+      const res = await fetch(`/api/live/search-public?q=${encodeURIComponent(trimmed)}`);
+      if (!res.ok) throw new Error("Search service temporarily unavailable");
+      const data = await res.json();
+      if (data.success && Array.isArray(data.channels)) {
+        setPublicResults(data.channels);
+        if (data.channels.length === 0) {
+          setPublicSearchError(`No public satellite feeds found for "${trimmed}". Try another title or spelling.`);
+        }
+      } else {
+        setPublicResults([]);
+        setPublicSearchError(data.message || "No channels found.");
+      }
+    } catch (err: unknown) {
+      setPublicSearchError(err instanceof Error ? err.message : "Failed to search public feeds.");
+      setPublicResults([]);
+    } finally {
+      setIsSearchingPublic(false);
+    }
+  }, []);
+
+  const handleSavePublicChannel = useCallback(
+    (channel: Channel) => {
+      const updated = [channel, ...customChannels.filter((c) => c.id !== channel.id)];
+      saveStoredCustomChannels(updated);
+      setCustomChannels(updated);
+    },
+    [customChannels]
+  );
+
+  useEffect(() => {
+    setPublicSearchError("");
+    if (!searchQuery.trim()) {
+      setPublicResults([]);
+      setHasSearchedPublic(false);
+    }
+  }, [searchQuery]);
 
   // Filtered Channels
   const filteredChannels = useMemo(() => {
@@ -558,33 +609,163 @@ export default function LiveTvPage() {
               );
             })}
           </div>
+          {/* Quick Global Public Search Suggestion Bar */}
+          {searchQuery.trim().length > 1 && (
+            <div className="flex items-center justify-between gap-2 px-1 pt-1 text-xs flex-wrap">
+              <span className="text-white/40">
+                Found {filteredChannels.length} in current playlist
+              </span>
+              <button
+                type="button"
+                onClick={() => handleSearchPublic(searchQuery)}
+                disabled={isSearchingPublic}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-bold transition-all cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {isSearchingPublic ? (
+                  <>
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                    <span>Scanning 20,000+ Satellites...</span>
+                  </>
+                ) : (
+                  <>
+                    <IoGlobeOutline className="w-3.5 h-3.5" />
+                    <span>Search 20,000+ Public Streams for "{searchQuery}"</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* ================= DISCOVERED PUBLIC SATELLITE CHANNELS SHELF ================= */}
+        {publicResults.length > 0 && (
+          <section className="p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-primary/[0.09] to-transparent border border-primary/25 space-y-4 shadow-2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-primary/20 pb-3">
+              <div className="flex items-center gap-3">
+                <span className="p-2 rounded-xl bg-primary/20 text-primary text-base">🛰️</span>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-2">
+                    <span>Discovered Global Satellite Streams</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                      {publicResults.length} found
+                    </span>
+                  </h3>
+                  <p className="text-xs text-white/50">
+                    Live public broadcast feeds found on iptvcat matching "{searchQuery}"
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPublicResults([]);
+                  setHasSearchedPublic(false);
+                }}
+                className="text-xs text-white/50 hover:text-white flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+              >
+                <IoClose className="w-4 h-4" />
+                <span>Dismiss Results</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
+              {publicResults.map((ch, idx) => (
+                <div key={ch.id} className="relative group">
+                  <LiveChannelCard
+                    channel={ch}
+                    variant="grid"
+                    index={idx}
+                    isActive={ch.id === activeChannel.id}
+                    isFavorite={favorites.includes(ch.id)}
+                    onSelect={() => handleSelectChannel(ch)}
+                    onToggleFavorite={(e) => {
+                      e.stopPropagation();
+                      handleToggleFavorite(ch.id);
+                    }}
+                  />
+                  {/* Quick save button to store channel permanently */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSavePublicChannel(ch);
+                    }}
+                    className="absolute top-2 left-2 z-10 p-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-white/20 text-white/70 hover:text-primary hover:border-primary opacity-0 group-hover:opacity-100 transition-all text-xs cursor-pointer shadow-lg"
+                    title="Save permanently to My Custom Channels"
+                  >
+                    <IoAdd className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ================= CHANNELS DISPLAY ================= */}
         {filteredChannels.length === 0 ? (
-          <div className="py-24 text-center space-y-3">
+          <div className="py-20 text-center space-y-6 max-w-xl mx-auto px-4">
             <div className="flex justify-center">
-              <IoRadioOutline className="w-12 h-12 text-white/20" />
+              <div className="p-4 rounded-3xl bg-white/[0.04] border border-white/10 text-white/40">
+                <IoRadioOutline className="w-12 h-12" />
+              </div>
             </div>
-            <p className="text-xl font-bold text-white/70">
-              {searchQuery
-                ? `No channels found for "${searchQuery}"`
-                : "No channels found in this selection"}
-            </p>
-            <p className="text-sm text-white/40">
-              Try adjusting your category, country filter, or search query.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCategory("All");
-                setSelectedCountry("all");
-              }}
-              className="mt-2 px-4 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-white/90"
-            >
-              Reset Filters
-            </button>
+
+            <div className="space-y-2">
+              <p className="text-xl font-extrabold text-white tracking-tight">
+                {searchQuery
+                  ? `No channels found in current playlist for "${searchQuery}"`
+                  : "No channels found in this selection"}
+              </p>
+              <p className="text-xs text-white/50 leading-relaxed">
+                {searchQuery
+                  ? "This channel might not be in the current playlist. Search the global IPTV satellite directory to find and play public live streams."
+                  : "Try adjusting your category or country filters."}
+              </p>
+            </div>
+
+            {searchQuery.trim().length > 0 && (
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSearchPublic(searchQuery)}
+                  disabled={isSearchingPublic}
+                  className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-primary hover:bg-primary/90 active:scale-95 text-black font-extrabold text-xs shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSearchingPublic ? (
+                    <>
+                      <div className="w-4 h-4 rounded-full border-2 border-black/20 border-t-black animate-spin" />
+                      <span>Scanning 20,000+ Global Satellites...</span>
+                    </>
+                  ) : (
+                    <>
+                      <IoGlobeOutline className="w-4 h-4 text-black" />
+                      <span>Search Global Public Streams for "{searchQuery}"</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("All");
+                    setSelectedCountry("all");
+                    setPublicResults([]);
+                    setHasSearchedPublic(false);
+                  }}
+                  className="w-full sm:w-auto px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/15 text-white/80 hover:text-white text-xs font-bold transition-all border border-white/10 cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
+
+            {publicSearchError && (
+              <p className="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-xl py-2.5 px-4 max-w-md mx-auto">
+                {publicSearchError}
+              </p>
+            )}
           </div>
         ) : isGrouped && !isFiltering ? (
           /* ================= GROUPED BY CATEGORY VIEW ================= */
