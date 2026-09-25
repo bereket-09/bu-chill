@@ -23,6 +23,8 @@ import {
 } from "@/utils/watchProgress";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import { getActiveProfileId, saveProfileHistoryItem } from "@/services/profileStorage";
+import { MdSkipNext } from "react-icons/md";
+import { IoClose } from "react-icons/io5";
 
 const AdsWarning = dynamic(() => import("@/components/ui/overlay/AdsWarning"));
 const TvShowPlayerHeader = dynamic(() => import("./Header"));
@@ -98,12 +100,14 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
   const currentTimeRef = useRef<number>(initialPosition);
   const [activePlaybackTime, setActivePlaybackTime] = useState<number>(initialPosition);
   const [showResumeBanner, setShowResumeBanner] = useState<boolean>(initialPosition > 10);
+  const [dismissNextEpisode, setDismissNextEpisode] = useState<boolean>(false);
 
   // Reset banner and playback time whenever navigating to a different episode
   useEffect(() => {
     setShowResumeBanner(initialPosition > 10);
     setActivePlaybackTime(initialPosition);
     currentTimeRef.current = initialPosition;
+    setDismissNextEpisode(false);
   }, [initialPosition, episode.season_number, episode.episode_number]);
 
   // Auto hide resume banner after 7 seconds
@@ -429,16 +433,38 @@ const TvShowPlayer: React.FC<TvShowPlayerProps> = ({
             )
           )}
 
-          {/* Floating Next Episode Button for Embed Mode */}
-          {!isNative && props.nextEpisodeNumber && (
-            <button
-              type="button"
-              onClick={handleNextEpisode}
-              className="pointer-events-auto absolute bottom-5 right-5 z-30 flex items-center gap-2 rounded-full border border-white/20 bg-neutral-900/90 hover:bg-neutral-800 text-white px-4 py-2 text-xs font-bold shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer group"
+          {/* Floating Next Episode Button for Embed Mode (Elevated above player controls and auto-fading on idle) */}
+          {!isNative && props.nextEpisodeNumber && !dismissNextEpisode && (
+            <div
+              className={cn(
+                "absolute bottom-20 sm:bottom-24 right-5 sm:right-8 z-30 transition-all duration-300 ease-out",
+                idle && !mobile
+                  ? "opacity-0 pointer-events-none translate-y-2"
+                  : "opacity-100 pointer-events-auto translate-y-0"
+              )}
             >
-              <span>Next Episode (E{props.nextEpisodeNumber})</span>
-              <span className="text-primary font-black group-hover:translate-x-0.5 transition-transform">→</span>
-            </button>
+              <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-neutral-900/90 hover:bg-neutral-900 text-white p-1 pl-3.5 shadow-2xl backdrop-blur-md transition-all hover:scale-105 active:scale-95 group">
+                <button
+                  type="button"
+                  onClick={handleNextEpisode}
+                  className="flex items-center gap-2 text-xs sm:text-sm font-bold cursor-pointer pr-1"
+                  aria-label={`Play next episode: Episode ${props.nextEpisodeNumber}`}
+                >
+                  <MdSkipNext className="w-4 h-4 text-primary shrink-0" />
+                  <span>Next Episode (E{props.nextEpisodeNumber})</span>
+                  <span className="text-primary font-black group-hover:translate-x-0.5 transition-transform">→</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissNextEpisode(true)}
+                  className="p-1 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Dismiss next episode prompt"
+                  aria-label="Dismiss next episode prompt"
+                >
+                  <IoClose className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           )}
         </Card>
       </div>
