@@ -70,18 +70,21 @@ export default function LiveTvPage() {
   const [isScrolledPastPlayer, setIsScrolledPastPlayer] = useState(false);
   const playerSectionRef = useRef<HTMLDivElement>(null);
 
-  // Track if user has scrolled past the main video player
+  // Track if user has scrolled past the main video player using IntersectionObserver (0 scroll lag/flicker)
   useEffect(() => {
-    const handleScroll = () => {
-      if (!playerSectionRef.current) return;
-      const rect = playerSectionRef.current.getBoundingClientRect();
-      setIsScrolledPastPlayer(rect.bottom < 80);
-    };
+    const el = playerSectionRef.current;
+    if (!el) return;
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsScrolledPastPlayer(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [channelIdParam]);
 
   // Load favorites & custom channels on mount
   useEffect(() => {
@@ -221,13 +224,21 @@ export default function LiveTvPage() {
     []
   );
 
+  const CHANNELS_PER_PAGE = 48;
+  const [visibleCount, setVisibleCount] = useState<number>(CHANNELS_PER_PAGE);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
   const handleImportM3U = useCallback(
     (imported: Channel[]) => {
-      saveStoredCustomChannels(imported);
-      setCustomChannels(imported);
-      if (imported.length > 0) {
-        setChannelIdParam(imported[0].id);
-      }
+      setIsModalOpen(false);
+      // Asynchronously process custom channels so UI thread doesn't freeze or lock modal
+      setTimeout(() => {
+        saveStoredCustomChannels(imported);
+        setCustomChannels(imported);
+        if (imported.length > 0) {
+          setChannelIdParam(imported[0].id);
+        }
+      }, 50);
     },
     [setChannelIdParam]
   );
@@ -286,6 +297,34 @@ export default function LiveTvPage() {
     });
     return map;
   }, [filteredChannels]);
+
+  // Reset pagination when filter criteria change
+  useEffect(() => {
+    setVisibleCount(CHANNELS_PER_PAGE);
+  }, [selectedCategory, selectedCountry, searchQuery, selectedPlaylistId]);
+
+  // Infinite scroll trigger for smooth lazy loading without blocking the DOM
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((prev) => Math.min(prev + CHANNELS_PER_PAGE, filteredChannels.length));
+        }
+      },
+      { rootMargin: "600px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [filteredChannels.length]);
+
+  // Paginated channels for high-performance rendering (caps DOM elements)
+  const displayedChannels = useMemo(() => {
+    return filteredChannels.slice(0, visibleCount);
+  }, [filteredChannels, visibleCount]);
 
   const isFiltering = selectedCategory !== "All" || selectedCountry !== "all" || searchQuery.trim().length > 0;
 
@@ -569,63 +608,99 @@ export default function LiveTvPage() {
                     <button
                       type="button"
                       onClick={() => setSelectedCategory(catName as ChannelCategory)}
-                      className="text-xs font-bold text-primary hover:underline"
+                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
                     >
-                      View All {catName} &rarr;
+                      <span>View All {catName} ({channels.length})</span>
+                      <span>&rarr;</span>
                     </button>
                   </div>
 
-                  {/* Channel Cards (Grid vs List) */}
-                  {viewMode === "grid" ? (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
-                      {channels.map((ch, idx) => (
-                        <LiveChannelCard
-                          key={ch.id}
-                          channel={ch}
-                          variant="grid"
-                          index={idx}
-                          isActive={ch.id === activeChannel.id}
-                          isFavorite={favorites.includes(ch.id)}
-                          onSelect={() => handleSelectChannel(ch)}
-                          onToggleFavorite={(e) => {
-                            e.stopPropagation();
-                            handleToggleFavorite(ch.id);
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {channels.map((ch, idx) => (
-                        <LiveChannelCard
-                          key={ch.id}
-                          channel={ch}
-                          variant="list"
-                          index={idx}
-                          isActive={ch.id === activeChannel.id}
-                          isFavorite={favorites.includes(ch.id)}
-                          onSelect={() => handleSelectChannel(ch)}
-                          onToggleFavorite={(e) => {
-                            e.stopPropagation();
-                            handleToggleFavorite(ch.id);
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  {/* Channel Cards (Grid vs List) - capped per shelf for 60fps performance */}
+                  {(() => {
+                    const shelfLimit = 14;
+                    const shelfChannels = channels.slice(0, shelfLimit);
+                    const hasMore = channels.length > shelfLimit;
+
+                    return viewMode === "grid" ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
+                        {shelfChannels.map((ch, idx) => (
+                          <LiveChannelCard
+                            key={ch.id}
+                            channel={ch}
+                            variant="grid"
+                            index={idx}
+                            isActive={ch.id === activeChannel.id}
+                            isFavorite={favorites.includes(ch.id)}
+                            onSelect={() => handleSelectChannel(ch)}
+                            onToggleFavorite={(e) => {
+                              e.stopPropagation();
+                              handleToggleFavorite(ch.id);
+                            }}
+                          />
+                        ))}
+                        {hasMore && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategory(catName as ChannelCategory)}
+                            className="flex flex-col items-center justify-center p-4 rounded-2xl border border-dashed border-white/20 bg-white/[0.03] hover:bg-white/10 hover:border-primary/50 text-white/70 hover:text-white transition-all group aspect-[16/10] sm:aspect-auto"
+                          >
+                            <span className="text-xl mb-1 group-hover:scale-110 transition-transform">➡️</span>
+                            <span className="text-xs font-bold text-center">+{channels.length - shelfLimit} More</span>
+                            <span className="text-[10px] text-primary mt-0.5 font-semibold">View All</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {shelfChannels.map((ch, idx) => (
+                          <LiveChannelCard
+                            key={ch.id}
+                            channel={ch}
+                            variant="list"
+                            index={idx}
+                            isActive={ch.id === activeChannel.id}
+                            isFavorite={favorites.includes(ch.id)}
+                            onSelect={() => handleSelectChannel(ch)}
+                            onToggleFavorite={(e) => {
+                              e.stopPropagation();
+                              handleToggleFavorite(ch.id);
+                            }}
+                          />
+                        ))}
+                        {hasMore && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedCategory(catName as ChannelCategory)}
+                            className="w-full py-2.5 rounded-xl border border-dashed border-white/20 bg-white/[0.02] hover:bg-white/10 text-center text-xs font-bold text-primary transition-all"
+                          >
+                            View All {channels.length} {catName} Channels &rarr;
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </section>
               );
             })}
           </div>
         ) : (
-          /* ================= UNIFIED (FLAT) VIEW ================= */
+          /* ================= UNIFIED (FLAT) VIEW WITH INFINITE LAZY LOADING ================= */
           <div className="space-y-3 pb-36 md:pb-12">
-            <div className="text-xs font-semibold text-white/40 px-1">
-              Showing {filteredChannels.length} {filteredChannels.length === 1 ? "channel" : "channels"}
+            <div className="flex items-center justify-between text-xs font-semibold text-white/40 px-1">
+              <span>
+                Showing {displayedChannels.length} of {filteredChannels.length}{" "}
+                {filteredChannels.length === 1 ? "channel" : "channels"}
+              </span>
+              {displayedChannels.length < filteredChannels.length && (
+                <span className="text-primary font-normal">
+                  Scroll down for more
+                </span>
+              )}
             </div>
+
             {viewMode === "grid" ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
-                {filteredChannels.map((ch, idx) => (
+                {displayedChannels.map((ch, idx) => (
                   <LiveChannelCard
                     key={ch.id}
                     channel={ch}
@@ -643,7 +718,7 @@ export default function LiveTvPage() {
               </div>
             ) : (
               <div className="space-y-1.5">
-                {filteredChannels.map((ch, idx) => (
+                {displayedChannels.map((ch, idx) => (
                   <LiveChannelCard
                     key={ch.id}
                     channel={ch}
@@ -658,6 +733,25 @@ export default function LiveTvPage() {
                     }}
                   />
                 ))}
+              </div>
+            )}
+
+            {/* Infinite Scroll Sentinel & Load More Trigger */}
+            {displayedChannels.length < filteredChannels.length && (
+              <div ref={loadMoreRef} className="py-8 flex flex-col items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleCount((prev) =>
+                      Math.min(prev + CHANNELS_PER_PAGE, filteredChannels.length)
+                    )
+                  }
+                  className="px-6 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-white transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer shadow-lg"
+                >
+                  <span>
+                    Load More Channels ({filteredChannels.length - displayedChannels.length} remaining)
+                  </span>
+                </button>
               </div>
             )}
           </div>

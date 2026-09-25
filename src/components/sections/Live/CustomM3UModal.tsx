@@ -101,7 +101,6 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
         throw new Error("No playable video stream channels were found in this playlist.");
       }
 
-      onAddChannels(parsed);
       setSuccessMsg(
         `Successfully loaded ${parsed.length} channels${playlistName ? ` from ${playlistName}` : ""}!`
       );
@@ -109,7 +108,10 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
       setTimeout(() => {
         setSuccessMsg(null);
         onClose();
-      }, 1400);
+        setTimeout(() => {
+          onAddChannels(parsed);
+        }, 80);
+      }, 600);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error fetching playlist";
       setError(
@@ -155,12 +157,14 @@ export const CustomM3UModal: React.FC<CustomM3UModalProps> = ({
         if (parsed.length === 0) {
           setError("No valid video stream channels found in this .m3u file.");
         } else {
-          onAddChannels(parsed);
           setSuccessMsg(`Successfully loaded ${parsed.length} channels from ${file.name}!`);
           setTimeout(() => {
             setSuccessMsg(null);
             onClose();
-          }, 1400);
+            setTimeout(() => {
+              onAddChannels(parsed);
+            }, 80);
+          }, 600);
         }
       } catch {
         setError("Failed to parse the uploaded playlist file.");

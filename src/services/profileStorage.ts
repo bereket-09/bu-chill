@@ -80,7 +80,7 @@ export function setActiveProfileId(userId: string | undefined, profileId: string
  * Gets all profiles for a user account (up to 5 profiles).
  * Guarantees that at least one main profile exists.
  */
-export function getUserProfiles(userId?: string, defaultName?: string): UserProfileItem[] {
+export function getUserProfiles(userId?: string, defaultName?: string, serverAvatar?: string): UserProfileItem[] {
   if (typeof window === "undefined") return [];
   const uid = userId || "guest";
   try {
@@ -94,8 +94,13 @@ export function getUserProfiles(userId?: string, defaultName?: string): UserProf
       }
     }
 
+    const storedMainAvatar =
+      serverAvatar ||
+      localStorage.getItem(`buchill_avatar_${uid}`) ||
+      localStorage.getItem("buchill_avatar") ||
+      DEFAULT_AVATAR_ID;
+
     if (!Array.isArray(loaded) || loaded.length === 0) {
-      const storedMainAvatar = localStorage.getItem(`buchill_avatar_${uid}`) || DEFAULT_AVATAR_ID;
       loaded = [
         {
           id: "main",
@@ -125,15 +130,23 @@ export function getUserProfiles(userId?: string, defaultName?: string): UserProf
     const mainIdx = loaded.findIndex((p) => p.isMain || p.id === "main");
     if (mainIdx >= 0) {
       loaded[mainIdx].isMain = true;
+      let changed = false;
       if (defaultName && (loaded[mainIdx].name === "User" || loaded[mainIdx].name === "Main Profile")) {
         loaded[mainIdx].name = defaultName;
+        changed = true;
+      }
+      if (storedMainAvatar && storedMainAvatar !== DEFAULT_AVATAR_ID && loaded[mainIdx].avatar !== storedMainAvatar) {
+        loaded[mainIdx].avatar = storedMainAvatar;
+        changed = true;
+      }
+      if (changed) {
         localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loaded));
       }
     } else {
       loaded.unshift({
         id: "main",
         name: defaultName || "Main Profile",
-        avatar: DEFAULT_AVATAR_ID,
+        avatar: storedMainAvatar,
         isMain: true,
       });
       localStorage.setItem(`buchill_profiles_${uid}`, JSON.stringify(loaded));
@@ -232,6 +245,11 @@ export function updateUserProfile(userId: string | undefined, profile: UserProfi
 
   saveUserProfiles(uid, updated);
 
+  if (profile.isMain || profile.id === "main") {
+    localStorage.setItem(`buchill_avatar_${uid}`, profile.avatar);
+    localStorage.setItem("buchill_avatar", profile.avatar);
+  }
+
   const activeId = getActiveProfileId(uid);
   if (activeId === profile.id) {
     localStorage.setItem(`buchill_active_name_${uid}`, profile.name);
@@ -323,16 +341,19 @@ export function getProfileWatchlist(userId?: string, profileId?: string): Profil
 export function saveProfileWatchlist(
   userId: string | undefined,
   profileId: string | undefined,
-  items: ProfileWatchlistItem[]
+  items: ProfileWatchlistItem[],
+  emitEvent: boolean = true
 ): void {
   if (typeof window === "undefined") return;
   const uid = userId || "guest";
   const pid = profileId || "main";
   try {
     localStorage.setItem(getWatchlistKey(uid, pid), JSON.stringify(items));
-    window.dispatchEvent(
-      new CustomEvent("buchill_watchlist_changed", { detail: { userId: uid, profileId: pid } })
-    );
+    if (emitEvent) {
+      window.dispatchEvent(
+        new CustomEvent("buchill_watchlist_changed", { detail: { userId: uid, profileId: pid } })
+      );
+    }
   } catch (e) {
     console.error("Failed to save profile watchlist:", e);
   }
@@ -454,16 +475,19 @@ export function getProfileHistory(userId?: string, profileId?: string): ProfileH
 export function saveProfileHistory(
   userId: string | undefined,
   profileId: string | undefined,
-  items: ProfileHistoryItem[]
+  items: ProfileHistoryItem[],
+  emitEvent: boolean = true
 ): void {
   if (typeof window === "undefined") return;
   const uid = userId || "guest";
   const pid = profileId || "main";
   try {
     localStorage.setItem(getHistoryKey(uid, pid), JSON.stringify(items));
-    window.dispatchEvent(
-      new CustomEvent("buchill_history_changed", { detail: { userId: uid, profileId: pid } })
-    );
+    if (emitEvent) {
+      window.dispatchEvent(
+        new CustomEvent("buchill_history_changed", { detail: { userId: uid, profileId: pid } })
+      );
+    }
   } catch (e) {
     console.error("Failed to save profile history:", e);
   }

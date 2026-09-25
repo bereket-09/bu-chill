@@ -120,7 +120,7 @@ export const HomeHero: React.FC = () => {
           </Chip>
 
           <Chip size="sm" variant="flat" className="bg-primary/20 text-primary font-bold">
-            #1 Trending
+            #{activeIndex + 1} Trending
           </Chip>
         </div>
 

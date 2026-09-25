@@ -156,45 +156,43 @@ export const MySpace: React.FC = () => {
     getUserHistories(50)
       .then((res) => {
         if (res.success && res.data && res.data.length > 0) {
-          setHistoryItems((prev) => {
-            const map = new Map<string, ProfileHistoryItem>();
-            prev.forEach((item) => {
-              const key = `${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`;
-              map.set(key, item);
-            });
-            res.data!.forEach((s) => {
-              const key = `${s.type}-${s.media_id}-${s.season || 0}-${s.episode || 0}`;
-              if (!map.has(key)) {
-                map.set(key, {
-                  id: s.id || s.media_id,
-                  media_id: s.media_id,
-                  type: (s.type === "tv" ? "tv" : "movie") as "movie" | "tv",
-                  title: s.title,
-                  poster_path: s.poster_path || undefined,
-                  backdrop_path: s.backdrop_path || undefined,
-                  duration: s.duration,
-                  last_position: s.last_position,
-                  completed: s.completed,
-                  season: s.season,
-                  episode: s.episode,
-                  updated_at: s.updated_at,
-                });
-              } else {
-                const existing = map.get(key)!;
-                if (!existing.backdrop_path && s.backdrop_path) {
-                  existing.backdrop_path = s.backdrop_path;
-                }
-                if (!existing.poster_path && s.poster_path) {
-                  existing.poster_path = s.poster_path;
-                }
-              }
-            });
-            const merged = Array.from(map.values());
-            if (currentPid === "main") {
-              saveProfileHistory(user.id, "main", merged);
-            }
-            return merged;
+          const map = new Map<string, ProfileHistoryItem>();
+          hList.forEach((item) => {
+            const key = `${item.type}-${item.media_id}-${item.season || 0}-${item.episode || 0}`;
+            map.set(key, item);
           });
+          res.data.forEach((s) => {
+            const key = `${s.type}-${s.media_id}-${s.season || 0}-${s.episode || 0}`;
+            if (!map.has(key)) {
+              map.set(key, {
+                id: s.id || s.media_id,
+                media_id: s.media_id,
+                type: (s.type === "tv" ? "tv" : "movie") as "movie" | "tv",
+                title: s.title,
+                poster_path: s.poster_path || undefined,
+                backdrop_path: s.backdrop_path || undefined,
+                duration: s.duration,
+                last_position: s.last_position,
+                completed: s.completed,
+                season: s.season,
+                episode: s.episode,
+                updated_at: s.updated_at,
+              });
+            } else {
+              const existing = map.get(key)!;
+              if (!existing.backdrop_path && s.backdrop_path) {
+                existing.backdrop_path = s.backdrop_path;
+              }
+              if (!existing.poster_path && s.poster_path) {
+                existing.poster_path = s.poster_path;
+              }
+            }
+          });
+          const merged = Array.from(map.values());
+          if (currentPid === "main" && user?.id) {
+            saveProfileHistory(user.id, "main", merged, false);
+          }
+          setHistoryItems(merged);
         }
       })
       .catch(() => {});
@@ -202,31 +200,29 @@ export const MySpace: React.FC = () => {
     getWatchlist("all", 1, 100)
       .then((res) => {
         if (res.success && res.data && res.data.length > 0) {
-          setWatchlistItems((prev) => {
-            const map = new Map<string, ProfileWatchlistItem>();
-            prev.forEach((item) => map.set(`${item.type}-${item.id}`, item));
-            res.data!.forEach((s) => {
-              const key = `${s.type}-${s.id}`;
-              if (!map.has(key)) {
-                map.set(key, {
-                  id: s.id,
-                  type: s.type,
-                  title: s.title,
-                  poster_path: s.poster_path || null,
-                  backdrop_path: s.backdrop_path,
-                  release_date: s.release_date,
-                  vote_average: s.vote_average,
-                  adult: s.adult,
-                  created_at: s.created_at,
-                });
-              }
-            });
-            const merged = Array.from(map.values());
-            if (currentPid === "main" && prev.length === 0) {
-              saveProfileWatchlist(user.id, "main", merged);
+          const map = new Map<string, ProfileWatchlistItem>();
+          wList.forEach((item) => map.set(`${item.type}-${item.id}`, item));
+          res.data.forEach((s) => {
+            const key = `${s.type}-${s.id}`;
+            if (!map.has(key)) {
+              map.set(key, {
+                id: s.id,
+                type: s.type,
+                title: s.title,
+                poster_path: s.poster_path || null,
+                backdrop_path: s.backdrop_path,
+                release_date: s.release_date,
+                vote_average: s.vote_average,
+                adult: s.adult,
+                created_at: s.created_at,
+              });
             }
-            return merged;
           });
+          const merged = Array.from(map.values());
+          if (currentPid === "main" && wList.length === 0 && user?.id) {
+            saveProfileWatchlist(user.id, "main", merged, false);
+          }
+          setWatchlistItems(merged);
         }
       })
       .catch(() => {});

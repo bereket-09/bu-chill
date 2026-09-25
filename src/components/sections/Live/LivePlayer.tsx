@@ -82,11 +82,13 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
 
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const osdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
 
   // Reset proxy and trigger OSD on channel change
   useEffect(() => {
     setUseProxy(false);
     setProxyAttempted(false);
+    retryCountRef.current = 0;
     setShowOsd(true);
     if (osdTimerRef.current) clearTimeout(osdTimerRef.current);
     osdTimerRef.current = setTimeout(() => {
@@ -190,12 +192,24 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
                   initHls(true);
                   return;
                 }
-                hls.startLoad();
+                if (retryCountRef.current < 2) {
+                  retryCountRef.current += 1;
+                  setTimeout(() => {
+                    if (hlsRef.current) {
+                      hlsRef.current.startLoad();
+                    }
+                  }, 2000);
+                } else {
+                  hls.destroy();
+                  setHasError(true);
+                  setIsBuffering(false);
+                }
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
                 hls.recoverMediaError();
                 break;
               default:
+                hls.destroy();
                 setHasError(true);
                 setIsBuffering(false);
                 break;
@@ -740,7 +754,7 @@ export const LivePlayer: React.FC<LivePlayerProps> = ({
 
             {/* Channels Scrollable List */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1" style={{ scrollbarWidth: "thin" }}>
-              {filteredDrawerChannels.map((ch) => {
+              {filteredDrawerChannels.slice(0, 80).map((ch) => {
                 const isActive = ch.id === channel.id;
                 return (
                   <button

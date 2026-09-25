@@ -183,11 +183,13 @@ export async function GET(request: NextRequest) {
     // Merge high-priority curated channels at the top if they aren't already present
     const finalChannels: Channel[] = [...CURATED_CHANNELS];
     const existingUrls = new Set(CURATED_CHANNELS.map((c) => c.url));
+    const existingIds = new Set(CURATED_CHANNELS.map((c) => c.id.toLowerCase()));
 
     for (const ch of parsedChannels) {
-      if (!existingUrls.has(ch.url)) {
+      if (!existingUrls.has(ch.url) && !existingIds.has(ch.id.toLowerCase())) {
         finalChannels.push(ch);
         existingUrls.add(ch.url);
+        existingIds.add(ch.id.toLowerCase());
       }
     }
 

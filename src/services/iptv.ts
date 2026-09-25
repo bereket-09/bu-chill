@@ -1114,23 +1114,17 @@ export function getStoredCustomChannels(): Channel[] {
 export function saveStoredCustomChannels(channels: Channel[]) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(CUSTOM_CHANNELS_STORAGE_KEY, JSON.stringify(channels));
-  } catch {
-    // If quota exceeded (e.g. 5MB quota reached), save a smaller subset
+    // Keep up to 800 channels in persistent localStorage to prevent browser quota freezes
+    const toStore = channels.slice(0, 800);
+    localStorage.setItem(CUSTOM_CHANNELS_STORAGE_KEY, JSON.stringify(toStore));
+  } catch (err) {
     try {
       localStorage.setItem(
         CUSTOM_CHANNELS_STORAGE_KEY,
-        JSON.stringify(channels.slice(0, 500))
+        JSON.stringify(channels.slice(0, 200))
       );
     } catch {
-      try {
-        localStorage.setItem(
-          CUSTOM_CHANNELS_STORAGE_KEY,
-          JSON.stringify(channels.slice(0, 200))
-        );
-      } catch {
-        // Ignore quota error safely
-      }
+      // Ignore quota error safely
     }
   }
 }

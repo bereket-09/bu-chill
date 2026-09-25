@@ -26,7 +26,7 @@ const CATEGORY_STYLES: Record<string, { badge: string; icon: string }> = {
   Kids: { badge: "bg-orange-500/15 text-orange-400 border-orange-500/30", icon: "🧸" },
 };
 
-export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
+const LiveChannelCardComponent: React.FC<LiveChannelCardProps> = ({
   channel,
   isActive,
   isFavorite,
@@ -313,5 +313,17 @@ export const LiveChannelCard: React.FC<LiveChannelCardProps> = ({
     </div>
   );
 };
+
+export const LiveChannelCard = React.memo(LiveChannelCardComponent, (prev, next) => {
+  return (
+    prev.isActive === next.isActive &&
+    prev.isFavorite === next.isFavorite &&
+    prev.variant === next.variant &&
+    prev.index === next.index &&
+    prev.channel.id === next.channel.id &&
+    prev.channel.name === next.channel.name &&
+    prev.channel.logo === next.channel.logo
+  );
+});
 
 export default LiveChannelCard;

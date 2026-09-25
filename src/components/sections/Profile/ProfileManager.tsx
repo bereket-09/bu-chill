@@ -222,7 +222,7 @@ const ProfileManager: React.FC = () => {
   // Initialize profiles
   useEffect(() => {
     const uid = user?.id || "guest";
-    const loadedProfiles = getUserProfiles(uid, user?.username);
+    const loadedProfiles = getUserProfiles(uid, user?.username, user?.avatar);
     setProfiles(loadedProfiles);
 
     const activeId = getActiveProfileId(uid);
@@ -295,17 +295,30 @@ const ProfileManager: React.FC = () => {
 
       updateUserProfile(uid, updatedProfileItem);
 
-      // If updating the main profile, sync username to Supabase profiles & localStorage avatar
+      // If updating the main profile, sync to Supabase user metadata and profiles table
       if (updatedProfileItem.isMain) {
         localStorage.setItem(`buchill_avatar_${uid}`, avatarId);
+        localStorage.setItem("buchill_avatar", avatarId);
         if (user) {
           const supabase = createClient();
-          await supabase.from("profiles").upsert({ id: user.id, username: cleanName });
+          await Promise.allSettled([
+            supabase.auth.updateUser({
+              data: {
+                avatar: avatarId,
+                avatar_id: avatarId,
+              },
+            }),
+            (supabase.from("profiles") as any).upsert({
+              id: user.id,
+              username: cleanName,
+              avatar: avatarId,
+            }),
+          ]);
           queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
         }
       }
 
-      const refreshed = getUserProfiles(uid, user?.username);
+      const refreshed = getUserProfiles(uid, user?.username, avatarId);
       setProfiles(refreshed);
 
       addToast({

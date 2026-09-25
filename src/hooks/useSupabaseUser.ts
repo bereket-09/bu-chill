@@ -9,6 +9,7 @@ import { addToast } from "@heroui/react";
 
 type AuthUserData = User & {
   username: string;
+  avatar?: string;
 };
 
 const fetchUser = async (): Promise<AuthUserData | null> => {
@@ -37,16 +38,54 @@ const fetchUser = async (): Promise<AuthUserData | null> => {
   }
 
   if (user) {
-    const { data: username } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .maybeSingle();
+    let profileAvatar: string | undefined;
+    let profileUsername: string | undefined;
+
+    try {
+      const { data: profile } = await (supabase.from("profiles") as any)
+        .select("username, avatar")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      profileUsername = profile?.username;
+      profileAvatar = profile?.avatar;
+    } catch {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .maybeSingle();
+        profileUsername = profile?.username;
+      } catch (_) {}
+    }
+
+    const cachedAvatar =
+      typeof window !== "undefined"
+        ? localStorage.getItem(`buchill_avatar_${user.id}`) ||
+          localStorage.getItem("buchill_avatar") ||
+          undefined
+        : undefined;
+
+    const resolvedAvatar =
+      profileAvatar ||
+      user.user_metadata?.avatar ||
+      user.user_metadata?.avatar_id ||
+      cachedAvatar ||
+      "01";
+
+    if (resolvedAvatar && typeof window !== "undefined") {
+      try {
+        localStorage.setItem(`buchill_avatar_${user.id}`, resolvedAvatar);
+        localStorage.setItem("buchill_avatar", resolvedAvatar);
+      } catch (_) {}
+    }
 
     AuthUser = {
       ...user,
+      avatar: resolvedAvatar,
       username:
-        username?.username ||
+        profileUsername ||
         user.user_metadata?.full_name ||
         user.user_metadata?.name ||
         user.user_metadata?.username ||
