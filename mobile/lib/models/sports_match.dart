@@ -79,6 +79,40 @@ class SportsStream {
   }
 }
 
+class SportsChannelStream {
+  final String id;
+  final String channelName;
+  final String channelCode;
+  final String url;
+  final String image;
+
+  const SportsChannelStream({
+    this.id = '',
+    required this.channelName,
+    this.channelCode = '',
+    required this.url,
+    this.image = '',
+  });
+
+  factory SportsChannelStream.fromJson(Map<String, dynamic> json) {
+    return SportsChannelStream(
+      id: json['id']?.toString() ?? '',
+      channelName: json['channel_name'] ?? json['name'] ?? 'Stream',
+      channelCode: json['channel_code'] ?? json['code'] ?? '',
+      url: json['url'] ?? '',
+      image: json['image'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'channel_name': channelName,
+        'channel_code': channelCode,
+        'url': url,
+        'image': image,
+      };
+}
+
 class SportsMatch {
   final String id;
   final String title;
@@ -89,6 +123,7 @@ class SportsMatch {
   final SportsTeam homeTeam;
   final SportsTeam awayTeam;
   final List<SportsStreamSource> sources;
+  final List<SportsChannelStream> channels;
 
   const SportsMatch({
     required this.id,
@@ -100,6 +135,7 @@ class SportsMatch {
     required this.homeTeam,
     required this.awayTeam,
     this.sources = const [],
+    this.channels = const [],
   });
 
   bool get isLive {
@@ -119,6 +155,7 @@ class SportsMatch {
   factory SportsMatch.fromJson(Map<String, dynamic> json) {
     final teamsJson = json['teams'] as Map<String, dynamic>?;
     final rawSources = json['sources'] as List<dynamic>? ?? [];
+    final rawChannels = json['channels'] as List<dynamic>? ?? [];
 
     return SportsMatch(
       id: json['id'] ?? '',
@@ -131,6 +168,9 @@ class SportsMatch {
       awayTeam: SportsTeam.fromJson(teamsJson?['away']),
       sources: rawSources
           .map((s) => SportsStreamSource.fromJson(s as Map<String, dynamic>))
+          .toList(),
+      channels: rawChannels
+          .map((c) => SportsChannelStream.fromJson(c as Map<String, dynamic>))
           .toList(),
     );
   }

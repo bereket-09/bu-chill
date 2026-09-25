@@ -98,6 +98,7 @@ class SportsService {
             body: jsonEncode({
               'sources': sources,
               'matchId': match.id,
+              'channels': match.channels.map((c) => c.toJson()).toList(),
             }),
           )
           .timeout(const Duration(seconds: 10));
@@ -128,6 +129,7 @@ class SportsService {
         }
 
         if (hlsOnly.isNotEmpty) return hlsOnly;
+        if (list.isNotEmpty) return list;
       }
       return verified247Channels;
     } catch (_) {

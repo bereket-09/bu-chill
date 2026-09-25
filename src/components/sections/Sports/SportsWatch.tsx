@@ -109,7 +109,11 @@ export const SportsWatch: React.FC = () => {
       const res = await fetch("/api/sports/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sources, matchId }),
+        body: JSON.stringify({
+          sources,
+          matchId,
+          channels: currentMatch?.channels,
+        }),
       });
       if (!res.ok) return VERIFIED_LIVE_SPORTS_CHANNELS;
       const data = await res.json();
