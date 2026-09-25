@@ -130,8 +130,10 @@ const SidebarInner: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // Hide sidebar completely on video player pages
-  const isPlayer = pathName.includes("/player") || pathName.includes("/watch");
+  // Hide sidebar completely on dedicated video player pages, but keep visible on sports watch pages
+  const isPlayer =
+    (pathName.includes("/player") || pathName.startsWith("/watch-party/")) &&
+    !pathName.startsWith("/sports");
   if (isPlayer) {
     return <>{children}</>;
   }
