@@ -1,16 +1,12 @@
 import { PlayersProps } from "@/types";
 
 /**
- * Helper to ensure embed URLs default to English audio and subtitles
+ * Safely appends resume timestamp if startAt is provided
  */
-const withEnglishDefaults = (url: string, startAt?: number): string => {
+const appendStartAt = (url: string, startAt?: number): string => {
+  if (!startAt || startAt <= 0) return url;
   const separator = url.includes("?") ? "&" : "?";
-  let fullUrl = `${url}${separator}sub=en&lang=en&audio=en&ds_lang=en&default_lang=en&subtitle=en&default_audio=en`;
-  if (startAt && startAt > 0) {
-    const s = Math.floor(startAt);
-    fullUrl += `&startAt=${s}&time=${s}&t=${s}&start=${s}`;
-  }
-  return fullUrl;
+  return `${url}${separator}startAt=${Math.floor(startAt)}`;
 };
 
 /**
@@ -30,7 +26,7 @@ export const getMoviePlayers = (
   const fallbackEmbeds: PlayersProps[] = [
     {
       title: "CineSrc (English - Recommended)",
-      source: withEnglishDefaults(`https://cinesrc.st/embed/movie/${id}`, startAt),
+      source: appendStartAt(`https://cinesrc.st/embed/movie/${id}`, startAt),
       type: "embed",
       recommended: true,
       fast: true,
@@ -39,10 +35,7 @@ export const getMoviePlayers = (
     },
     {
       title: "VidLink (English HD)",
-      source: withEnglishDefaults(
-        `https://vidlink.pro/movie/${id}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
-        startAt
-      ),
+      source: `https://vidlink.pro/movie/${id}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false${startAt && startAt > 0 ? `&startAt=${Math.floor(startAt)}` : ""}`,
       type: "embed",
       recommended: true,
       fast: true,
@@ -51,7 +44,7 @@ export const getMoviePlayers = (
     },
     {
       title: "Videasy (Fast English HD)",
-      source: withEnglishDefaults(`https://player.videasy.to/movie/${id}?color=f5a524`, startAt),
+      source: appendStartAt(`https://player.videasy.to/movie/${id}?color=f5a524`, startAt),
       type: "embed",
       recommended: true,
       fast: true,
@@ -60,7 +53,7 @@ export const getMoviePlayers = (
     },
     {
       title: "Cinezo (English HD)",
-      source: withEnglishDefaults(`https://player.cinezo.live/embed/movie/${id}`, startAt),
+      source: appendStartAt(`https://player.cinezo.live/embed/movie/${id}`, startAt),
       type: "embed",
       recommended: true,
       fast: true,
@@ -69,7 +62,7 @@ export const getMoviePlayers = (
     },
     {
       title: "Vidy (Fast Stream)",
-      source: withEnglishDefaults(`https://www.vidy.st/movie/${id}`, startAt),
+      source: appendStartAt(`https://www.vidy.st/movie/${id}`, startAt),
       type: "embed",
       fast: true,
       ads: false,
@@ -77,7 +70,7 @@ export const getMoviePlayers = (
     },
     {
       title: "Vidbolt (English)",
-      source: withEnglishDefaults(`https://vidbolt.xyz/movie/${id}`, startAt),
+      source: appendStartAt(`https://vidbolt.xyz/movie/${id}`, startAt),
       type: "embed",
       fast: true,
       ads: false,
@@ -93,14 +86,14 @@ export const getMoviePlayers = (
     },
     {
       title: "AutoEmbed (English)",
-      source: withEnglishDefaults(`https://autoembed.co/movie/tmdb/${id}`, startAt),
+      source: appendStartAt(`https://autoembed.co/movie/tmdb/${id}`, startAt),
       type: "embed",
       ads: true,
       resumable: true,
     },
     {
       title: "VidSrc SBS (Multi-Server)",
-      source: withEnglishDefaults(`https://vidsrc.sbs/embed/movie/${id}/`, startAt),
+      source: appendStartAt(`https://vidsrc.sbs/embed/movie/${id}/`, startAt),
       type: "embed",
       fast: true,
       ads: true,
@@ -108,14 +101,14 @@ export const getMoviePlayers = (
     },
     {
       title: "AnyEmbed (English)",
-      source: withEnglishDefaults(`https://anyembed.xyz/embed/tmdb-movie-${id}`, startAt),
+      source: appendStartAt(`https://anyembed.xyz/embed/tmdb-movie-${id}`, startAt),
       type: "embed",
       ads: true,
       resumable: true,
     },
     {
       title: "Filmu (Regional / Secondary)",
-      source: withEnglishDefaults(`https://embed.filmu.in/movie/${id}`, startAt),
+      source: appendStartAt(`https://embed.filmu.in/movie/${id}`, startAt),
       type: "embed",
       ads: true,
       resumable: true,
@@ -149,8 +142,8 @@ export const getTvShowPlayers = (
   const fallbackEmbeds: PlayersProps[] = [
     {
       title: "CineSrc (English - Recommended)",
-      source: withEnglishDefaults(
-        `https://cinesrc.st/embed/tv/${id}?s=${season}&e=${episode}&color=f5a524&autoplay=true&autonext=true`,
+      source: appendStartAt(
+        `https://cinesrc.st/embed/tv/${id}?s=${season}&e=${episode}&color=f5a524&autoplay=false&autonext=true`,
         startAt
       ),
       type: "embed",
@@ -161,10 +154,7 @@ export const getTvShowPlayers = (
     },
     {
       title: "VidLink (English HD)",
-      source: withEnglishDefaults(
-        `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false`,
-        startAt
-      ),
+      source: `https://vidlink.pro/tv/${id}/${season}/${episode}?player=jw&primaryColor=f5a524&secondaryColor=a2a2a2&iconColor=eefdec&autoplay=false${startAt && startAt > 0 ? `&startAt=${Math.floor(startAt)}` : ""}`,
       type: "embed",
       recommended: true,
       fast: true,
@@ -173,7 +163,7 @@ export const getTvShowPlayers = (
     },
     {
       title: "Videasy (Fast English HD)",
-      source: withEnglishDefaults(
+      source: appendStartAt(
         `https://player.videasy.to/tv/${id}/${season}/${episode}?color=f5a524`,
         startAt
       ),
@@ -185,7 +175,7 @@ export const getTvShowPlayers = (
     },
     {
       title: "Cinezo (English HD)",
-      source: withEnglishDefaults(`https://player.cinezo.live/embed/tv/${id}/${season}/${episode}`, startAt),
+      source: appendStartAt(`https://player.cinezo.live/embed/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       recommended: true,
       fast: true,
@@ -194,7 +184,7 @@ export const getTvShowPlayers = (
     },
     {
       title: "Vidy (Fast Stream)",
-      source: withEnglishDefaults(`https://www.vidy.st/tv/${id}/${season}/${episode}`, startAt),
+      source: appendStartAt(`https://www.vidy.st/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       fast: true,
       ads: false,
@@ -202,7 +192,7 @@ export const getTvShowPlayers = (
     },
     {
       title: "Vidbolt (English)",
-      source: withEnglishDefaults(`https://vidbolt.xyz/tv/${id}/${season}/${episode}`, startAt),
+      source: appendStartAt(`https://vidbolt.xyz/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       fast: true,
       ads: false,
@@ -218,14 +208,14 @@ export const getTvShowPlayers = (
     },
     {
       title: "AutoEmbed (English)",
-      source: withEnglishDefaults(`https://autoembed.co/tv/tmdb/${id}-${season}-${episode}`, startAt),
+      source: appendStartAt(`https://autoembed.co/tv/tmdb/${id}-${season}-${episode}`, startAt),
       type: "embed",
       ads: true,
       resumable: true,
     },
     {
       title: "VidSrc SBS (Multi-Server)",
-      source: withEnglishDefaults(`https://vidsrc.sbs/embed/tv/${id}/${season}/${episode}`, startAt),
+      source: appendStartAt(`https://vidsrc.sbs/embed/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       fast: true,
       ads: true,
@@ -233,7 +223,7 @@ export const getTvShowPlayers = (
     },
     {
       title: "AnyEmbed (English)",
-      source: withEnglishDefaults(
+      source: appendStartAt(
         `https://anyembed.xyz/embed/tmdb-tv-${id}/${season}/${episode}`,
         startAt
       ),
@@ -243,7 +233,7 @@ export const getTvShowPlayers = (
     },
     {
       title: "Filmu (Regional / Secondary)",
-      source: withEnglishDefaults(`https://embed.filmu.in/tv/${id}/${season}/${episode}`, startAt),
+      source: appendStartAt(`https://embed.filmu.in/tv/${id}/${season}/${episode}`, startAt),
       type: "embed",
       ads: true,
       resumable: true,
