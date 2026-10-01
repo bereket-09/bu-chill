@@ -1,0 +1,12 @@
+.git
+node_modules
+mobile/
+mobile/**
+scripts/
+scripts/**
+upwork_portfolio_assets/
+upwork_portfolio_assets/**
+.next/
+.next/**
+*.pem
+tsconfig.tsbuildinfo

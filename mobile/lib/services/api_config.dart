@@ -14,8 +14,8 @@ class ApiConfig {
   static const String liveChannels = '$baseUrl/api/live/channels';
   static const String liveStreamProxy = '$baseUrl/api/live/stream-proxy';
 
-  // TMDB API Token and Base URL
-  static const String tmdbBaseUrl = 'https://api.themoviedb.org/3';
+  // TMDB API Token and Base URL (Proxied via backend to bypass ad-blockers and ISP filters)
+  static const String tmdbBaseUrl = '$baseUrl/api/tmdb';
   static const String tmdbReadAccessToken =
       'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhNTVkMTg5MTg3YzRjMjVhNDE2MmRjMjU4OWU1MDlmYiIsIm5iZiI6MTc4OTY3NjI2MC45NTI5OTk4LCJzdWIiOiI2YWFjNGFlNDM4OWM3ZDE0NjkzNWVkYTciLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.PrGdZA5Sccz2kwO0Iu4-IRE0SF3SIvL8dF-sYnkOMns';
 
