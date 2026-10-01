@@ -59,7 +59,7 @@ export const HeroVideo: React.FC<HeroVideoProps> = ({
         <div className="pointer-events-none absolute inset-0 h-full w-full overflow-hidden">
           <iframe
             ref={iframeRef}
-            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${trailerKey}&playsinline=1&rel=0&showinfo=0&iv_load_policy=3&modestbranding=1&enablejsapi=1`}
+            src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${trailerKey}&playsinline=1&rel=0&showinfo=0&iv_load_policy=3&modestbranding=1&enablejsapi=1&cc_load_policy=0`}
             allow="autoplay; encrypted-media"
             onLoad={() => setIsVideoLoaded(true)}
             className={cn(

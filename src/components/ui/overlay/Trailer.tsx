@@ -79,7 +79,7 @@ const Trailer: React.FC<TrailerProps> = ({ videos, color = "primary" }) => {
                           {inView && (
                             <iframe
                               className="absolute z-10 size-full rounded-large"
-                              src={`https://www.youtube.com/embed/${trailer.key}`}
+                              src={`https://www.youtube.com/embed/${trailer.key}?autoplay=1&rel=0&modestbranding=1&cc_load_policy=0`}
                               title={trailer.name}
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                               referrerPolicy="strict-origin-when-cross-origin"
