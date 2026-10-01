@@ -38,27 +38,17 @@ const fetchUser = async (): Promise<AuthUserData | null> => {
   }
 
   if (user) {
-    let profileAvatar: string | undefined;
     let profileUsername: string | undefined;
 
     try {
-      const { data: profile } = await (supabase.from("profiles") as any)
-        .select("username, avatar")
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
         .eq("id", user.id)
         .maybeSingle();
 
       profileUsername = profile?.username;
-      profileAvatar = profile?.avatar;
-    } catch {
-      try {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("username")
-          .eq("id", user.id)
-          .maybeSingle();
-        profileUsername = profile?.username;
-      } catch (_) {}
-    }
+    } catch (_) {}
 
     const cachedAvatar =
       typeof window !== "undefined"
@@ -68,7 +58,6 @@ const fetchUser = async (): Promise<AuthUserData | null> => {
         : undefined;
 
     const resolvedAvatar =
-      profileAvatar ||
       user.user_metadata?.avatar ||
       user.user_metadata?.avatar_id ||
       cachedAvatar ||

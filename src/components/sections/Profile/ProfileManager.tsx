@@ -308,10 +308,9 @@ const ProfileManager: React.FC = () => {
                 avatar_id: avatarId,
               },
             }),
-            (supabase.from("profiles") as any).upsert({
+            supabase.from("profiles").upsert({
               id: user.id,
               username: cleanName,
-              avatar: avatarId,
             }),
           ]);
           queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
