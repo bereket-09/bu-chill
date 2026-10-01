@@ -22,6 +22,8 @@ const useFetchDiscoverMovies = ({
   const nowPlaying = () => tmdb.movies.nowPlaying({ page: page });
   const upcoming = () => tmdb.movies.upcoming({ page: page });
   const topRated = () => tmdb.movies.topRated({ page: page });
+  const korean = () => tmdb.discover.movie({ page: page, with_original_language: "ko", sort_by: "popularity.desc" });
+  const koreanMovies = korean;
 
   const queryData = {
     discover,
@@ -31,6 +33,8 @@ const useFetchDiscoverMovies = ({
     nowPlaying,
     upcoming,
     topRated,
+    korean,
+    koreanMovies,
   }[type];
 
   return queryData();

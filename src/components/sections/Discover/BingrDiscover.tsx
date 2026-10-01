@@ -24,6 +24,7 @@ const QUERY_TABS = [
   { id: "todayTrending", label: "Today's Trending", icon: <IoFlame className="w-3.5 h-3.5 text-amber-500" /> },
   { id: "thisWeekTrending", label: "This Week", icon: <IoSparkles className="w-3.5 h-3.5 text-yellow-400" /> },
   { id: "popular", label: "Popular", icon: <IoStar className="w-3.5 h-3.5 text-cyan-400" /> },
+  { id: "korean", label: "K-Drama & Korean", icon: <span className="text-xs">🇰🇷</span> },
   { id: "topRated", label: "Top Rated", icon: <IoStar className="w-3.5 h-3.5 text-emerald-400" /> },
   { id: "nowPlaying", label: "In Theatres / Airing", icon: <IoCalendar className="w-3.5 h-3.5 text-rose-400" /> },
   { id: "discover", label: "Browse All", icon: <IoCompass className="w-3.5 h-3.5 text-purple-400" /> },

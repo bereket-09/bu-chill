@@ -14,9 +14,10 @@ export const metadata: Metadata = {
 };
 
 async function getMoviesData() {
-  const [trending, topRated, action, comedy, sciFi, horror] = await Promise.all([
+  const [trending, topRated, korean, action, comedy, sciFi, horror] = await Promise.all([
     tmdb.trending.trending("movie", "day").catch(() => ({ results: [] })),
     tmdb.movies.topRated().catch(() => ({ results: [] })),
+    tmdb.discover.movie({ with_original_language: "ko", sort_by: "popularity.desc" }).catch(() => ({ results: [] })),
     tmdb.discover.movie({ with_genres: "28", sort_by: "popularity.desc" }).catch(() => ({ results: [] })),
     tmdb.discover.movie({ with_genres: "35", sort_by: "popularity.desc" }).catch(() => ({ results: [] })),
     tmdb.discover.movie({ with_genres: "878", sort_by: "popularity.desc" }).catch(() => ({ results: [] })),
@@ -27,6 +28,7 @@ async function getMoviesData() {
     featured: (trending.results[0] || null) as unknown as BingrMediaItem | null,
     trending: trending.results as unknown as BingrMediaItem[],
     topRated: topRated.results as unknown as BingrMediaItem[],
+    korean: korean.results as unknown as BingrMediaItem[],
     action: action.results as unknown as BingrMediaItem[],
     comedy: comedy.results as unknown as BingrMediaItem[],
     sciFi: sciFi.results as unknown as BingrMediaItem[],
@@ -35,7 +37,7 @@ async function getMoviesData() {
 }
 
 const MoviesPage: NextPage = async () => {
-  const { featured, trending, topRated, action, comedy, sciFi, horror } = await getMoviesData();
+  const { featured, trending, topRated, korean, action, comedy, sciFi, horror } = await getMoviesData();
 
   return (
     <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden">
@@ -102,6 +104,7 @@ const MoviesPage: NextPage = async () => {
       {/* Trays Section */}
       <div className="relative z-20 px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 pb-20 space-y-4 w-full">
         <BingrTray title="Trending Movies" items={trending} type="movie" seeAllHref="/categories?genre=28" />
+        <BingrTray title="🔥 Popular Korean Cinema" items={korean} type="movie" seeAllHref="/categories?type=language&name=Korean" />
         <BingrTray title="Top Rated Classics" items={topRated} type="movie" />
         <BingrTray title="Action & Thrills" items={action} type="movie" seeAllHref="/categories?genre=28" />
         <BingrTray title="Sci-Fi & Fantasy Worlds" items={sciFi} type="movie" seeAllHref="/categories?genre=878" />

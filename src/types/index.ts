@@ -18,14 +18,18 @@ export type MovieParam =
   | "popular"
   | "nowPlaying"
   | "upcoming"
-  | "topRated";
+  | "topRated"
+  | "koreanMovies"
+  | "korean";
 
 export type TvShowParam =
   | "todayTrending"
   | "thisWeekTrending"
   | "popular"
   | "onTheAir"
-  | "topRated";
+  | "topRated"
+  | "kdramas"
+  | "korean";
 
 export type QueryList<T extends Movie | TV> = {
   name: string;

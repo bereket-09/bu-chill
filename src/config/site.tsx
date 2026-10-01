@@ -87,6 +87,11 @@ export const siteConfig: SiteConfigType = {
         param: "popular",
       },
       {
+        name: "🔥 Trending Korean Cinema",
+        query: () => tmdb.discover.movie({ with_original_language: "ko", sort_by: "popularity.desc" }),
+        param: "koreanMovies",
+      },
+      {
         name: "Now Playing Movies",
         query: () => tmdb.movies.nowPlaying(),
         param: "nowPlaying",
@@ -118,6 +123,11 @@ export const siteConfig: SiteConfigType = {
         // @ts-expect-error: Property 'adult' is missing in type 'PopularTvShowResult' but required in type 'TV'.
         query: () => tmdb.tvShows.popular(),
         param: "popular",
+      },
+      {
+        name: "🔥 Top K-Dramas & Korean Series",
+        query: () => tmdb.discover.tvShow({ with_original_language: "ko", sort_by: "popularity.desc" }),
+        param: "kdramas",
       },
       {
         name: "On The Air TV Shows",

@@ -14,9 +14,10 @@ export const metadata: Metadata = {
 };
 
 async function getTvData() {
-  const [trending, topRated, drama, sciFi, comedy, action] = await Promise.all([
+  const [trending, topRated, kdrama, drama, sciFi, comedy, action] = await Promise.all([
     tmdb.trending.trending("tv", "day").catch(() => ({ results: [] })),
     tmdb.tvShows.topRated().catch(() => ({ results: [] })),
+    tmdb.discover.tvShow({ with_original_language: "ko", sort_by: "popularity.desc" }).catch(() => ({ results: [] })),
     tmdb.discover.tvShow({ with_genres: "18", sort_by: "popularity.desc" }).catch(() => ({ results: [] })),
     tmdb.discover.tvShow({ with_genres: "10765", sort_by: "popularity.desc" }).catch(() => ({ results: [] })),
     tmdb.discover.tvShow({ with_genres: "35", sort_by: "popularity.desc" }).catch(() => ({ results: [] })),
@@ -27,6 +28,7 @@ async function getTvData() {
     featured: (trending.results[0] || null) as unknown as BingrMediaItem | null,
     trending: trending.results as unknown as BingrMediaItem[],
     topRated: topRated.results as unknown as BingrMediaItem[],
+    kdrama: kdrama.results as unknown as BingrMediaItem[],
     drama: drama.results as unknown as BingrMediaItem[],
     sciFi: sciFi.results as unknown as BingrMediaItem[],
     comedy: comedy.results as unknown as BingrMediaItem[],
@@ -35,7 +37,7 @@ async function getTvData() {
 }
 
 const TvPage: NextPage = async () => {
-  const { featured, trending, topRated, drama, sciFi, comedy, action } = await getTvData();
+  const { featured, trending, topRated, kdrama, drama, sciFi, comedy, action } = await getTvData();
 
   return (
     <div className="min-h-screen bg-black text-white font-sans overflow-x-hidden">
@@ -102,6 +104,7 @@ const TvPage: NextPage = async () => {
       {/* Trays Section */}
       <div className="relative z-20 px-4 sm:px-8 md:pl-24 lg:pl-28 md:pr-10 pb-20 space-y-4 w-full">
         <BingrTray title="Trending TV Shows" items={trending} type="tv" />
+        <BingrTray title="🔥 Top K-Dramas & Korean Series" items={kdrama} type="tv" seeAllHref="/categories?type=language&name=Korean" />
         <BingrTray title="Top Rated TV Series" items={topRated} type="tv" />
         <BingrTray title="Gripping Dramas" items={drama} type="tv" />
         <BingrTray title="Sci-Fi & Fantasy Shows" items={sciFi} type="tv" />

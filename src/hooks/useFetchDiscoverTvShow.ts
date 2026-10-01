@@ -21,6 +21,8 @@ const useFetchDiscoverTvShows = ({
   const popular = () => tmdb.tvShows.popular({ page: page });
   const onTheAir = () => tmdb.tvShows.onTheAir({ page: page });
   const topRated = () => tmdb.tvShows.topRated({ page: page });
+  const korean = () => tmdb.discover.tvShow({ page: page, with_original_language: "ko", sort_by: "popularity.desc" });
+  const kdramas = korean;
 
   const queryData = {
     discover,
@@ -29,6 +31,8 @@ const useFetchDiscoverTvShows = ({
     popular,
     onTheAir,
     topRated,
+    korean,
+    kdramas,
   }[type];
 
   // @ts-expect-error: Property 'adult' is missing in type 'PopularTvShowResult' but required in type 'TV'.

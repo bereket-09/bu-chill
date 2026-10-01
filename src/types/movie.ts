@@ -23,6 +23,8 @@ export const DISCOVER_MOVIES_VALID_QUERY_TYPES = [
   "nowPlaying",
   "upcoming",
   "topRated",
+  "koreanMovies",
+  "korean",
 ] as const;
 
 export type DiscoverMoviesFetchQueryType = (typeof DISCOVER_MOVIES_VALID_QUERY_TYPES)[number];
@@ -34,6 +36,8 @@ export const DISCOVER_TVS_VALID_QUERY_TYPES = [
   "popular",
   "onTheAir",
   "topRated",
+  "kdramas",
+  "korean",
 ] as const;
 
 export type DiscoverTvShowsFetchQueryType = (typeof DISCOVER_TVS_VALID_QUERY_TYPES)[number];

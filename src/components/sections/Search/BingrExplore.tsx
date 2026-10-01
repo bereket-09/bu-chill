@@ -17,7 +17,7 @@ import {
   IoFlameOutline,
 } from "react-icons/io5";
 
-type SearchType = "all" | "movie" | "tv" | "anime";
+type SearchType = "all" | "movie" | "tv" | "anime" | "kdrama";
 
 export const BingrExplore: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
@@ -58,6 +58,17 @@ export const BingrExplore: React.FC = () => {
         });
         return res.results as unknown as BingrMediaItem[];
       }
+      if (searchType === "kdrama") {
+        const [koreanTv, koreanMovies] = await Promise.all([
+          tmdb.discover.tvShow({ with_original_language: "ko", sort_by: "popularity.desc" }),
+          tmdb.discover.movie({ with_original_language: "ko", sort_by: "popularity.desc" }),
+        ]);
+        const combined = [
+          ...(koreanTv.results || []).map((i: any) => ({ ...i, media_type: "tv" })),
+          ...(koreanMovies.results || []).map((i: any) => ({ ...i, media_type: "movie" })),
+        ];
+        return combined.sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) as unknown as BingrMediaItem[];
+      }
       if (searchType === "movie") {
         const res = await tmdb.trending.trending("movie", "day");
         return res.results as unknown as BingrMediaItem[];
@@ -92,6 +103,14 @@ export const BingrExplore: React.FC = () => {
         const res = await tmdb.search.tvShows({ query: debouncedQuery });
         return (res.results as unknown as BingrMediaItem[]).filter(
           (item: any) => item.genre_ids?.includes(16) || true
+        );
+      }
+      if (searchType === "kdrama") {
+        const res = await tmdb.search.multi({ query: debouncedQuery });
+        return (res.results as unknown as BingrMediaItem[]).filter(
+          (item: any) =>
+            (item.media_type === "movie" || item.media_type === "tv") &&
+            item.original_language === "ko"
         );
       }
       const res = await tmdb.search.multi({ query: debouncedQuery });
@@ -175,6 +194,9 @@ export const BingrExplore: React.FC = () => {
               </option>
               <option value="anime" className="bg-[#0f1014] text-white">
                 Anime
+              </option>
+              <option value="kdrama" className="bg-[#0f1014] text-white">
+                K-Drama & Korean
               </option>
             </select>
           </div>
