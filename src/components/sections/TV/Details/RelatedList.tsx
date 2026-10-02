@@ -13,7 +13,7 @@ const TvShowRelatedList: React.FC<TvShowRelatedListProps> = ({ tvs }) => {
     <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 sm:gap-4 md:gap-5 w-full">
       {tvs.map((tv) => {
         const backdropUrl = tv.backdrop_path
-          ? `https://image.tmdb.org/t/p/w500${tv.backdrop_path}`
+          ? getImageUrl(tv.backdrop_path, "backdrop")
           : getImageUrl(tv.poster_path, "poster");
         const year = tv.first_air_date ? new Date(tv.first_air_date).getFullYear() : null;
 

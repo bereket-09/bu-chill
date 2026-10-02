@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import SafeImage from "@/components/ui/other/SafeImage";
+import { getImageUrl } from "@/utils/movies";
 import { SportsMatch } from "@/services/sports";
 import {
   IoPlay,
@@ -47,7 +48,7 @@ export const getCategoryFallbackImage = (category?: string): string => {
   if (t.includes("rugby")) {
     return "https://images.unsplash.com/photo-1585822765356-3c0800c25a07?q=80&w=1200&auto=format&fit=crop";
   }
-  return "https://image.tmdb.org/t/p/w1280/uO4hEw4gRar83XqVvC3s5UInWEd.jpg";
+  return getImageUrl("/uO4hEw4gRar83XqVvC3s5UInWEd.jpg", "backdrop", true);
 };
 
 const isAbsoluteUrl = (url?: string) => /^https?:\/\//i.test(url || "");

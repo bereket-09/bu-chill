@@ -982,7 +982,7 @@ const ProfileManager: React.FC = () => {
                     <img
                       src={
                         item.poster_path
-                          ? `https://image.tmdb.org/t/p/w300${item.poster_path}`
+                          ? getImageUrl(item.poster_path, "poster")
                           : "/placeholder.png"
                       }
                       alt={item.title}

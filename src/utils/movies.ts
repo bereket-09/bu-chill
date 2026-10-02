@@ -103,15 +103,20 @@ export const timeAgo = (date: Date | string): string => {
  * // returns 'https://dancyflix.com/placeholder.png'
  */
 export const getImageUrl = (
-  path?: string,
+  path?: string | null,
   type: "poster" | "backdrop" | "title" | "avatar" = "poster",
   fullSize?: boolean,
 ): string => {
   if (!path || typeof path !== "string" || path.trim() === "") return "/placeholder.png";
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
+  if (path.startsWith("http://") || path.startsWith("https://")) {
+    if (path.includes("image.tmdb.org/")) {
+      return path.replace(/^https?:\/\/image\.tmdb\.org\//, "/api/tmdb-image/");
+    }
+    return path;
+  }
   const size = fullSize ? "original" : "w500";
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `https://image.tmdb.org/t/p/${size}${cleanPath}`;
+  return `/api/tmdb-image/t/p/${size}${cleanPath}`;
 };
 
 /**

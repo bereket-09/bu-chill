@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/utils/helpers";
+import { getImageUrl } from "@/utils/movies";
 import useSupabaseUser from "@/hooks/useSupabaseUser";
 import SafeImage from "@/components/ui/other/SafeImage";
 import {
@@ -372,7 +373,7 @@ export const AiConciergeModal: React.FC = () => {
                     <div className="flex flex-col gap-2 mt-2 w-full">
                       {msg.recommendations.map((rec) => {
                         const posterUrl = rec.poster_path
-                          ? `https://image.tmdb.org/t/p/w200${rec.poster_path}`
+                          ? getImageUrl(rec.poster_path, "poster")
                           : undefined;
 
                         const playHref =

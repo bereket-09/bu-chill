@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/utils/helpers";
+import { getImageUrl } from "@/utils/movies";
 import { IoVolumeHigh, IoVolumeMute } from "react-icons/io5";
 
 interface HeroVideoProps {
@@ -23,7 +24,7 @@ export const HeroVideo: React.FC<HeroVideoProps> = ({
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const backdropUrl = backdropPath
-    ? `https://image.tmdb.org/t/p/original${backdropPath}`
+    ? getImageUrl(backdropPath, "backdrop", true)
     : "/img/mockup.png";
 
   const toggleAudio = () => {

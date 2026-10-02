@@ -68,7 +68,7 @@ export const DetailHero: React.FC<DetailHeroProps> = ({ movie }) => {
   )?.key;
 
   const backdropUrl = movie.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}`
+    ? getImageUrl(movie.backdrop_path, "backdrop", true)
     : getImageUrl(movie.poster_path, "backdrop", true);
 
   const bookmarkData: SavedMovieDetails = {
@@ -201,7 +201,7 @@ export const DetailHero: React.FC<DetailHeroProps> = ({ movie }) => {
           <div className="mb-3 sm:mb-4 transition-transform duration-500">
             {logo ? (
               <img
-                src={`https://image.tmdb.org/t/p/w500${logo}`}
+                src={getImageUrl(logo, "title")}
                 alt={title}
                 className="max-h-[50px] sm:max-h-[80px] md:max-h-[120px] w-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
               />

@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import { getImageUrl } from "@/utils/movies";
 
 interface CollectionBannerProps {
   collection?: {
@@ -16,7 +17,7 @@ export const CollectionBanner: React.FC<CollectionBannerProps> = ({ collection }
   if (!collection) return null;
 
   const bgImage = collection.backdrop_path || collection.poster_path
-    ? `https://image.tmdb.org/t/p/original${collection.backdrop_path || collection.poster_path}`
+    ? getImageUrl(collection.backdrop_path || collection.poster_path, "backdrop", true)
     : "/img/mockup.png";
 
   return (

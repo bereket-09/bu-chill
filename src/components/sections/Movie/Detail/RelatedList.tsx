@@ -9,7 +9,7 @@ const RelatedMovieList: React.FC<{ movies: Movie[] }> = ({ movies }) => {
     <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 sm:gap-4 md:gap-5 w-full">
       {movies.map((movie) => {
         const backdropUrl = movie.backdrop_path
-          ? `https://image.tmdb.org/t/p/w500${movie.backdrop_path}`
+          ? getImageUrl(movie.backdrop_path, "backdrop")
           : getImageUrl(movie.poster_path, "poster");
         const year = movie.release_date ? new Date(movie.release_date).getFullYear() : null;
 

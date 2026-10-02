@@ -62,6 +62,10 @@ const nextConfig: NextConfig = {
         source: "/api/supabase/:path*",
         destination: `${supabaseUrl}/:path*`,
       },
+      {
+        source: "/api/tmdb-image/:path*",
+        destination: "https://image.tmdb.org/:path*",
+      },
     ];
   },
 };

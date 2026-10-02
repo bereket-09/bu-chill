@@ -136,7 +136,7 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
   )?.key;
 
   const backdropUrl = tv.backdrop_path
-    ? `https://image.tmdb.org/t/p/original${tv.backdrop_path}`
+    ? getImageUrl(tv.backdrop_path, "backdrop", true)
     : getImageUrl(tv.poster_path, "backdrop", true);
 
   const bookmarkData: SavedMovieDetails = {
@@ -264,7 +264,7 @@ export const TvDetailHero: React.FC<TvDetailHeroProps> = ({ tv, onViewEpisodesCl
           <div className="mb-3 sm:mb-4 transition-transform duration-500">
             {logo ? (
               <img
-                src={`https://image.tmdb.org/t/p/w500${logo}`}
+                src={getImageUrl(logo, "title")}
                 alt={title}
                 className="max-h-[50px] sm:max-h-[85px] md:max-h-[130px] w-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)]"
               />
