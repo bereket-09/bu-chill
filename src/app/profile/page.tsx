@@ -20,7 +20,7 @@ const ProfilePage: NextPage = async () => {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth");
+    redirect("/auth?redirect=/profile");
   }
 
   return (

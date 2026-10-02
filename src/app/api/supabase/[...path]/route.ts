@@ -22,8 +22,8 @@ async function proxyRequest(
     const headers = new Headers();
     request.headers.forEach((value, key) => {
       const lower = key.toLowerCase();
-      // Exclude host so upstream Supabase recognizes the destination host
-      if (lower !== "host") {
+      // Exclude hop-by-hop headers
+      if (lower !== "host" && lower !== "connection" && lower !== "content-length") {
         headers.set(key, value);
       }
     });
@@ -45,9 +45,26 @@ async function proxyRequest(
       responseHeaders.set(key, value);
     });
 
-    // Ensure permissive CORS for browser client requests
-    responseHeaders.set("Access-Control-Allow-Origin", "*");
-    responseHeaders.set("Access-Control-Allow-Credentials", "true");
+    // Handle Set-Cookie forwarding if present
+    if (typeof (response.headers as any).getSetCookie === "function") {
+      const setCookies = (response.headers as any).getSetCookie();
+      if (Array.isArray(setCookies) && setCookies.length > 0) {
+        responseHeaders.delete("set-cookie");
+        setCookies.forEach((cookieStr: string) => {
+          responseHeaders.append("set-cookie", cookieStr);
+        });
+      }
+    }
+
+    // Ensure valid CORS: wildcard '*' must not be used with Allow-Credentials: true
+    const origin = request.headers.get("origin") || request.nextUrl.origin;
+    if (origin) {
+      responseHeaders.set("Access-Control-Allow-Origin", origin);
+      responseHeaders.set("Access-Control-Allow-Credentials", "true");
+    } else {
+      responseHeaders.delete("Access-Control-Allow-Credentials");
+      responseHeaders.set("Access-Control-Allow-Origin", "*");
+    }
 
     const responseBody = await response.arrayBuffer();
     return new NextResponse(responseBody, {
@@ -71,14 +88,21 @@ export const DELETE = proxyRequest;
 export const PATCH = proxyRequest;
 export const HEAD = proxyRequest;
 
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get("origin") || request.nextUrl.origin;
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, prefer, x-supabase-auth-token, accept",
+  };
+  if (origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+  } else {
+    headers["Access-Control-Allow-Origin"] = "*";
+  }
   return new NextResponse(null, {
     status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS",
-      "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, prefer",
-      "Access-Control-Allow-Credentials": "true",
-    },
+    headers,
   });
 }

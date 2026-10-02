@@ -56,6 +56,7 @@ export const AiConciergeModal: React.FC = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { data: user } = useSupabaseUser();
+  const authUrl = `/auth?redirect=${encodeURIComponent(pathname || "/")}`;
   const [historyCount, setHistoryCount] = useState<number>(0);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -334,7 +335,7 @@ export const AiConciergeModal: React.FC = () => {
                     <span>Sign in required to chat with AI</span>
                   </span>
                   <Link
-                    href="/auth"
+                    href={authUrl}
                     onClick={() => setIsOpen(false)}
                     className="text-amber-400 hover:text-amber-300 font-bold ml-2 underline underline-offset-2 shrink-0 flex items-center gap-1"
                   >
@@ -474,7 +475,7 @@ export const AiConciergeModal: React.FC = () => {
                     </p>
                   </div>
                   <Link
-                    href="/auth"
+                    href={authUrl}
                     onClick={() => setIsOpen(false)}
                     className="mt-1 w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                   >
@@ -519,7 +520,7 @@ export const AiConciergeModal: React.FC = () => {
             <div className="p-3 border-t border-white/10 bg-[#0e0f17] shrink-0">
               {!user ? (
                 <Link
-                  href="/auth"
+                  href={authUrl}
                   onClick={() => setIsOpen(false)}
                   className="w-full py-3 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-amber-500/25 transition-all active:scale-[0.98]"
                 >

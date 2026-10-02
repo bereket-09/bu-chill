@@ -23,6 +23,7 @@ import { tmdb } from "@/api/tmdb";
 import { getImageUrl } from "@/utils/movies";
 import { isEmpty, shuffleArray } from "@/utils/helpers";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/app/providers";
 
 function AuthContent() {
   const router = useRouter();
@@ -35,6 +36,12 @@ function AuthContent() {
       : searchParams.get("mode") === "forgot" || searchParams.get("form") === "forgot"
       ? "forgot"
       : "login";
+
+  const rawRedirect = searchParams.get("redirect");
+  const redirectPath =
+    rawRedirect && rawRedirect.startsWith("/") && !rawRedirect.startsWith("//")
+      ? rawRedirect
+      : "/profile";
 
   const [mode, setMode] = useState<"login" | "register" | "forgot">(initialMode);
 
@@ -52,9 +59,9 @@ function AuthContent() {
 
   useEffect(() => {
     if (user && !isLoading) {
-      router.push("/profile");
+      router.push(redirectPath);
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, redirectPath]);
 
   // Generate QR code SVG
   useEffect(() => {
@@ -133,7 +140,16 @@ function AuthContent() {
         });
         addToast({ title: message, color: success ? "success" : "danger" });
         if (success) {
-          router.push("/profile");
+          try {
+            const supabase = createClient();
+            await supabase.auth.signInWithPassword({
+              email: email.trim(),
+              password,
+            });
+          } catch (_) {}
+
+          await queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
+          router.push(redirectPath);
           router.refresh();
         }
       } else if (mode === "register") {
@@ -150,7 +166,16 @@ function AuthContent() {
         });
         addToast({ title: message, color: success ? "success" : "danger" });
         if (success) {
-          router.push("/profile");
+          try {
+            const supabase = createClient();
+            await supabase.auth.signInWithPassword({
+              email: email.trim(),
+              password,
+            });
+          } catch (_) {}
+
+          await queryClient.invalidateQueries({ queryKey: ["supabase-user"] });
+          router.push(redirectPath);
           router.refresh();
         }
       } else if (mode === "forgot") {

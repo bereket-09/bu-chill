@@ -20,7 +20,7 @@ const SettingsPage: NextPage = async () => {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth");
+    redirect("/auth?redirect=/settings");
   }
 
   return (

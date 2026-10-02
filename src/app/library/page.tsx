@@ -27,7 +27,7 @@ const LibraryPage: NextPage = async () => {
   const { user, error } = await getUser();
 
   if (error || !user) {
-    redirect("/auth");
+    redirect("/auth?redirect=/library");
   }
 
   return (

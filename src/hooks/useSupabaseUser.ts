@@ -18,22 +18,17 @@ const fetchUser = async (): Promise<AuthUserData | null> => {
   const supabase = createClient();
 
   const { data: sessionData } = await supabase.auth.getSession();
-  if (!sessionData.session) return null;
+  if (!sessionData?.session) {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return null;
+  }
 
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
 
-  if (error) {
-    console.error("Error fetching user:", error.message);
-
-    addToast({
-      title: "Error fetching user",
-      description: error.message,
-      color: "danger",
-    });
-
+  if (error || !user) {
     return null;
   }
 

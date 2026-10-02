@@ -7,13 +7,31 @@ const PROTECTED_PATHS = env.PROTECTED_PATHS?.split(",") ?? [];
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
+  const projectRef = new URL(env.NEXT_PUBLIC_SUPABASE_URL).hostname.split(".")[0];
+  const cookieName = `sb-${projectRef}-auth-token`;
+
   const supabase = createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
+      cookieOptions: {
+        name: cookieName,
+      },
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          const all = request.cookies.getAll();
+          const hasProjectCookie = all.some((c) => c.name.startsWith(cookieName));
+          if (!hasProjectCookie) {
+            const altCookie = all.find((c) => c.name.includes("-auth-token"));
+            if (altCookie) {
+              const suffix = altCookie.name.substring(altCookie.name.indexOf("-auth-token"));
+              return [
+                ...all,
+                { name: `sb-${projectRef}${suffix}`, value: altCookie.value },
+              ];
+            }
+          }
+          return all;
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));

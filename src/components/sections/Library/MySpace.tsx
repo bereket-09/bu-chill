@@ -95,7 +95,7 @@ export const MySpace: React.FC = () => {
   // Redirect to auth if not logged in
   useEffect(() => {
     if (!isUserLoading && !user) {
-      router.replace("/auth");
+      router.replace("/auth?redirect=/library");
     }
   }, [isUserLoading, user, router]);
 
