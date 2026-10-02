@@ -54,6 +54,16 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["@heroui/react"],
     prefetchInlining: true,
   },
+  async rewrites() {
+    const supabaseUrl =
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "https://vuzgkwkeyqdinbmsoosg.supabase.co";
+    return [
+      {
+        source: "/api/supabase/:path*",
+        destination: `${supabaseUrl}/:path*`,
+      },
+    ];
+  },
 };
 
 const pwa = withPWA(nextConfig);
